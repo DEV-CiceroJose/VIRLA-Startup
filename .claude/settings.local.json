@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm --version)",
+      "Bash(node -e \"console.log\\('node:test available:', !!require\\('node:test'\\)\\)\")",
+      "Bash(npm install *)",
+      "Bash(cd /c/Users/nauam/OneDrive/Documentos/VirlaFinal/frontend/virla-experimental/src && find services -type f | head && echo \"---\" && ls services 2>/dev/null)",
+      "Bash(npm test *)",
+      "Bash(npm run *)",
+      "Bash(curl -s \"https://api.github.com/repos/anthropics/skills/contents/skills/frontend-design?ref=main\")",
+      "Bash(mkdir -p __TRACKED_VAR__/.claude/skills/frontend-design)",
+      "Bash(curl -sL https://raw.githubusercontent.com/anthropics/skills/main/skills/frontend-design/SKILL.md -o __TRACKED_VAR__/.claude/skills/frontend-design/SKILL.md)",
+      "Bash(curl -sL https://raw.githubusercontent.com/anthropics/skills/main/skills/frontend-design/LICENSE.txt -o __TRACKED_VAR__/.claude/skills/frontend-design/LICENSE.txt)"
+    ]
+  }
+}

@@ -1,0 +1,36 @@
+﻿# --- Dependências ---
+node_modules/
+**/node_modules/
+
+# --- Arquivos de Ambiente (MUITO IMPORTANTE) ---
+.env
+**/.env
+.env.*.local
+
+# --- Prisma ---
+# Ignora a pasta do cliente gerado no seu backend
+backend/generated/
+# Ignora bancos de dados locais do SQLite (se você usar)
+*.db
+*.db-journal
+
+# --- Builds do Frontend (Vite) ---
+frontend/virla-experimental/dist/
+dist/
+**/dist/
+.vite/
+
+# --- Logs e Cache ---
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+*.log
+.eslintcache
+
+# --- Sistema Operacional ---
+.DS_Store
+Thumbs.db
+
+# Pasta de uploads do servidor
+backend/uploads/

@@ -91,27 +91,15 @@ export const updateSolicitacao = async (req, res) => {
 export const assumirSolicitacao = async (req, res) => {
   try {
     const { id } = req.params
-    const caregiverId = req.userId
-
-    const solicitacao = await solicitacaoRepo.getById(id)
-    if (!solicitacao) {
-      return res.status(404).json({ msg: 'Solicitação não encontrada.' })
-    }
-    if (!['ABERTA', 'VISUALIZADA'].includes(solicitacao.status)) {
-      return res.status(422).json({ msg: 'Esta solicitação já foi assumida, concluída ou cancelada.' })
-    }
-
-    const viewedByIds = solicitacao.viewedByIds.includes(caregiverId)
-      ? solicitacao.viewedByIds
-      : [...solicitacao.viewedByIds, caregiverId]
-
-    const updated = await solicitacaoRepo.update(id, {
-      status: 'EM_ANDAMENTO',
-      assignedCaregiverId: caregiverId,
-      viewedByIds,
-    })
+    // Transação atômica no repositório: previne que dois cuidadores assumam a
+    // mesma solicitação simultaneamente (race condition no read→check→write).
+    const updated = await solicitacaoRepo.assumir(id, req.userId)
     return res.status(200).json({ solicitacao: updated })
   } catch (err) {
+    if (err instanceof solicitacaoRepo.SolicitacaoError) {
+      const status = err.code === 'NOT_FOUND' ? 404 : 422
+      return res.status(status).json({ msg: err.message })
+    }
     logger.error('solicitacao:assumir_failed', {
       error: err.message,
       stack: err.stack,
@@ -273,20 +261,14 @@ export const listAvailableSolicitacoes = async (req, res) => {
 export const markSolicitacaoViewed = async (req, res) => {
   try {
     const { id } = req.params
-    const caregiverId = req.userId
-
-    const solicitacao = await solicitacaoRepo.getById(id)
-    if (!solicitacao) {
-      return res.status(404).json({ msg: 'Solicitação não encontrada.' })
-    }
-
-    const alreadyViewed = solicitacao.viewedByIds.includes(caregiverId)
-    const updated = await solicitacaoRepo.update(id, {
-      viewedByIds: alreadyViewed ? solicitacao.viewedByIds : [...solicitacao.viewedByIds, caregiverId],
-      status: solicitacao.status === 'ABERTA' ? 'VISUALIZADA' : solicitacao.status,
-    })
+    // Transação atômica: evita perder visualizações concorrentes no array.
+    const updated = await solicitacaoRepo.markViewed(id, req.userId)
     return res.status(200).json({ solicitacao: updated })
   } catch (err) {
+    if (err instanceof solicitacaoRepo.SolicitacaoError) {
+      const status = err.code === 'NOT_FOUND' ? 404 : 422
+      return res.status(status).json({ msg: err.message })
+    }
     logger.error('solicitacao:mark_viewed_failed', {
       error: err.message,
       stack: err.stack,

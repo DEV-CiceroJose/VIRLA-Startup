@@ -11,7 +11,7 @@
 //  - Navegação (rotas do SPA) → network-first com fallback pro cache, pra
 //    funcionar minimamente offline mas sempre preferir a versão mais nova.
 
-const CACHE_VERSION = 'virla-v1'
+const CACHE_VERSION = 'virla-v2'
 const STATIC_CACHE = `${CACHE_VERSION}-static`
 
 const PRECACHE_URLS = ['/', '/manifest.json', '/icon-192.png', '/icon-512.png']
@@ -49,14 +49,28 @@ function isApiRequest(url) {
   return apiPrefixes.some((prefix) => url.pathname.startsWith(prefix))
 }
 
+// Internos do bundler (Vite/HMR) e módulos versionados: NUNCA interceptar.
+// Servir esses arquivos do cache faz o app carregar duas cópias de React
+// (chunk velho + chunk novo) e quebra com "Invalid hook call". Em produção
+// o Vite não usa esses caminhos, mas a guarda protege dev e previews.
+function isBundlerInternal(url) {
+  if (/[?&](v|t)=/.test(url.search)) return true // ?v=hash / ?t=timestamp do Vite
+  return [
+    '/@vite', '/@react-refresh', '/@id', '/@fs', '/node_modules/', '/src/',
+  ].some((prefix) => url.pathname.startsWith(prefix))
+}
+
 self.addEventListener('fetch', (event) => {
   const { request } = event
   if (request.method !== 'GET') return // nunca interceptar POST/PUT/PATCH/DELETE
 
+  // Ignora esquemas não-http (chrome-extension:, data:, etc.) — interceptá-los lança.
+  if (!request.url.startsWith('http')) return
+
   const url = new URL(request.url)
 
-  // Requisições para o backend (outra origem, ex.: api.virla.com) — nunca cachear.
-  if (url.origin !== self.location.origin || isApiRequest(url)) {
+  // Requisições para o backend (outra origem) ou internos do bundler — nunca cachear.
+  if (url.origin !== self.location.origin || isApiRequest(url) || isBundlerInternal(url)) {
     return
   }
 
@@ -69,7 +83,13 @@ self.addEventListener('fetch', (event) => {
           caches.open(STATIC_CACHE).then((cache) => cache.put('/', copy))
           return response
         })
-        .catch(() => caches.match('/')),
+        // Fallback offline: usa o '/' cacheado; se nem isso existir, devolve um
+        // Response válido (respondWith(undefined) lançaria "Failed to convert
+        // value to 'Response'", o erro que aparecia no console).
+        .catch(async () =>
+          (await caches.match('/')) ||
+          new Response('Offline', { status: 503, headers: { 'Content-Type': 'text/plain' } }),
+        ),
     )
     return
   }
@@ -85,7 +105,9 @@ self.addEventListener('fetch', (event) => {
           }
           return response
         })
-        .catch(() => cached)
+        // Sem cache e sem rede: devolve um Response válido em vez de undefined
+        // (que lançaria "Failed to convert value to 'Response'").
+        .catch(() => cached || Response.error())
 
       return cached || networkFetch
     }),

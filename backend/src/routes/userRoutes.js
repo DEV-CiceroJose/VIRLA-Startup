@@ -1,5 +1,5 @@
 import express from "express"
-import { createUsers, getUsers, getFeedUsers, updateUsers, deleteUsers } from "../controllers/userController.js"
+import { createUsers, getFeedUsers, updateUsers, deleteUsers } from "../controllers/userController.js"
 import checkToken from '../middlewares/checkToken.js'
 import { requireRole } from '../middlewares/requireRole.js'
 import { validateZod } from '../middlewares/validateZod.js'
@@ -16,7 +16,8 @@ router.post('/users', registerLimiter, validateZod(createUserBodySchema), create
 // CORREÇÃO DE SEGURANÇA (Broken Access Control):
 // as rotas abaixo expunham/alteravam dados de QUALQUER usuário sem autenticação.
 // Agora exigem token; update/delete também verificam posse (ownership) no controller.
-router.get('/users', checkToken, getUsers)
+// (A listagem geral GET /users foi removida: dump de todas as contas sem uso real
+// no frontend e sem papel de admin para justificá-la.)
 router.put('/users/:id', checkToken, validateZod(updateUserBodySchema), updateUsers)
 router.delete('/users/:id', checkToken, deleteUsers)
 

@@ -6,7 +6,6 @@ import {
   createUser,
   updateUser,
   deleteUser,
-  listAll,
   listByRole,
 } from '../repositories/userRepository.js'
 import { project } from '../repositories/_helpers.js'
@@ -78,13 +77,16 @@ const createUsers = async (req, res) => {
     return res.status(422).json({ msg: 'Valor por hora inválido' })
   }
 
-  const passwordHash = await bcrypt.hash(password, 12)
-
   try {
     const existing = await getUserByEmail(email)
     if (existing) {
       return res.status(409).json({ msg: 'Este e-mail já está cadastrado' })
     }
+
+    // Hash só DEPOIS de confirmar que o e-mail é novo: bcrypt(12) custa ~100ms
+    // de CPU; rodá-lo antes do check deixaria o endpoint vulnerável a abuso
+    // (um bot forçaria o hash repetindo e-mails já cadastrados).
+    const passwordHash = await bcrypt.hash(password, 12)
 
     const created = await createUser({
       name,
@@ -122,19 +124,13 @@ const createUsers = async (req, res) => {
   }
 }
 
-const getUsers = async (req, res) => {
-  // Rota administrativa/interna — protegida por checkToken.
-  // Usa o select público (sem email/cpf) para não expor PII em massa.
-  const all = await listAll()
-  const users = all.map((u) => project(u, USER_PUBLIC_SELECT))
-  res.status(200).send(users)
-}
-
 const FEED_PAGE_SIZE = 10
 
 const getFeedUsers = async (req, res) => {
   try {
-    const loggedUserId = req.params.id
+    // Anti-IDOR: usa o usuário autenticado, não o :id da URL — assim ninguém
+    // monta o feed a partir do papel/conta de outra pessoa.
+    const loggedUserId = req.userId
     const page = Math.max(1, parseInt(String(req.query.page ?? '1'), 10) || 1)
     const limit = FEED_PAGE_SIZE
     const skip = (page - 1) * limit
@@ -268,4 +264,4 @@ const deleteUsers = async (req, res) => {
   }
 }
 
-export { createUsers, getUsers, getFeedUsers, updateUsers, deleteUsers }
+export { createUsers, getFeedUsers, updateUsers, deleteUsers }

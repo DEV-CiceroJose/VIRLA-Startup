@@ -1,10 +1,17 @@
 import { z } from 'zod'
 import { isValidCPF, stripCpf } from '../utils/cpf.js'
 
-/** ObjectId MongoDB (24 hex) — impede injeção de IDs malformados. */
+/**
+ * ID de documento — impede injeção de IDs malformados.
+ * Aceita IDs do Firestore (~20 chars alfanuméricos, com - e _) e ObjectIds do
+ * Mongo (24 hex) de registros migrados. Mesmo formato de `isValidId` em
+ * utils/validation.js — manter os dois em sincronia. Antes era /^[a-f\d]{24}$/i
+ * (só Mongo), o que rejeitava IDs do Firestore com "ID inválido." em todas as
+ * rotas de solicitação/cobrança/pagamento/escrow após a migração.
+ */
 export const objectIdSchema = z
   .string()
-  .regex(/^[a-f\d]{24}$/i, 'ID inválido.')
+  .regex(/^[A-Za-z0-9_-]{16,128}$/, 'ID inválido.')
 
 /** Valor em centavos: inteiro positivo com teto. */
 export const amountCentsSchema = z

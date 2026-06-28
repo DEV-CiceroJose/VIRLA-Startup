@@ -5,6 +5,7 @@ import { SocketProvider } from './context/SocketContext'
 import { PageLoader } from './components/Spinner'
 import { PAYMENT_ENABLED } from './utils/featureFlags'
 import Menu from './components/Menu'
+import RouteErrorBoundary from './components/RouteErrorBoundary'
 
 // ── Lazy imports — cada página vira um chunk separado no build.
 // Se um módulo estiver quebrado, só aquela rota falha; o resto da app
@@ -137,6 +138,7 @@ export default function AppShell() {
           da página lazy está sendo baixado. Erros de import ficam isolados
           por rota graças ao lazy — não travam a aplicação inteira. */}
       <Suspense fallback={<PageFallback />}>
+        <RouteErrorBoundary resetKey={location.pathname}>
         <Routes>
           {/* Rotas públicas */}
           <Route path="/"         element={<Landing />} />
@@ -176,6 +178,7 @@ export default function AppShell() {
           {/* Fallback 404 */}
           <Route path="*" element={<NotFound />} />
         </Routes>
+        </RouteErrorBoundary>
       </Suspense>
     </SocketProvider>
   )

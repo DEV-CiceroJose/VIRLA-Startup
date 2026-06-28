@@ -140,6 +140,8 @@ export const getUnreadCount = async (req, res) => {
 export const markAsRead = async (req, res) => {
     try {
         const { userId } = req.params
+        if (!userId) return res.status(400).json({ msg: "Usuário inválido" })
+        if (userId === req.userId) return res.status(400).json({ msg: "Conversa inválida" })
         await markAsReadRTDB(req.userId, userId)
         res.status(200).json({ msg: "Mensagens lidas" })
     } catch (e) {

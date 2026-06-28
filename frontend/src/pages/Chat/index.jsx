@@ -106,7 +106,13 @@ export default function Chat() {
         await fetchHistory()
         await loadPendingCharge()
       } catch (e) {
-        if (!cancelled) navigate('/feed')
+        // CORREÇÃO: antes redirecionava para /feed (que, para cuidadores,
+        // jogava de volta para a lista de solicitações — parecia que o botão
+        // "Conversar" não fazia nada). Agora avisa e volta uma página.
+        if (!cancelled) {
+          toast.error('Não foi possível carregar a conversa. Tente novamente.')
+          navigate(-1)
+        }
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -157,7 +163,7 @@ export default function Chat() {
 
   // Sprint 0: a entrega de mensagens em tempo real agora é feita via Firebase
   // Realtime Database (não depende mais de reconexão do Socket.io).
-  const { sendMessage: sendFirebaseMessage, markRead: markFirebaseRead } = useFirebaseChat({
+  const { sendMessage: sendFirebaseMessage, markRead: markFirebaseRead, realtimeActive } = useFirebaseChat({
     meId,
     peerId,
     onMessage: handleIncomingMessage,
@@ -181,6 +187,17 @@ export default function Chat() {
   useEffect(() => {
     if (peerId && !loading) markFirebaseRead().catch((err) => console.error('Erro ao marcar lidas (Firebase)', err))
   }, [peerId, loading, markFirebaseRead])
+
+  // Modo de contingência (correção do chat): se o tempo real do Firebase não
+  // estiver ativo (serviço de Auth desativado / sem config), busca o histórico
+  // por HTTP a cada 4s para a conversa continuar atualizando mesmo assim.
+  useEffect(() => {
+    if (loading || realtimeActive) return
+    const intervalId = setInterval(() => {
+      fetchHistory().catch(() => { /* silencioso: erro já tratado no carregamento */ })
+    }, 4000)
+    return () => clearInterval(intervalId)
+  }, [loading, realtimeActive, fetchHistory])
 
   const handleSend = useCallback(async (e) => {
     e.preventDefault()

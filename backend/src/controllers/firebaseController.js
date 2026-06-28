@@ -1,4 +1,4 @@
-import { firebaseAdmin } from '../lib/firebase.js'
+import { firebaseAdmin, FIREBASE_CONFIGURED } from '../lib/firebase.js'
 import { authLogger } from '../lib/logger.js'
 
 /**
@@ -9,6 +9,13 @@ import { authLogger } from '../lib/logger.js'
  * liberar leitura/escrita em `chats/{chatId}`.
  */
 export const getFirebaseToken = async (req, res) => {
+  // Trava de segurança: sem Firebase configurado, retorna 503 claro em vez de
+  // deixar o proxy de indisponibilidade lançar um erro genérico. O frontend
+  // usa esse 503 para cair no modo de contingência HTTP (polling).
+  if (!FIREBASE_CONFIGURED) {
+    return res.status(503).json({ msg: 'Chat em tempo real indisponível no momento.' })
+  }
+
   try {
     const customToken = await firebaseAdmin.auth().createCustomToken(req.userId)
     res.status(200).json({ token: customToken })

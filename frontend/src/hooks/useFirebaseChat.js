@@ -1,6 +1,6 @@
 import { useEffect, useRef, useCallback, useState } from 'react'
-import { ref, push, query, orderByChild, equalTo, onChildAdded, update, get } from 'firebase/database'
-import { rtdb } from '../services/firebase'
+import { ref, push, onChildAdded, update, get } from 'firebase/database'
+import { rtdb, isFirebaseReady } from '../services/firebase'
 import { connectFirebaseAuth } from '../services/firebaseAuth'
 
 export function chatIdFor(userIdA, userIdB) {
@@ -8,16 +8,20 @@ export function chatIdFor(userIdA, userIdB) {
 }
 
 /**
- * useFirebaseChat — substitui a entrega de mensagens que antes vinha pelo
- * evento `receive_message` do Socket.io. Agora o cliente escreve e escuta
- * diretamente o Firebase Realtime Database, o que resolve o problema de
- * mensagens não sincronizarem em produção (Sprint 1), já que o RTDB mantém
- * sua própria conexão persistente e reconexão automática nativas.
+ * useFirebaseChat — entrega de mensagens em tempo real via Firebase Realtime
+ * Database (substituiu o `receive_message` do Socket.io na Sprint 1).
+ *
+ * Resiliência (correção do "chat não abre"): se o Firebase não estiver
+ * configurado ou a autenticação falhar (ex.: serviço de Auth desativado no
+ * console), o hook NÃO derruba a tela — ele apenas reporta `realtimeActive:
+ * false`, e a página de Chat assume o modo de contingência por HTTP (polling).
  *
  * @param {{ meId: string, peerId: string, onMessage: (msg: object) => void }} params
  */
 export function useFirebaseChat({ meId, peerId, onMessage }) {
   const [ready, setReady] = useState(false)
+  // realtimeActive=false → a página de Chat deve buscar histórico por HTTP.
+  const [realtimeActive, setRealtimeActive] = useState(false)
   const onMessageRef = useRef(onMessage)
   onMessageRef.current = onMessage
 
@@ -25,6 +29,14 @@ export function useFirebaseChat({ meId, peerId, onMessage }) {
 
   useEffect(() => {
     if (!chatId || !meId || !peerId) return
+
+    // Sem Firebase: não tenta assinar; chat opera em fallback HTTP.
+    if (!isFirebaseReady() || !rtdb) {
+      setRealtimeActive(false)
+      setReady(false)
+      return
+    }
+
     let unsubscribed = false
     let unsubscribe = () => {}
 
@@ -39,9 +51,13 @@ export function useFirebaseChat({ meId, peerId, onMessage }) {
           onMessageRef.current?.(message)
         })
 
+        setRealtimeActive(true)
         setReady(true)
       } catch (err) {
-        console.error('[FirebaseChat] Falha ao conectar:', err)
+        // Auth desativado / falha de rede: cai no fallback HTTP sem crashar.
+        console.error('[FirebaseChat] Falha ao conectar — usando fallback HTTP:', err)
+        setRealtimeActive(false)
+        setReady(false)
       }
     })()
 
@@ -51,10 +67,14 @@ export function useFirebaseChat({ meId, peerId, onMessage }) {
     }
   }, [chatId, meId, peerId])
 
-  /** Envia uma mensagem de texto direto para o Firebase RTDB (sem round-trip pelo backend). */
+  /**
+   * Envia uma mensagem direto pelo Firebase RTDB. Se o Firebase não estiver
+   * disponível, lança — a página de Chat captura e reenvia via POST /messages.
+   */
   const sendMessage = useCallback(
     async ({ content }) => {
       if (!chatId || !meId || !peerId) throw new Error('Chat não inicializado')
+      if (!isFirebaseReady() || !rtdb) throw new Error('Firebase indisponível')
 
       const newRef = push(ref(rtdb, `chats/${chatId}/messages`))
       const createdAtMs = Date.now()
@@ -81,22 +101,30 @@ export function useFirebaseChat({ meId, peerId, onMessage }) {
     [chatId, meId, peerId]
   )
 
-  /** Marca como lidas as mensagens recebidas de `peerId` nesse chat. */
+  /**
+   * Marca como lidas as mensagens recebidas de `peerId`.
+   *
+   * CORREÇÃO (erro de índice): leitura completa do nó + filtro em memória,
+   * em vez de `query(orderByChild('senderId'), equalTo(peerId))`, que exigia
+   * a regra `.indexOn` publicada no Firebase.
+   */
   const markRead = useCallback(async () => {
     if (!chatId || !meId || !peerId) return
+    if (!isFirebaseReady() || !rtdb) return
+
     const messagesRef = ref(rtdb, `chats/${chatId}/messages`)
-    const q = query(messagesRef, orderByChild('senderId'), equalTo(peerId))
-    const snap = await get(q)
+    const snap = await get(messagesRef)
     if (!snap.exists()) return
 
     const updates = {}
     snap.forEach((child) => {
-      if (child.val().read === false) updates[`${child.key}/read`] = true
+      const v = child.val()
+      if (v.senderId === peerId && v.read === false) updates[`${child.key}/read`] = true
     })
     if (Object.keys(updates).length > 0) {
       await update(messagesRef, updates)
     }
   }, [chatId, meId, peerId])
 
-  return { chatId, ready, sendMessage, markRead }
+  return { chatId, ready, realtimeActive, sendMessage, markRead }
 }

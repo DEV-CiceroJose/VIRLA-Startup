@@ -1,5 +1,5 @@
 import { signInWithCustomToken, signOut } from 'firebase/auth'
-import { firebaseAuth } from './firebase'
+import { firebaseAuth, isFirebaseReady } from './firebase'
 import api from './api'
 
 /**
@@ -11,6 +11,9 @@ import api from './api'
  * Idempotente: se já houver um usuário do Firebase logado, não repete a troca de token.
  */
 export async function connectFirebaseAuth() {
+  // Sem Firebase configurado/inicializado: não há o que autenticar —
+  // o chat opera em modo HTTP (fallback).
+  if (!isFirebaseReady() || !firebaseAuth) return null
   if (firebaseAuth.currentUser) return firebaseAuth.currentUser
 
   const meuToken = localStorage.getItem('meuToken')
@@ -22,7 +25,7 @@ export async function connectFirebaseAuth() {
 }
 
 export async function disconnectFirebaseAuth() {
-  if (firebaseAuth.currentUser) {
+  if (firebaseAuth?.currentUser) {
     await signOut(firebaseAuth)
   }
 }

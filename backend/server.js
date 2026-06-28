@@ -155,10 +155,20 @@ const server = http.createServer(app)
 //
 const io = new SocketServer(server, {
   cors: {
-    origin: isOriginAllowed,  // Reutiliza a mesma função — consistência garantida
+    // CORREÇÃO (chat tela branca): o pacote `cors` usado pelo Socket.io trata
+    // `origin` como callback `(origin, callback) => callback(err, allow)` quando
+    // é função — ele IGNORA o valor de retorno. Passar `isOriginAllowed` direto
+    // (que retorna boolean e nunca chama o callback) travava o handshake e
+    // bloqueava a conexão do front. Aqui adaptamos para o formato de callback.
+    origin: (origin, callback) => callback(null, isOriginAllowed(origin)),
     credentials: true,
     methods: ['GET', 'POST', 'OPTIONS'],
   },
+
+  // Transportes explícitos: inicia em 'polling' e faz upgrade para 'websocket'.
+  // Sem isso, o proxy da Render às vezes não propaga o header Upgrade no primeiro
+  // handshake e a conexão fica presa em "connecting". O frontend usa a mesma ordem.
+  transports: ['polling', 'websocket'],
 
   // CORREÇÃO 7: Ajustar ping para o ambiente da Render.
   //

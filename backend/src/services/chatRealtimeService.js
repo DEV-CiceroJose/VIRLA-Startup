@@ -73,15 +73,24 @@ export async function createMessage({ senderId, receiverId, content, audioUrl = 
   return message
 }
 
-/** Histórico completo de uma conversa, ordenado por data crescente. */
+/**
+ * Histórico completo de uma conversa, ordenado por data crescente.
+ *
+ * CORREÇÃO (erro 500): trocamos `orderByChild('createdAt')` por leitura
+ * completa do nó + ordenação em memória. A query indexada exigia a regra
+ * `.indexOn` publicada no console do Firebase; sem ela o RTDB respondia com
+ * erro e a rota /messages/history caía em 500. A ordenação em memória torna
+ * o chat resiliente mesmo sem índices configurados.
+ */
 export async function getHistory(meId, otherId) {
   const chatId = chatIdFor(meId, otherId)
-  const snap = await rtdb.ref(`chats/${chatId}/messages`).orderByChild('createdAt').get()
+  const snap = await rtdb.ref(`chats/${chatId}/messages`).get()
   if (!snap.exists()) return []
   const messages = []
   snap.forEach((child) => {
     messages.push(child.val())
   })
+  messages.sort((a, b) => (a.createdAt ?? 0) - (b.createdAt ?? 0))
   return messages
 }
 
@@ -110,16 +119,15 @@ export async function getUnreadCount(meId) {
   let total = 0
   const chatIds = Object.keys(userChatsSnap.val())
 
+  // CORREÇÃO (erro 500): leitura completa + filtro em memória, em vez de
+  // `orderByChild('receiverId').equalTo(meId)` (que exigia `.indexOn`).
   await Promise.all(
     chatIds.map(async (chatId) => {
-      const msgsSnap = await rtdb
-        .ref(`chats/${chatId}/messages`)
-        .orderByChild('receiverId')
-        .equalTo(meId)
-        .get()
+      const msgsSnap = await rtdb.ref(`chats/${chatId}/messages`).get()
       if (!msgsSnap.exists()) return
       msgsSnap.forEach((child) => {
-        if (child.val().read === false) total += 1
+        const msg = child.val()
+        if (msg.receiverId === meId && msg.read === false) total += 1
       })
     })
   )
@@ -130,17 +138,16 @@ export async function getUnreadCount(meId) {
 /** Marca como lidas todas as mensagens enviadas por `otherId` para `meId`. */
 export async function markAsRead(meId, otherId) {
   const chatId = chatIdFor(meId, otherId)
-  const snap = await rtdb
-    .ref(`chats/${chatId}/messages`)
-    .orderByChild('senderId')
-    .equalTo(otherId)
-    .get()
+  // CORREÇÃO (erro 500): leitura completa + filtro em memória, em vez de
+  // `orderByChild('senderId').equalTo(otherId)` (que exigia `.indexOn`).
+  const snap = await rtdb.ref(`chats/${chatId}/messages`).get()
 
   if (!snap.exists()) return
 
   const updates = {}
   snap.forEach((child) => {
-    if (child.val().read === false) {
+    const msg = child.val()
+    if (msg.senderId === otherId && msg.read === false) {
       updates[`${child.key}/read`] = true
     }
   })

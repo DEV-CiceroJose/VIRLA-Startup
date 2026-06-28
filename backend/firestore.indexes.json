@@ -1,0 +1,5 @@
+{
+  "comment": "Os repositórios usam consultas de campo único (indexadas automaticamente pelo Firestore) e fazem ordenação/filtro composto em memória, evitando índices compostos. Se no futuro alguma consulta passar a combinar where+orderBy ou múltiplos where no servidor, declare o índice composto correspondente aqui e rode: firebase deploy --only firestore:indexes",
+  "indexes": [],
+  "fieldOverrides": []
+}

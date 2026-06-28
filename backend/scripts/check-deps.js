@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 
-const required = ['zod', '@prisma/client', 'express']
+const required = ['zod', 'firebase-admin', 'express']
 const missing = required.filter((pkg) => !existsSync(join(root, 'node_modules', pkg, 'package.json')))
 
 if (missing.length) {
@@ -15,6 +15,6 @@ if (missing.length) {
   process.exit(1)
 }
 
-if (!process.env.DATABASE_URL) {
-  console.warn('[Virla] Aviso: DATABASE_URL não está definida no .env — o banco não vai conectar.')
+if (!process.env.FIREBASE_PROJECT_ID) {
+  console.warn('[Virla] Aviso: variáveis FIREBASE_* não definidas no .env — o Firestore/Chat não vai conectar.')
 }

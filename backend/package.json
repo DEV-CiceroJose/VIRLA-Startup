@@ -10,16 +10,13 @@
     "dev": "nodemon server.js",
     "postinstall": "node scripts/check-deps.js",
     "test": "node --test \"tests/*.test.js\"",
-    "test:coverage": "node --test --experimental-test-coverage \"tests/*.test.js\"",
-    "prisma:generate": "prisma generate",
-    "prisma:push": "prisma db push"
+    "test:coverage": "node --test --experimental-test-coverage \"tests/*.test.js\""
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "module",
   "dependencies": {
-    "@prisma/client": "6.19",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
@@ -34,7 +31,6 @@
     "zod": "^3.24.0"
   },
   "devDependencies": {
-    "nodemon": "^3.1.14",
-    "prisma": "6.19"
+    "nodemon": "^3.1.14"
   }
 }

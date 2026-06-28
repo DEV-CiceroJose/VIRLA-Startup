@@ -5,10 +5,11 @@
  * DISPUTED é transitório — apenas HELD → DISPUTED → RELEASED.
  */
 
-/** @type {import('@prisma/client').EscrowStatus[]} */
+/** Estados possíveis: PENDING | HELD | DISPUTED | RELEASED. */
+/** @type {string[]} */
 export const TERMINAL_ESCROW_STATUSES = ['RELEASED']
 
-/** @type {Record<string, import('@prisma/client').EscrowStatus[]>} */
+/** @type {Record<string, string[]>} */
 const ALLOWED_TRANSITIONS = {
   PENDING: ['HELD'],
   HELD: ['DISPUTED', 'RELEASED'],

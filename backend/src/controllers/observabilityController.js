@@ -1,15 +1,15 @@
-import prisma from '../lib/prisma.js'
+import { db } from '../lib/firestore.js'
 import { logger } from '../lib/logger.js'
 import { getMetricsSnapshot } from '../lib/metrics.js'
 import { FIREBASE_CONFIGURED } from '../lib/firebase.js'
 
 const NODE_ENV = process.env.NODE_ENV || 'development'
 
-/** Ping no MongoDB com timeout para não travar o health check. */
+/** Ping leve no Firestore com timeout para não travar o health check. */
 async function checkDatabase(timeoutMs = 3000) {
   try {
     await Promise.race([
-      prisma.$runCommandRaw({ ping: 1 }),
+      db.collection('_health').doc('ping').get(),
       new Promise((_, reject) => setTimeout(() => reject(new Error('db_timeout')), timeoutMs)),
     ])
     return { ok: true }

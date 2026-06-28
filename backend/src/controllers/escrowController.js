@@ -1,6 +1,7 @@
-import prisma from '../lib/prisma.js'
 import { logger } from '../lib/logger.js'
 import { isValidObjectId } from '../utils/validation.js'
+import { getById as getEscrowById } from '../repositories/escrowRepository.js'
+import { getById as getPaymentById } from '../repositories/paymentRepository.js'
 import {
   releaseEscrowFunds,
   disputeEscrowFunds,
@@ -29,12 +30,7 @@ export const getEscrow = async (req, res) => {
       return res.status(422).json({ msg: 'ID de custódia inválido.' })
     }
 
-    const escrow = await prisma.escrow.findUnique({
-      where: { id: escrowId },
-      include: {
-        payment: { select: { billingId: true, status: true, paidAt: true } },
-      },
-    })
+    const escrow = await getEscrowById(escrowId)
 
     if (!escrow) {
       return res.status(404).json({ msg: 'Custódia não encontrada.' })
@@ -46,6 +42,12 @@ export const getEscrow = async (req, res) => {
       return res.status(403).json({ msg: 'Acesso negado.' })
     }
 
+    // Substitui o include do Prisma: busca o pagamento vinculado.
+    const paymentDoc = await getPaymentById(escrow.paymentId)
+    const payment = paymentDoc
+      ? { billingId: paymentDoc.billingId, status: paymentDoc.status, paidAt: paymentDoc.paidAt }
+      : null
+
     return res.status(200).json({
       id: escrow.id,
       status: escrow.status,
@@ -55,7 +57,7 @@ export const getEscrow = async (req, res) => {
       heldAt: escrow.heldAt,
       disputedAt: escrow.disputedAt,
       releasedAt: escrow.releasedAt,
-      payment: escrow.payment,
+      payment,
     })
   } catch (err) {
     return handleServiceError(res, err)

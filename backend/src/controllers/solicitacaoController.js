@@ -1,20 +1,11 @@
-import prisma from '../lib/prisma.js'
+import * as solicitacaoRepo from '../repositories/solicitacaoRepository.js'
+import { getUserById, listByIds } from '../repositories/userRepository.js'
 import { logger } from '../lib/logger.js'
 
-const PUBLIC_SELECT = {
-  id: true,
-  familiarId: true,
-  titulo: true,
-  descricao: true,
-  tipoCuidado: true,
-  cidade: true,
-  estado: true,
-  urgencia: true,
-  status: true,
-  viewedByIds: true,
-  assignedCaregiverId: true,
-  createdAt: true,
-  updatedAt: true,
+/** Projeção do familiar embutido (substitui o join `familiar` do Prisma). */
+function pickFamiliar(user) {
+  if (!user) return null
+  return { id: user.id, name: user.name, city: user.city ?? null, state: user.state ?? null }
 }
 
 /**
@@ -26,17 +17,14 @@ export const createSolicitacao = async (req, res) => {
     const familiarId = req.userId
     const { titulo, descricao, tipoCuidado, cidade, estado, urgencia } = req.body
 
-    const solicitacao = await prisma.solicitacao.create({
-      data: {
-        familiarId,
-        titulo: titulo.trim(),
-        descricao: descricao.trim(),
-        tipoCuidado,
-        cidade: cidade?.trim() || null,
-        estado: estado?.trim().toUpperCase() || null,
-        urgencia,
-      },
-      select: PUBLIC_SELECT,
+    const solicitacao = await solicitacaoRepo.create({
+      familiarId,
+      titulo: titulo.trim(),
+      descricao: descricao.trim(),
+      tipoCuidado,
+      cidade: cidade?.trim() || null,
+      estado: estado?.trim().toUpperCase() || null,
+      urgencia,
     })
 
     return res.status(201).json({ solicitacao })
@@ -60,7 +48,7 @@ export const createSolicitacao = async (req, res) => {
 export const updateSolicitacao = async (req, res) => {
   try {
     const { id } = req.params
-    const existing = await prisma.solicitacao.findUnique({ where: { id } })
+    const existing = await solicitacaoRepo.getById(id)
     if (!existing) {
       return res.status(404).json({ msg: 'Solicitação não encontrada.' })
     }
@@ -73,17 +61,13 @@ export const updateSolicitacao = async (req, res) => {
 
     const { titulo, descricao, tipoCuidado, cidade, estado, urgencia } = req.body
 
-    const updated = await prisma.solicitacao.update({
-      where: { id },
-      data: {
-        titulo: titulo.trim(),
-        descricao: descricao.trim(),
-        tipoCuidado,
-        cidade: cidade?.trim() || null,
-        estado: estado?.trim().toUpperCase() || null,
-        urgencia,
-      },
-      select: PUBLIC_SELECT,
+    const updated = await solicitacaoRepo.update(id, {
+      titulo: titulo.trim(),
+      descricao: descricao.trim(),
+      tipoCuidado,
+      cidade: cidade?.trim() || null,
+      estado: estado?.trim().toUpperCase() || null,
+      urgencia,
     })
 
     return res.status(200).json({ solicitacao: updated })
@@ -109,7 +93,7 @@ export const assumirSolicitacao = async (req, res) => {
     const { id } = req.params
     const caregiverId = req.userId
 
-    const solicitacao = await prisma.solicitacao.findUnique({ where: { id } })
+    const solicitacao = await solicitacaoRepo.getById(id)
     if (!solicitacao) {
       return res.status(404).json({ msg: 'Solicitação não encontrada.' })
     }
@@ -121,14 +105,10 @@ export const assumirSolicitacao = async (req, res) => {
       ? solicitacao.viewedByIds
       : [...solicitacao.viewedByIds, caregiverId]
 
-    const updated = await prisma.solicitacao.update({
-      where: { id },
-      data: {
-        status: 'EM_ANDAMENTO',
-        assignedCaregiverId: caregiverId,
-        viewedByIds,
-      },
-      select: PUBLIC_SELECT,
+    const updated = await solicitacaoRepo.update(id, {
+      status: 'EM_ANDAMENTO',
+      assignedCaregiverId: caregiverId,
+      viewedByIds,
     })
     return res.status(200).json({ solicitacao: updated })
   } catch (err) {
@@ -150,7 +130,7 @@ export const assumirSolicitacao = async (req, res) => {
 export const concluirSolicitacao = async (req, res) => {
   try {
     const { id } = req.params
-    const solicitacao = await prisma.solicitacao.findUnique({ where: { id } })
+    const solicitacao = await solicitacaoRepo.getById(id)
     if (!solicitacao) {
       return res.status(404).json({ msg: 'Solicitação não encontrada.' })
     }
@@ -161,11 +141,7 @@ export const concluirSolicitacao = async (req, res) => {
       return res.status(422).json({ msg: 'Só é possível concluir uma solicitação que está em andamento.' })
     }
 
-    const updated = await prisma.solicitacao.update({
-      where: { id },
-      data: { status: 'CONCLUIDA' },
-      select: PUBLIC_SELECT,
-    })
+    const updated = await solicitacaoRepo.update(id, { status: 'CONCLUIDA' })
     return res.status(200).json({ solicitacao: updated })
   } catch (err) {
     logger.error('solicitacao:concluir_failed', {
@@ -185,11 +161,7 @@ export const concluirSolicitacao = async (req, res) => {
 export const listMySolicitacoes = async (req, res) => {
   try {
     const familiarId = req.userId
-    const solicitacoes = await prisma.solicitacao.findMany({
-      where: { familiarId },
-      orderBy: { createdAt: 'desc' },
-      select: PUBLIC_SELECT,
-    })
+    const solicitacoes = await solicitacaoRepo.listByFamiliar(familiarId)
     // "interessados" = nº de cuidadores que já visualizaram a solicitação.
     const withCounts = solicitacoes.map((s) => ({
       ...s,
@@ -214,14 +186,12 @@ export const listMySolicitacoes = async (req, res) => {
 export const getSolicitacao = async (req, res) => {
   try {
     const { id } = req.params
-    const solicitacao = await prisma.solicitacao.findUnique({
-      where: { id },
-      select: { ...PUBLIC_SELECT, familiar: { select: { id: true, name: true, city: true, state: true } } },
-    })
+    const solicitacao = await solicitacaoRepo.getById(id)
     if (!solicitacao) {
       return res.status(404).json({ msg: 'Solicitação não encontrada.' })
     }
-    return res.status(200).json({ solicitacao })
+    const familiar = pickFamiliar(await getUserById(solicitacao.familiarId))
+    return res.status(200).json({ solicitacao: { ...solicitacao, familiar } })
   } catch (err) {
     logger.error('solicitacao:get_failed', {
       error: err.message,
@@ -240,7 +210,7 @@ export const getSolicitacao = async (req, res) => {
 export const cancelSolicitacao = async (req, res) => {
   try {
     const { id } = req.params
-    const solicitacao = await prisma.solicitacao.findUnique({ where: { id } })
+    const solicitacao = await solicitacaoRepo.getById(id)
     if (!solicitacao) {
       return res.status(404).json({ msg: 'Solicitação não encontrada.' })
     }
@@ -251,11 +221,7 @@ export const cancelSolicitacao = async (req, res) => {
       return res.status(422).json({ msg: 'Esta solicitação não pode mais ser cancelada.' })
     }
 
-    const updated = await prisma.solicitacao.update({
-      where: { id },
-      data: { status: 'CANCELADA' },
-      select: PUBLIC_SELECT,
-    })
+    const updated = await solicitacaoRepo.update(id, { status: 'CANCELADA' })
     return res.status(200).json({ solicitacao: updated })
   } catch (err) {
     logger.error('solicitacao:cancel_failed', {
@@ -277,16 +243,17 @@ export const cancelSolicitacao = async (req, res) => {
 export const listAvailableSolicitacoes = async (req, res) => {
   try {
     const caregiverId = req.userId
-    const solicitacoes = await prisma.solicitacao.findMany({
-      where: {
-        OR: [
-          { status: { in: ['ABERTA', 'VISUALIZADA'] } },
-          { status: 'EM_ANDAMENTO', assignedCaregiverId: caregiverId },
-        ],
-      },
-      orderBy: { createdAt: 'desc' },
-      select: { ...PUBLIC_SELECT, familiar: { select: { id: true, name: true, city: true, state: true } } },
-    })
+    const base = await solicitacaoRepo.listAvailableForCaregiver(caregiverId)
+
+    // Enriququece com os dados do familiar (substitui o join do Prisma),
+    // buscando os usuários em lote.
+    const familiarById = new Map(
+      (await listByIds([...new Set(base.map((s) => s.familiarId))])).map((u) => [u.id, u])
+    )
+    const solicitacoes = base.map((s) => ({
+      ...s,
+      familiar: pickFamiliar(familiarById.get(s.familiarId)),
+    }))
     return res.status(200).json({ solicitacoes })
   } catch (err) {
     logger.error('solicitacao:list_available_failed', {
@@ -308,19 +275,15 @@ export const markSolicitacaoViewed = async (req, res) => {
     const { id } = req.params
     const caregiverId = req.userId
 
-    const solicitacao = await prisma.solicitacao.findUnique({ where: { id } })
+    const solicitacao = await solicitacaoRepo.getById(id)
     if (!solicitacao) {
       return res.status(404).json({ msg: 'Solicitação não encontrada.' })
     }
 
     const alreadyViewed = solicitacao.viewedByIds.includes(caregiverId)
-    const updated = await prisma.solicitacao.update({
-      where: { id },
-      data: {
-        viewedByIds: alreadyViewed ? solicitacao.viewedByIds : [...solicitacao.viewedByIds, caregiverId],
-        status: solicitacao.status === 'ABERTA' ? 'VISUALIZADA' : solicitacao.status,
-      },
-      select: PUBLIC_SELECT,
+    const updated = await solicitacaoRepo.update(id, {
+      viewedByIds: alreadyViewed ? solicitacao.viewedByIds : [...solicitacao.viewedByIds, caregiverId],
+      status: solicitacao.status === 'ABERTA' ? 'VISUALIZADA' : solicitacao.status,
     })
     return res.status(200).json({ solicitacao: updated })
   } catch (err) {

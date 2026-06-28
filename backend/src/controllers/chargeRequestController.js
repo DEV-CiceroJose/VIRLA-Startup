@@ -1,4 +1,5 @@
-import prisma from '../lib/prisma.js'
+import * as chargeRepo from '../repositories/chargeRequestRepository.js'
+import { getUserById } from '../repositories/userRepository.js'
 import { logger } from '../lib/logger.js'
 import { calculateChargeTotalCents } from '../utils/paymentFees.js'
 /**
@@ -14,7 +15,7 @@ export const createChargeRequest = async (req, res) => {
       return res.status(422).json({ msg: 'O familiar não pode ser você mesmo.' })
     }
 
-    const familiar = await prisma.user.findUnique({ where: { id: familiarId } })
+    const familiar = await getUserById(familiarId)
     if (!familiar) {
       return res.status(404).json({ msg: 'Familiar não encontrado.' })
     }
@@ -24,23 +25,14 @@ export const createChargeRequest = async (req, res) => {
 
     const { totalCents, platformFeeCents, fixedFeeCents } = calculateChargeTotalCents(baseAmount)
 
-    await prisma.chargeRequest.updateMany({
-      where: {
-        caregiverId,
-        familiarId,
-        status: 'PENDING',
-      },
-      data: { status: 'CANCELLED' },
-    })
+    await chargeRepo.cancelPendingForPair(caregiverId, familiarId)
 
-    const charge = await prisma.chargeRequest.create({
-      data: {
-        caregiverId,
-        familiarId,
-        baseAmount,
-        totalAmount: totalCents,
-        description,
-      },
+    const charge = await chargeRepo.create({
+      caregiverId,
+      familiarId,
+      baseAmount,
+      totalAmount: totalCents,
+      description,
     })
 
     return res.status(201).json({
@@ -69,26 +61,13 @@ export const getPendingChargeWithPeer = async (req, res) => {
     const userId = req.userId
     const { peerId } = req.params
 
-    const user = await prisma.user.findUnique({ where: { id: userId } })
-    const peer = await prisma.user.findUnique({ where: { id: peerId } })
+    const user = await getUserById(userId)
+    const peer = await getUserById(peerId)
     if (!user || !peer) {
       return res.status(404).json({ msg: 'Usuário não encontrado.' })
     }
 
-    const charge = await prisma.chargeRequest.findFirst({
-      where: {
-        status: 'PENDING',
-        OR: [
-          { caregiverId: userId, familiarId: peerId },
-          { caregiverId: peerId, familiarId: userId },
-        ],
-      },
-      orderBy: { createdAt: 'desc' },
-      include: {
-        caregiver: { select: { id: true, name: true, role: true } },
-        familiar: { select: { id: true, name: true, role: true } },
-      },
-    })
+    const charge = await chargeRepo.findPendingBetween(userId, peerId)
 
     if (!charge) {
       return res.status(200).json({ charge: null })
@@ -102,6 +81,12 @@ export const getPendingChargeWithPeer = async (req, res) => {
       return res.status(200).json({ charge: null })
     }
 
+    // Nomes do cuidador/familiar (substitui o include do Prisma).
+    const caregiver = charge.caregiverId === user.id ? user
+      : charge.caregiverId === peer.id ? peer : await getUserById(charge.caregiverId)
+    const familiar = charge.familiarId === user.id ? user
+      : charge.familiarId === peer.id ? peer : await getUserById(charge.familiarId)
+
     return res.status(200).json({
       charge: {
         id: charge.id,
@@ -111,8 +96,8 @@ export const getPendingChargeWithPeer = async (req, res) => {
         status: charge.status,
         caregiverId: charge.caregiverId,
         familiarId: charge.familiarId,
-        caregiverName: charge.caregiver.name,
-        familiarName: charge.familiar.name,
+        caregiverName: caregiver?.name ?? 'Usuário',
+        familiarName: familiar?.name ?? 'Usuário',
       },
     })
   } catch (err) {

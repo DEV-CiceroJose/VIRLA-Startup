@@ -1,72 +1,69 @@
-import prisma from '../lib/prisma.js'
+import { db } from '../lib/firestore.js'
+import { mapDoc, nowTs, toTimestamp } from '../repositories/_helpers.js'
+import {
+  escrowsCol,
+  idempotencyCol,
+  auditCol,
+  getById as getEscrowById,
+  getByPaymentId as getEscrowByPaymentId,
+  getAuditTrail as getAuditTrailDocs,
+} from '../repositories/escrowRepository.js'
+import { paymentsCol } from '../repositories/paymentRepository.js'
 import { logger } from '../lib/logger.js'
 import { assertEscrowTransition, isTerminalEscrowStatus } from './escrowStateMachine.js'
 import { validateAmountCents, validateIdempotencyKey } from '../utils/validation.js'
 
 /**
- * Registra transição na trilha de auditoria (append-only).
- * @param {import('@prisma/client').Prisma.TransactionClient} tx
+ * escrowService — custódia (escrow) sobre Firestore. As transições de estado
+ * usam `db.runTransaction`: a leitura dentro da transação trava o documento e
+ * o `tx.update` só comita se a versão lida não mudou — equivalente ao
+ * `updateMany` condicional do Prisma (compare-and-set anti-race).
+ *
+ * A trilha de auditoria fica em `escrows/{id}/auditLogs` e é escrita na MESMA
+ * transação da transição. A idempotência usa a própria chave como ID do
+ * documento em `escrowIdempotencyKeys`, garantindo unicidade via `tx.set`/get.
  */
-async function writeAuditLog(tx, {
-  escrowId,
-  fromStatus,
-  toStatus,
-  actorId = null,
-  reason = null,
-  metadata = null,
-}) {
-  return tx.escrowAuditLog.create({
-    data: {
-      escrowId,
-      fromStatus,
-      toStatus,
-      actorId,
-      reason,
-      metadata: metadata ?? undefined,
-    },
+
+/** Escreve um registro de auditoria dentro da transação. */
+function writeAuditLog(tx, escrowId, { fromStatus, toStatus, actorId = null, reason = null, metadata = null }) {
+  tx.set(auditCol(escrowId).doc(), {
+    escrowId,
+    fromStatus,
+    toStatus,
+    actorId,
+    reason,
+    metadata: metadata ?? null,
+    createdAt: nowTs(),
   })
 }
 
 /**
- * Consulta registro idempotente — retorna resposta cacheada se a chave já foi usada.
- * @param {string} idempotencyKey
+ * Cria a custódia vinculada ao pagamento (PENDING). Recebe a transação do
+ * Firestore — é chamada dentro da mesma transação que cria o Payment.
  */
-async function findIdempotentResponse(idempotencyKey) {
-  const record = await prisma.escrowIdempotencyKey.findUnique({
-    where: { key: idempotencyKey },
-  })
-  if (!record?.response) return null
-  return { record, body: record.response }
-}
-
-/**
- * Cria custódia vinculada ao pagamento (estado inicial PENDING).
- * @param {import('@prisma/client').Prisma.TransactionClient} tx
- */
-export async function createEscrowForPayment(tx, {
-  paymentId,
-  payerId,
-  payeeId,
-  amount,
-  actorId,
-}) {
+export function createEscrowForPayment(tx, { paymentId, payerId, payeeId, amount, actorId }) {
   const amountCheck = validateAmountCents(amount)
   if (!amountCheck.valid) {
     throw new Error(amountCheck.error)
   }
 
-  const escrow = await tx.escrow.create({
-    data: {
-      paymentId,
-      payerId,
-      payeeId: payeeId ?? null,
-      amount: amountCheck.amount,
-      status: 'PENDING',
-    },
+  const escrowRef = escrowsCol().doc()
+  const when = nowTs()
+
+  tx.set(escrowRef, {
+    paymentId,
+    payerId,
+    payeeId: payeeId ?? null,
+    amount: amountCheck.amount,
+    status: 'PENDING',
+    heldAt: null,
+    disputedAt: null,
+    releasedAt: null,
+    createdAt: when,
+    updatedAt: when,
   })
 
-  await writeAuditLog(tx, {
-    escrowId: escrow.id,
+  writeAuditLog(tx, escrowRef.id, {
     fromStatus: null,
     toStatus: 'PENDING',
     actorId,
@@ -74,31 +71,40 @@ export async function createEscrowForPayment(tx, {
     metadata: { paymentId, amount: amountCheck.amount },
   })
 
-  return escrow
+  return {
+    id: escrowRef.id,
+    paymentId,
+    payerId,
+    payeeId: payeeId ?? null,
+    amount: amountCheck.amount,
+    status: 'PENDING',
+  }
 }
 
 /**
- * Transição atômica PENDING → HELD após confirmação do gateway (webhook).
- * Usa updateMany condicional para evitar race entre workers concorrentes.
- *
- * @param {string} paymentId
- * @param {string} [actorId]
+ * Transição atômica PENDING → HELD após confirmação do gateway (webhook/poll).
  */
 export async function holdEscrowFunds(paymentId, actorId = null) {
-  return prisma.$transaction(async (tx) => {
-    const escrow = await tx.escrow.findUnique({
-      where: { paymentId },
-      include: { payment: true },
-    })
+  const found = await getEscrowByPaymentId(paymentId)
+  if (!found) {
+    return { updated: false, reason: 'NO_ESCROW' }
+  }
 
-    if (!escrow) {
+  const escrowRef = escrowsCol().doc(found.id)
+  const paymentRef = paymentsCol().doc(paymentId)
+
+  return db.runTransaction(async (tx) => {
+    const escrowSnap = await tx.get(escrowRef)
+    const paymentSnap = await tx.get(paymentRef)
+
+    if (!escrowSnap.exists) {
       return { updated: false, reason: 'NO_ESCROW' }
     }
+    const escrow = mapDoc(escrowSnap)
 
     if (escrow.status === 'HELD') {
       return { updated: false, reason: 'ALREADY_HELD', escrow }
     }
-
     if (isTerminalEscrowStatus(escrow.status)) {
       return { updated: false, reason: 'TERMINAL', escrow }
     }
@@ -108,47 +114,30 @@ export async function holdEscrowFunds(paymentId, actorId = null) {
       return { updated: false, reason: transition.error, escrow }
     }
 
-    if (escrow.payment.status !== 'PAID') {
+    const payment = mapDoc(paymentSnap)
+    if (!payment || payment.status !== 'PAID') {
       return { updated: false, reason: 'PAYMENT_NOT_PAID', escrow }
     }
-
-    const result = await tx.escrow.updateMany({
-      where: { id: escrow.id, status: 'PENDING' },
-      data: { status: 'HELD', heldAt: new Date() },
-    })
-
-    if (result.count === 0) {
-      const current = await tx.escrow.findUnique({ where: { id: escrow.id } })
-      return { updated: false, reason: 'RACE_LOST', escrow: current }
+    if (escrow.status !== 'PENDING') {
+      return { updated: false, reason: 'RACE_LOST', escrow }
     }
 
-    await writeAuditLog(tx, {
-      escrowId: escrow.id,
+    const when = new Date()
+    tx.update(escrowRef, { status: 'HELD', heldAt: toTimestamp(when), updatedAt: nowTs() })
+    writeAuditLog(tx, escrow.id, {
       fromStatus: 'PENDING',
       toStatus: 'HELD',
       actorId,
       reason: 'Fundos retidos em custódia após confirmação do PIX',
-      metadata: { billingId: escrow.payment.billingId },
+      metadata: { billingId: payment.billingId },
     })
 
-    const updated = await tx.escrow.findUnique({ where: { id: escrow.id } })
-    return { updated: true, escrow: updated }
+    return { updated: true, escrow: { ...escrow, status: 'HELD', heldAt: when } }
   })
 }
 
 /**
- * Executa transição com idempotência e updateMany condicional (anti race).
- *
- * @param {{
- *   escrowId: string
- *   actorId: string
- *   idempotencyKey: string
- *   operation: 'RELEASE' | 'DISPUTE'
- *   targetStatus: 'RELEASED' | 'DISPUTED'
- *   fromStatuses: string[]
- *   reason: string
- *   authorize: (escrow: object) => void
- * }} params
+ * Executa transição (RELEASE/DISPUTE) com idempotência e compare-and-set.
  */
 async function transitionEscrowWithIdempotency({
   escrowId,
@@ -167,31 +156,36 @@ async function transitionEscrowWithIdempotency({
     throw err
   }
 
-  const cached = await findIdempotentResponse(keyCheck.key)
-  if (cached) {
-    if (cached.record.escrowId !== escrowId || cached.record.operation !== operation) {
-      const err = new Error('Idempotency-Key já utilizada em outra operação.')
-      err.statusCode = 409
-      throw err
-    }
-    return { idempotent: true, body: cached.body }
-  }
+  const escrowRef = escrowsCol().doc(escrowId)
+  const idempRef = idempotencyCol().doc(keyCheck.key)
 
-  const result = await prisma.$transaction(async (tx) => {
-    const escrow = await tx.escrow.findUnique({
-      where: { id: escrowId },
-      include: { payment: true },
-    })
-
-    if (!escrow) {
+  const result = await db.runTransaction(async (tx) => {
+    const escrowSnap = await tx.get(escrowRef)
+    if (!escrowSnap.exists) {
       const err = new Error('Custódia não encontrada.')
       err.statusCode = 404
       throw err
     }
+    const escrow = mapDoc(escrowSnap)
+
+    const paymentSnap = await tx.get(paymentsCol().doc(escrow.paymentId))
+    const idempSnap = await tx.get(idempRef)
+
+    // Resposta cacheada: requisição repetida com a mesma chave.
+    if (idempSnap.exists) {
+      const rec = idempSnap.data()
+      if (rec.escrowId !== escrowId || rec.operation !== operation) {
+        const err = new Error('Idempotency-Key já utilizada em outra operação.')
+        err.statusCode = 409
+        throw err
+      }
+      return { idempotent: true, body: rec.response }
+    }
 
     authorize(escrow)
 
-    if (escrow.amount !== escrow.payment.amount) {
+    const payment = mapDoc(paymentSnap)
+    if (!payment || escrow.amount !== payment.amount) {
       const err = new Error('Inconsistência de valor entre pagamento e custódia.')
       err.statusCode = 409
       throw err
@@ -205,85 +199,60 @@ async function transitionEscrowWithIdempotency({
     }
 
     if (!fromStatuses.includes(escrow.status)) {
+      // Já no estado-alvo → tratada como aplicação anterior (idempotente).
+      if (escrow.status === targetStatus) {
+        return {
+          idempotent: false,
+          body: { escrowId, status: escrow.status, message: 'Transição já aplicada.' },
+        }
+      }
       const err = new Error(`Operação não permitida no estado "${escrow.status}".`)
       err.statusCode = 409
       throw err
     }
 
+    const when = new Date()
     const dataPatch =
       targetStatus === 'RELEASED'
-        ? { status: 'RELEASED', releasedAt: new Date() }
-        : { status: 'DISPUTED', disputedAt: new Date() }
+        ? { status: 'RELEASED', releasedAt: toTimestamp(when) }
+        : { status: 'DISPUTED', disputedAt: toTimestamp(when) }
 
-    const updated = await tx.escrow.updateMany({
-      where: { id: escrowId, status: { in: fromStatuses } },
-      data: dataPatch,
-    })
-
-    if (updated.count === 0) {
-      const current = await tx.escrow.findUnique({ where: { id: escrowId } })
-      if (current?.status === targetStatus) {
-        const body = {
-          escrowId: current.id,
-          status: current.status,
-          message: 'Transição já aplicada.',
-        }
-        return { body, escrow: current, fromStatus: current.status }
-      }
-      const err = new Error('Conflito de concorrência — tente novamente.')
-      err.statusCode = 409
-      throw err
-    }
-
-    const fromStatus = escrow.status
-
-    await writeAuditLog(tx, {
-      escrowId,
-      fromStatus,
+    tx.update(escrowRef, { ...dataPatch, updatedAt: nowTs() })
+    writeAuditLog(tx, escrowId, {
+      fromStatus: escrow.status,
       toStatus: targetStatus,
       actorId,
       reason,
       metadata: { operation, idempotencyKey: keyCheck.key },
     })
 
-    const fresh = await tx.escrow.findUnique({ where: { id: escrowId } })
-
     const body = {
-      escrowId: fresh.id,
-      status: fresh.status,
-      amount: fresh.amount,
-      payeeId: fresh.payeeId,
-      releasedAt: fresh.releasedAt,
-      disputedAt: fresh.disputedAt,
+      escrowId,
+      status: targetStatus,
+      amount: escrow.amount,
+      payeeId: escrow.payeeId,
+      releasedAt: targetStatus === 'RELEASED' ? when : null,
+      disputedAt: targetStatus === 'DISPUTED' ? when : null,
     }
 
-    await tx.escrowIdempotencyKey.create({
-      data: {
-        key: keyCheck.key,
-        operation,
-        escrowId,
-        actorId,
-        resultStatus: targetStatus,
-        response: body,
-      },
+    tx.set(idempRef, {
+      key: keyCheck.key,
+      operation,
+      escrowId,
+      actorId,
+      resultStatus: targetStatus,
+      response: body,
+      createdAt: nowTs(),
     })
 
-    return { body, escrow: fresh, fromStatus }
+    return { idempotent: false, body }
   })
 
   logger.info('escrow:transition', { operation, escrowId, actorId, targetStatus })
-
-  return { idempotent: false, body: result.body }
+  return result
 }
 
-/**
- * Libera fundos ao cuidador (HELD ou DISPUTED → RELEASED).
- * Exige Idempotency-Key — requisições duplicadas retornam o mesmo resultado.
- *
- * @param {string} escrowId
- * @param {string} actorId - deve ser o payer (familiar)
- * @param {string} idempotencyKey
- */
+/** Libera fundos ao cuidador (HELD ou DISPUTED → RELEASED). Idempotente. */
 export async function releaseEscrowFunds(escrowId, actorId, idempotencyKey) {
   return transitionEscrowWithIdempotency({
     escrowId,
@@ -308,9 +277,7 @@ export async function releaseEscrowFunds(escrowId, actorId, idempotencyKey) {
   })
 }
 
-/**
- * Abre disputa (HELD → DISPUTED). Idempotente.
- */
+/** Abre disputa (HELD → DISPUTED). Idempotente. */
 export async function disputeEscrowFunds(escrowId, actorId, idempotencyKey, disputeReason = '') {
   return transitionEscrowWithIdempotency({
     escrowId,
@@ -331,11 +298,9 @@ export async function disputeEscrowFunds(escrowId, actorId, idempotencyKey, disp
   })
 }
 
-/**
- * Lista trilha de auditoria de uma custódia (participantes apenas).
- */
+/** Lista a trilha de auditoria de uma custódia (participantes apenas). */
 export async function getEscrowAuditTrail(escrowId, actorId) {
-  const escrow = await prisma.escrow.findUnique({ where: { id: escrowId } })
+  const escrow = await getEscrowById(escrowId)
   if (!escrow) {
     const err = new Error('Custódia não encontrada.')
     err.statusCode = 404
@@ -347,8 +312,5 @@ export async function getEscrowAuditTrail(escrowId, actorId) {
     err.statusCode = 403
     throw err
   }
-  return prisma.escrowAuditLog.findMany({
-    where: { escrowId },
-    orderBy: { createdAt: 'asc' },
-  })
+  return getAuditTrailDocs(escrowId)
 }

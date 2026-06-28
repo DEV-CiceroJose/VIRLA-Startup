@@ -1,4 +1,9 @@
-import prisma from '../lib/prisma.js'
+import { db } from '../lib/firestore.js'
+import { nowTs } from '../repositories/_helpers.js'
+import * as paymentRepo from '../repositories/paymentRepository.js'
+import { getByPaymentId as getEscrowByPaymentId } from '../repositories/escrowRepository.js'
+import { getUserById } from '../repositories/userRepository.js'
+import { getById as getChargeById } from '../repositories/chargeRequestRepository.js'
 import { logger } from '../lib/logger.js'
 import { createBilling, getBillingStatus } from '../services/abacatePayService.js'
 import { createEscrowForPayment, holdEscrowFunds } from '../services/escrowService.js'
@@ -17,7 +22,7 @@ export const initiateBilling = async (req, res) => {
   try {
     const userId = req.userId
 
-    const user = await prisma.user.findUnique({ where: { id: userId } })
+    const user = await getUserById(userId)
     if (!user) {
       return res.status(404).json({ msg: 'Usuário não encontrado.' })
     }
@@ -29,7 +34,7 @@ export const initiateBilling = async (req, res) => {
       return res.status(422).json({ msg: amountCheck.error })
     }
 
-    const payee = await prisma.user.findUnique({ where: { id: payeeId } })
+    const payee = await getUserById(payeeId)
     if (!payee) {
       return res.status(404).json({ msg: 'Cuidador não encontrado.' })
     }
@@ -42,9 +47,7 @@ export const initiateBilling = async (req, res) => {
 
     let chargeRequest = null
     if (chargeRequestId) {
-      chargeRequest = await prisma.chargeRequest.findUnique({
-        where: { id: chargeRequestId },
-      })
+      chargeRequest = await getChargeById(chargeRequestId)
       if (!chargeRequest || chargeRequest.status !== 'PENDING') {
         return res.status(404).json({ msg: 'Cobrança não encontrada ou já processada.' })
       }
@@ -79,30 +82,33 @@ export const initiateBilling = async (req, res) => {
       })
     }
 
-    const { payment, escrow } = await prisma.$transaction(async (tx) => {
-      const paymentRecord = await tx.payment.create({
-        data: {
-          billingId: billing.billingId,
-          // CORREÇÃO (webhook): persistir o ID da cobrança HOSPEDADA (bill_*).
-          // O webhook `billing.paid` do AbacatePay referencia esse ID, não o
-          // pix_char_* do QR Code. Antes era `null`, então o webhook nunca
-          // encontrava o pagamento e o status ficava preso em PENDING.
-          gatewayBillingId: billing.gatewayBillingId ?? null,
-          userId,
-          amount: amountCheck.amount,
-          status: 'PENDING',
-        },
+    const { payment, escrow } = await db.runTransaction(async (tx) => {
+      const paymentRef = paymentRepo.paymentsCol().doc()
+      tx.set(paymentRef, {
+        billingId: billing.billingId,
+        // CORREÇÃO (webhook): persistir o ID da cobrança HOSPEDADA (bill_*).
+        // O webhook `billing.paid` do AbacatePay referencia esse ID, não o
+        // pix_char_* do QR Code. Antes era `null`, então o webhook nunca
+        // encontrava o pagamento e o status ficava preso em PENDING.
+        gatewayBillingId: billing.gatewayBillingId ?? null,
+        userId,
+        amount: amountCheck.amount,
+        status: 'PENDING',
+        paidAt: null,
+        createdAt: nowTs(),
       })
 
-      const escrowRecord = await createEscrowForPayment(tx, {
-        paymentId: paymentRecord.id,
+      // createEscrowForPayment só escreve (tx.set) — compatível com a regra do
+      // Firestore de "leituras antes de escritas" nesta transação.
+      const escrowRecord = createEscrowForPayment(tx, {
+        paymentId: paymentRef.id,
         payerId: userId,
         payeeId,
         amount: amountCheck.amount,
         actorId: userId,
       })
 
-      return { payment: paymentRecord, escrow: escrowRecord }
+      return { payment: { id: paymentRef.id }, escrow: escrowRecord }
     })
 
     return res.status(201).json({
@@ -133,10 +139,7 @@ export const pollBillingStatus = async (req, res) => {
   try {
     const { billingId } = req.params
 
-    const payment = await prisma.payment.findUnique({
-      where: { billingId },
-      include: { escrow: { select: { id: true, status: true } } },
-    })
+    const payment = await paymentRepo.getByBillingId(billingId)
 
     if (!payment) {
       return res.status(404).json({ msg: 'Pagamento não encontrado.' })
@@ -146,13 +149,15 @@ export const pollBillingStatus = async (req, res) => {
       return res.status(403).json({ msg: 'Acesso negado.' })
     }
 
+    const escrow = await getEscrowByPaymentId(payment.id)
+
     // Se já estiver pago no nosso banco, responde direto
     if (payment.status === 'PAID') {
       return res.status(200).json({
         status: 'PAID',
         paidAt: payment.paidAt,
-        escrowStatus: payment.escrow?.status ?? null,
-        escrowId: payment.escrow?.id ?? null,
+        escrowStatus: escrow?.status ?? null,
+        escrowId: escrow?.id ?? null,
         expiresAt: null,
       })
     }
@@ -166,8 +171,8 @@ export const pollBillingStatus = async (req, res) => {
       return res.status(200).json({
         status: payment.status,
         paidAt: payment.paidAt,
-        escrowStatus: payment.escrow?.status ?? null,
-        escrowId: payment.escrow?.id ?? null,
+        escrowStatus: escrow?.status ?? null,
+        escrowId: escrow?.id ?? null,
         expiresAt: null,
       });
     }
@@ -175,13 +180,7 @@ export const pollBillingStatus = async (req, res) => {
     const gatewayStatus = normalizeGatewayStatus(billing.status);
 
     if (gatewayStatus !== payment.status) {
-      await prisma.payment.updateMany({
-        where: { billingId, status: { not: gatewayStatus } },
-        data: {
-          status: gatewayStatus,
-          paidAt: gatewayStatus === 'PAID' ? new Date() : null,
-        },
-      })
+      await paymentRepo.setStatusByBillingId(billingId, gatewayStatus)
 
       if (gatewayStatus === 'PAID') {
         await holdEscrowFunds(payment.id)
@@ -189,16 +188,14 @@ export const pollBillingStatus = async (req, res) => {
       }
     }
 
-    const fresh = await prisma.payment.findUnique({
-      where: { billingId },
-      include: { escrow: { select: { id: true, status: true } } },
-    })
+    const fresh = await paymentRepo.getByBillingId(billingId)
+    const freshEscrow = await getEscrowByPaymentId(fresh.id)
 
     return res.status(200).json({
       status: fresh.status,
       paidAt: fresh.paidAt,
-      escrowStatus: fresh.escrow?.status ?? null,
-      escrowId: fresh.escrow?.id ?? null,
+      escrowStatus: freshEscrow?.status ?? null,
+      escrowId: freshEscrow?.id ?? null,
       expiresAt: billing.expiresAt ?? null,
     })
   } catch (err) {

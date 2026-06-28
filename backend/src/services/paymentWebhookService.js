@@ -1,5 +1,6 @@
-import prisma from '../lib/prisma.js'
 import { logger } from '../lib/logger.js'
+import * as paymentRepo from '../repositories/paymentRepository.js'
+import { getByPaymentId as getEscrowByPaymentId } from '../repositories/escrowRepository.js'
 import { holdEscrowFunds } from './escrowService.js'
 import { markChargePaidForPayment } from './chargeRequestService.js'
 
@@ -56,33 +57,16 @@ export async function processPaymentEvent(event) {
     return { handled: false }
   }
 
-  const paymentResult = await prisma.payment.updateMany({
-    where: {
-      status: { not: 'PAID' },
-      OR: [{ billingId }, { gatewayBillingId: billingId }],
-    },
-    data: { status: 'PAID', paidAt: new Date() },
-  })
+  const { changed, payment } = await paymentRepo.markPaidByEitherBillingId(billingId)
 
-  if (paymentResult.count === 0) {
-    const existing = await prisma.payment.findFirst({
-      where: { OR: [{ billingId }, { gatewayBillingId: billingId }] },
-    })
-    if (!existing) {
-      logger.error('webhook:payment_not_found', { billingId })
-      return { handled: false, billingId }
-    }
-    logger.info('webhook:payment_already_paid', { billingId })
-  } else {
-    logger.info('webhook:payment_marked_paid', { billingId })
+  if (!payment) {
+    logger.error('webhook:payment_not_found', { billingId })
+    return { handled: false, billingId }
   }
+  logger.info(changed ? 'webhook:payment_marked_paid' : 'webhook:payment_already_paid', { billingId })
 
-  const payment = await prisma.payment.findFirst({
-    where: { OR: [{ billingId }, { gatewayBillingId: billingId }] },
-    include: { escrow: true },
-  })
-
-  if (!payment?.escrow) {
+  const escrow = await getEscrowByPaymentId(payment.id)
+  if (!escrow) {
     logger.warn('webhook:no_escrow_for_billing', { billingId })
     return { handled: true, billingId }
   }

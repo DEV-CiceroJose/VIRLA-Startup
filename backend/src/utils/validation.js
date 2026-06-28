@@ -2,16 +2,22 @@
  * Validações de entrada compartilhadas — camada anti-manipulação de IDs e valores.
  */
 
-const OBJECT_ID_REGEX = /^[a-f\d]{24}$/i
+// Aceita IDs do Firestore (~20 chars alfanuméricos, podendo conter - e _) e
+// também ObjectIds do Mongo (24 hex) para registros migrados do banco antigo.
+const ID_REGEX = /^[A-Za-z0-9_-]{16,128}$/
 
 /**
- * Verifica se o valor é um ObjectId MongoDB válido (24 hex).
+ * Verifica se o valor é um ID de documento válido (Firestore ou ObjectId
+ * migrado). Antes validava apenas ObjectId de 24 hex; ampliado na migração
+ * para Firebase. Mantém o nome `isValidObjectId` por compatibilidade de import.
  * @param {unknown} value
  * @returns {boolean}
  */
-export function isValidObjectId(value) {
-  return typeof value === 'string' && OBJECT_ID_REGEX.test(value)
+export function isValidId(value) {
+  return typeof value === 'string' && ID_REGEX.test(value)
 }
+
+export const isValidObjectId = isValidId
 
 /**
  * Rejeita valores monetários inválidos (zero, negativo, não-inteiro, acima do teto).

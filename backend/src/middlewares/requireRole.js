@@ -1,4 +1,4 @@
-import prisma from '../lib/prisma.js'
+import { getUserById } from '../repositories/userRepository.js'
 
 /**
  * Restringe rota a papéis permitidos (ex.: só CUIDADOR gera cobrança).
@@ -6,7 +6,7 @@ import prisma from '../lib/prisma.js'
 export function requireRole(...roles) {
   return async (req, res, next) => {
     try {
-      const user = await prisma.user.findUnique({ where: { id: req.userId } })
+      const user = await getUserById(req.userId)
       if (!user) {
         return res.status(404).json({ msg: 'Usuário não encontrado.' })
       }

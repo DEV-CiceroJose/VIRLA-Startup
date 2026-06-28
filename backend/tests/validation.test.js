@@ -6,11 +6,11 @@ import {
   validateIdempotencyKey,
 } from '../src/utils/validation.js'
 
-test('isValidObjectId valida ObjectId de 24 hex', () => {
-  assert.equal(isValidObjectId('507f1f77bcf86cd799439011'), true)
-  assert.equal(isValidObjectId('xyz'), false)
-  assert.equal(isValidObjectId('507f1f77bcf86cd79943901'), false) // 23 chars
-  assert.equal(isValidObjectId(123), false)
+test('isValidObjectId aceita IDs Firestore e ObjectIds Mongo; rejeita lixo', () => {
+  assert.equal(isValidObjectId('507f1f77bcf86cd799439011'), true) // Mongo 24 hex (migrado)
+  assert.equal(isValidObjectId('aBcD1234EfGh5678IjKl'), true)     // Firestore ~20 chars
+  assert.equal(isValidObjectId('xyz'), false)                     // curto demais
+  assert.equal(isValidObjectId(123), false)                       // não-string
 })
 
 test('validateAmountCents rejeita valores inválidos', () => {

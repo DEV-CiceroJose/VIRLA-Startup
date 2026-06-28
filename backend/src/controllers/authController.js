@@ -1,6 +1,7 @@
 import bcrypt from 'bcrypt'
 import jwt from 'jsonwebtoken'
-import prisma from '../lib/prisma.js'
+import { getUserById as findUserById, getUserByEmail } from '../repositories/userRepository.js'
+import { project } from '../repositories/_helpers.js'
 import { authLogger, logger } from '../lib/logger.js'
 import { USER_PUBLIC_SELECT, USER_SELF_SELECT } from '../lib/userSelects.js'
 
@@ -12,23 +13,23 @@ export const getUserById = async (req, res) => {
     // PII (email/cpf) só é devolvido quando o usuário consulta o PRÓPRIO perfil.
     // Para perfis de terceiros (feed, página de cuidador) usamos o select público.
     const isSelf = req.userId === req.params.id
-    const user = await prisma.user.findUnique({
-      where: { id: req.params.id },
-      select: isSelf ? USER_SELF_SELECT : USER_PUBLIC_SELECT,
-    })
+    const fullUser = await findUserById(req.params.id)
 
-    if (!user) {
+    if (!fullUser) {
       return res.status(404).json({ msg: 'Usuário não encontrado!' })
     }
 
     // Sprint 4: Cuidador não navega mais por perfis de Familiar diretamente —
     // o acesso passa a ser mediado pelas Solicitações (/solicitacoes).
-    if (!isSelf && user.role === 'FAMILIAR') {
-      const requester = await prisma.user.findUnique({ where: { id: req.userId } })
+    if (!isSelf && fullUser.role === 'FAMILIAR') {
+      const requester = await findUserById(req.userId)
       if (requester?.role === 'CUIDADOR') {
         return res.status(403).json({ msg: 'Acesse este familiar através de uma Solicitação.' })
       }
     }
+
+    // Projeção em memória: PII (email/cpf) só quando o usuário consulta a si mesmo.
+    const user = project(fullUser, isSelf ? USER_SELF_SELECT : USER_PUBLIC_SELECT)
 
     res.status(200).json({ user })
   } catch (error) {
@@ -48,7 +49,7 @@ const LoginUser = async (req, res) => {
   const { email, password } = req.body
 
   try {
-    const user = await prisma.user.findUnique({ where: { email } })
+    const user = await getUserByEmail(email)
 
     // Resposta genérica idêntica para "usuário inexistente" e "senha errada":
     // evita enumeração de contas (account enumeration).

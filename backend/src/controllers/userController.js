@@ -1,5 +1,15 @@
 import bcrypt from 'bcrypt'
-import prisma from '../lib/prisma.js'
+import {
+  getUserById,
+  getUserByEmail,
+  emailExists,
+  createUser,
+  updateUser,
+  deleteUser,
+  listAll,
+  listByRole,
+} from '../repositories/userRepository.js'
+import { project } from '../repositories/_helpers.js'
 import { authLogger, logger } from '../lib/logger.js'
 import { USER_PUBLIC_SELECT, USER_SELF_SELECT } from '../lib/userSelects.js'
 
@@ -71,43 +81,38 @@ const createUsers = async (req, res) => {
   const passwordHash = await bcrypt.hash(password, 12)
 
   try {
-    const existing = await prisma.user.findUnique({ where: { email } })
+    const existing = await getUserByEmail(email)
     if (existing) {
       return res.status(409).json({ msg: 'Este e-mail já está cadastrado' })
     }
 
-    const user = await prisma.user.create({
-      data: {
-        name,
-        birthDate,
-        role,
-        bio: bio ?? '',
-        email,
-        cpf,
-        password: passwordHash,
-        profileImage: emptyToNull(profileImage),
-        crm_crf: role === 'CUIDADOR' ? emptyToNull(crm_crf) : null,
-        registerNumber: emptyToNull(registerNumber),
-        hourlyRate,
-        specialties: parseSpecialties(specialties),
-        approach: emptyToNull(approach),
-        description: emptyToNull(description),
-        city: emptyToNull(city),
-        state: emptyToNull(state),
-      },
-      select: USER_SELF_SELECT,
+    const created = await createUser({
+      name,
+      birthDate,
+      role,
+      bio: bio ?? '',
+      email,
+      cpf: cpf ?? null,
+      password: passwordHash,
+      profileImage: emptyToNull(profileImage),
+      crm_crf: role === 'CUIDADOR' ? emptyToNull(crm_crf) : null,
+      registerNumber: emptyToNull(registerNumber),
+      hourlyRate,
+      specialties: parseSpecialties(specialties),
+      approach: emptyToNull(approach),
+      description: emptyToNull(description),
+      city: emptyToNull(city),
+      state: emptyToNull(state),
     })
+    const user = project(created, USER_SELF_SELECT)
     authLogger.info('auth:register_success', {
-      userId: user.id,
-      role: user.role,
+      userId: created.id,
+      role: created.role,
       ip: req.ip,
       timestamp: new Date().toISOString(),
     })
     return res.status(201).json({ user })
   } catch (error) {
-    if (error.code === 'P2002') {
-      return res.status(409).json({ msg: 'Este e-mail já está cadastrado' })
-    }
     logger.error('user:create_failed', {
       error: error.message,
       stack: error.stack,
@@ -120,7 +125,8 @@ const createUsers = async (req, res) => {
 const getUsers = async (req, res) => {
   // Rota administrativa/interna — protegida por checkToken.
   // Usa o select público (sem email/cpf) para não expor PII em massa.
-  const users = await prisma.user.findMany({ select: USER_PUBLIC_SELECT })
+  const all = await listAll()
+  const users = all.map((u) => project(u, USER_PUBLIC_SELECT))
   res.status(200).send(users)
 }
 
@@ -133,26 +139,22 @@ const getFeedUsers = async (req, res) => {
     const limit = FEED_PAGE_SIZE
     const skip = (page - 1) * limit
 
-    const loggedUser = await prisma.user.findUnique({
-      where: { id: loggedUserId },
-    })
+    const loggedUser = await getUserById(loggedUserId)
 
     if (!loggedUser) {
       return res.status(404).json({ msg: 'Usuário não encontrado' })
     }
 
     const oppositeRole = loggedUser.role === 'CUIDADOR' ? 'FAMILIAR' : 'CUIDADOR'
-    const where = { role: oppositeRole }
 
-    const [feedUsers, total] = await Promise.all([
-      prisma.user.findMany({
-        where,
-        skip,
-        take: limit,
-        select: USER_PUBLIC_SELECT,
-      }),
-      prisma.user.count({ where }),
-    ])
+    // Paginação por offset emulada: o Firestore não tem offset eficiente, mas
+    // o feed tem volume baixo no MVP — buscamos os usuários do papel oposto e
+    // recortamos a página em memória. Mantém o contrato `?page=N` do frontend.
+    const allOfRole = await listByRole(oppositeRole)
+    const total = allOfRole.length
+    const feedUsers = allOfRole
+      .slice(skip, skip + limit)
+      .map((u) => project(u, USER_PUBLIC_SELECT))
 
     const totalPages = Math.max(1, Math.ceil(total / limit))
 
@@ -217,20 +219,15 @@ const updateUsers = async (req, res) => {
   }
 
   try {
-    await prisma.user.update({
-      where: { id: req.params.id },
-      data,
-    })
-
-    const user = await prisma.user.findUnique({
-      where: { id: req.params.id },
-      select: USER_SELF_SELECT,
-    })
-    res.status(200).json({ user })
-  } catch (error) {
-    if (error.code === 'P2002') {
+    // Unicidade de email no update (substitui o tratamento de P2002 do Prisma).
+    if (data.email != null && (await emailExists(data.email, req.params.id))) {
       return res.status(409).json({ msg: 'Este e-mail já está cadastrado' })
     }
+
+    const updated = await updateUser(req.params.id, data)
+    const user = project(updated, USER_SELF_SELECT)
+    res.status(200).json({ user })
+  } catch (error) {
     logger.error('user:update_failed', {
       error: error.message,
       stack: error.stack,
@@ -254,9 +251,7 @@ const deleteUsers = async (req, res) => {
   }
 
   try {
-    await prisma.user.delete({
-      where: { id: req.params.id },
-    })
+    await deleteUser(req.params.id)
     authLogger.info('user:deleted', {
       userId: req.userId,
       timestamp: new Date().toISOString(),

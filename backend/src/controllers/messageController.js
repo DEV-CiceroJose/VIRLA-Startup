@@ -1,4 +1,4 @@
-import prisma from '../lib/prisma.js'
+import { getUserById, listByIds } from '../repositories/userRepository.js'
 import { messageLogger } from '../lib/logger.js'
 import {
   createMessage,
@@ -9,10 +9,9 @@ import {
 } from '../services/chatRealtimeService.js'
 
 /**
- * Sprint 0: as mensagens deixaram de ser persistidas no MongoDB via Prisma e
- * passaram a viver no Firebase Realtime Database (ver chatRealtimeService.js).
- * O `prisma` continua sendo usado aqui apenas para validar/enriquecer dados
- * de usuário (User ainda mora no Mongo) — só as Mensagens migraram.
+ * As mensagens vivem no Firebase Realtime Database (ver chatRealtimeService.js).
+ * Os dados de usuário (nome, papel) vêm do Firestore via userRepository para
+ * validar destinatários e enriquecer a lista de conversas.
  */
 
 /** POST body: { receiverId, content } — sender is req.userId from JWT */
@@ -31,7 +30,7 @@ export const sendMessage = async (req, res) => {
             return res.status(400).json({ msg: "Não é possível enviar mensagem para si mesmo" })
         }
 
-        const receiver = await prisma.user.findUnique({ where: { id: receiverId } })
+        const receiver = await getUserById(receiverId)
         if (!receiver) {
             return res.status(404).json({ msg: "Usuário destinatário não encontrado" })
         }
@@ -78,11 +77,16 @@ export const getMessageHistory = async (req, res) => {
         if (!otherId) { return res.status(400).json({ msg: "Usuário inválido" }) }
         if (otherId === me) { return res.status(400).json({ msg: "Conversa inválida" }) }
 
-        const other = await prisma.user.findUnique({
-            where: { id: otherId },
-            select: { id: true, name: true, role: true, profileImage: true, approach: true, crm_crf: true },
-        })
-        if (!other) return res.status(404).json({ msg: "Usuário não encontrado" })
+        const otherFull = await getUserById(otherId)
+        if (!otherFull) return res.status(404).json({ msg: "Usuário não encontrado" })
+        const other = {
+            id: otherFull.id,
+            name: otherFull.name,
+            role: otherFull.role,
+            profileImage: otherFull.profileImage ?? null,
+            approach: otherFull.approach ?? null,
+            crm_crf: otherFull.crm_crf ?? null,
+        }
 
         const messages = await getHistory(me, otherId)
 
@@ -103,9 +107,7 @@ export const getConversations = async (req, res) => {
         const entries = await getConversationsRTDB(me)
 
         const peerIds = entries.map((e) => e.peerId)
-        const peers = peerIds.length
-            ? await prisma.user.findMany({ where: { id: { in: peerIds } }, select: { id: true, name: true } })
-            : []
+        const peers = await listByIds(peerIds)
         const peerNameById = new Map(peers.map((p) => [p.id, p.name]))
 
         const conversations = entries.map((e) => ({

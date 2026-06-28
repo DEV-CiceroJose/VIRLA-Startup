@@ -1,0 +1,207 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  CUIDADOR
+  FAMILIAR
+}
+
+/// Estados da custódia Escrow — transições controladas por `escrowStateMachine.js`.
+enum EscrowStatus {
+  PENDING
+  HELD
+  DISPUTED
+  RELEASED
+}
+
+/// Operações que exigem chave de idempotência (liberação e disputa de fundos).
+enum EscrowOperation {
+  HOLD
+  RELEASE
+  DISPUTE
+}
+
+/// Cobrança gerada pelo cuidador e paga pelo familiar.
+enum ChargeRequestStatus {
+  PENDING
+  PAID
+  CANCELLED
+}
+
+/// Ciclo de vida de uma Solicitação de cuidado criada pelo familiar.
+enum SolicitacaoStatus {
+  ABERTA
+  VISUALIZADA
+  EM_ANDAMENTO
+  CONCLUIDA
+  CANCELADA
+}
+
+enum SolicitacaoUrgencia {
+  BAIXA
+  MEDIA
+  ALTA
+}
+
+model User {
+  id               String    @id @default(auto()) @map("_id") @db.ObjectId
+  name             String
+  birthDate        DateTime?
+  role             UserRole
+  bio              String
+  email            String    @unique
+  cpf              String?
+  password         String
+  profileImage     String?
+  crm_crf          String?
+  registerNumber   String?
+  hourlyRate       Float?
+  specialties      String[]  @default([])
+  approach         String?
+  description      String?
+  city             String?
+  state            String?
+  sentMessages     Message[] @relation("SentMessages")
+  receivedMessages Message[] @relation("ReceivedMessages")
+  payments         Payment[]
+  escrowsAsPayer   Escrow[]  @relation("EscrowPayer")
+  escrowsAsPayee   Escrow[]  @relation("EscrowPayee")
+  chargesCreated   ChargeRequest[] @relation("ChargeCaregiver")
+  chargesReceived  ChargeRequest[] @relation("ChargeFamiliar")
+  solicitacoes     Solicitacao[]   @relation("FamiliarSolicitacoes")
+}
+
+model ChargeRequest {
+  id          String              @id @default(auto()) @map("_id") @db.ObjectId
+  caregiverId String              @db.ObjectId
+  familiarId  String              @db.ObjectId
+  baseAmount  Int
+  totalAmount Int
+  description String?
+  status      ChargeRequestStatus @default(PENDING)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  caregiver User @relation("ChargeCaregiver", fields: [caregiverId], references: [id])
+  familiar  User @relation("ChargeFamiliar", fields: [familiarId], references: [id])
+
+  @@index([familiarId, status])
+  @@index([caregiverId, familiarId, status])
+}
+
+/// Solicitação de cuidado criada pelo familiar — entidade central do fluxo
+/// (Sprint 3/4). O cuidador navega pelas solicitações disponíveis em vez de
+/// acessar perfis de familiares diretamente.
+model Solicitacao {
+  id          String              @id @default(auto()) @map("_id") @db.ObjectId
+  familiarId  String              @db.ObjectId
+  titulo      String
+  descricao   String
+  tipoCuidado String[]            @default([])
+  cidade      String?
+  estado      String?
+  urgencia    SolicitacaoUrgencia @default(MEDIA)
+  status      SolicitacaoStatus   @default(ABERTA)
+
+  // Cuidadores que já abriram/visualizaram a solicitação (aba "Visualizadas").
+  viewedByIds String[] @default([]) @db.ObjectId
+
+  // Cuidador que assumiu a solicitação, quando aplicável (Sprint 4+).
+  assignedCaregiverId String? @db.ObjectId
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  familiar User @relation("FamiliarSolicitacoes", fields: [familiarId], references: [id])
+
+  @@index([familiarId, status])
+  @@index([status, createdAt])
+}
+
+model Message {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  content    String
+  audioUrl   String?
+  read       Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  senderId   String   @db.ObjectId
+  receiverId String   @db.ObjectId
+  sender     User     @relation("SentMessages", fields: [senderId], references: [id])
+  receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
+}
+
+model Payment {
+  id               String    @id @default(auto()) @map("_id") @db.ObjectId
+  billingId        String    @unique
+  gatewayBillingId String?
+  userId           String    @db.ObjectId
+  amount    Int
+  status    String    @default("PENDING") // PENDING | PAID | EXPIRED | CANCELED
+  paidAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  escrow Escrow?
+}
+
+/// Custódia de valores entre familiar (payer) e cuidador (payee).
+model Escrow {
+  id         String       @id @default(auto()) @map("_id") @db.ObjectId
+  paymentId  String       @unique @db.ObjectId
+  payerId    String       @db.ObjectId
+  payeeId    String?      @db.ObjectId
+  amount     Int
+  status     EscrowStatus @default(PENDING)
+  heldAt     DateTime?
+  disputedAt DateTime?
+  releasedAt DateTime?
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  payment            Payment              @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  payer              User                 @relation("EscrowPayer", fields: [payerId], references: [id])
+  payee              User?                @relation("EscrowPayee", fields: [payeeId], references: [id])
+  auditLogs          EscrowAuditLog[]
+  idempotencyRecords EscrowIdempotencyKey[]
+}
+
+/// Trilha de auditoria imutável — cada transição de estado gera um registro.
+model EscrowAuditLog {
+  id         String        @id @default(auto()) @map("_id") @db.ObjectId
+  escrowId   String        @db.ObjectId
+  fromStatus EscrowStatus?
+  toStatus   EscrowStatus
+  actorId    String?       @db.ObjectId
+  reason     String?
+  metadata   Json?
+  createdAt  DateTime      @default(now())
+
+  escrow Escrow @relation(fields: [escrowId], references: [id], onDelete: Cascade)
+
+  @@index([escrowId, createdAt])
+}
+
+/// Garante que requisições repetidas de liberação/disputa não movimentam fundos duas vezes.
+model EscrowIdempotencyKey {
+  id           String          @id @default(auto()) @map("_id") @db.ObjectId
+  key          String          @unique
+  operation    EscrowOperation
+  escrowId     String          @db.ObjectId
+  actorId      String          @db.ObjectId
+  resultStatus EscrowStatus?
+  response     Json?
+  createdAt    DateTime        @default(now())
+
+  escrow Escrow @relation(fields: [escrowId], references: [id], onDelete: Cascade)
+
+  @@index([escrowId, operation])
+}

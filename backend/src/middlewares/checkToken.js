@@ -29,6 +29,7 @@ const checkToken = (req, res, next) => {
   try {
     const decoded = jwt.verify(token, process.env.SECRET)
     req.userId = decoded.id ?? decoded.userId ?? decoded.sub
+    req.userRole = decoded.role // presente em tokens novos; requireRole usa p/ evitar 1 read
 
     authLogger.info('http:auth_ok', {
       userId: req.userId,

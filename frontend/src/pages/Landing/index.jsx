@@ -694,7 +694,7 @@ function Landing() {
                 { name: "Fabio Henrique", role: "CEO", initials: "FH", image: "Fabio.jpg" },
                 { name: "Miguel Alves", role: "COO", initials: "MA", image: "Miguel.jpg" },
                 { name: "Alissomberg Domingos", role: "CTO", initials: "AD", image: "Berg.jpg" },
-                { name: "Argeu Vitor", role: "Co-CTO", initials: "AV", image: "Argeu.jpg" },
+                { name: "Cicero José", role: "Co-CTO", initials: "AV", image: "Cicero.jpeg" },
                 { name: "Kauã Soares", role: "CMO", initials: "KS", image: "Kaua.jpg" },
                 { name: "Vitor Gabriel", role: "CDO", initials: "VG", image: "Vitor.jpg" },
               ].map((member, i) => (
@@ -717,7 +717,6 @@ function Landing() {
               {[
                 { name: "Luiz Guilherme", role: "Colaborador", initials: "LZ", image: "Luiz.jpeg" },
                 { name: "Vinicius Gabriel", role: "Colaborador", initials: "VN", image: "Vinicius.jpeg" },
-                { name: "Cicero José", role: "Colaborador", initials: "CC", image: "Cicero.jpeg" },
                 { name: "Joéverton Paulo", role: "Colaborador", initials: "JV", image: "Jojo.png" },
               ].map((member, i) => (
                 <div key={i} className="flex flex-col items-center p-6 bg-white rounded-3xl border border-gray-100 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all">

@@ -64,7 +64,9 @@ const LoginUser = async (req, res) => {
       return res.status(401).json({ msg: 'Credenciais inválidas.' })
     }
 
-    const token = jwt.sign({ id: user.id }, process.env.SECRET, {
+    // role vai no token para que requireRole não precise de uma leitura extra
+    // ao Firestore por request (o papel não muda após o cadastro).
+    const token = jwt.sign({ id: user.id, role: user.role }, process.env.SECRET, {
       expiresIn: JWT_EXPIRES_IN,
     })
 

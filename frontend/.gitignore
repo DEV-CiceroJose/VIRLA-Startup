@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# Artefatos de teste (gerados por `npm test`)
+TEST-REPORT.md
+coverage
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

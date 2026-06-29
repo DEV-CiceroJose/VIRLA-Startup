@@ -1183,3 +1183,25 @@ footer {
 
   .features-bar { gap: .6rem; }
 }
+
+/* ──────────────────────────────────────────────
+   NOSSA TRAJETÓRIA — cards que expandem no hover
+   Regras explícitas (em vez de utilitárias do Tailwind) para evitar empate de
+   especificidade entre a altura base e a variante responsiva.
+────────────────────────────────────────────── */
+.journey-desc {
+  max-height: 16rem;          /* mobile: descrição sempre visível (sem hover) */
+  opacity: 1;
+  overflow: hidden;
+  transition: max-height .5s ease, opacity .45s ease;
+}
+.journey-hint {
+  transition: opacity .3s ease;
+}
+
+@media (min-width: 768px) {
+  /* desktop: colapsa por padrão e revela ao passar o mouse sobre o card */
+  .journey-desc { max-height: 0; opacity: 0; }
+  .group:hover .journey-desc { max-height: 16rem; opacity: 1; }
+  .group:hover .journey-hint { opacity: 0; }
+}

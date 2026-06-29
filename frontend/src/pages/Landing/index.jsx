@@ -551,11 +551,17 @@ function Landing() {
           LINHA DO TEMPO (Com Imagens Responsivas)
       ══════════════════════════════ */}
       <section id="trajetoria" className="py-24 bg-white">
-        <div className="container mx-auto px-6 max-w-5xl reveal text-center">
-          <div className="section-label">Nossa Trajetória</div>
-          <h2 className="section-title mb-16">Uma jornada de conquistas.</h2>
-          
-          <div className="space-y-8 text-left">
+        <div className="container mx-auto px-6 max-w-6xl reveal">
+          <div className="text-center mb-4">
+            <div className="section-label">Nossa Trajetória</div>
+            <h2 className="section-title">Uma jornada de conquistas.</h2>
+            <p className="section-subtitle mx-auto">
+              Cada marco nos aproximou de transformar o cuidado no Brasil.
+              <span className="hidden md:inline"> Passe o mouse sobre um card para ler a história completa.</span>
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-12">
             {[
               {
                 step: "01",
@@ -585,38 +591,88 @@ function Landing() {
                 step: "05",
                 title: "Quintas de Inovação",
                 desc: "Apresentação da nossa ideia e proposta de valor no evento Quintas de Inovação, marcando o início da nossa validação pública com o ecossistema.",
-                img: "",
-                highlight: false
+                img: ""
               },
               {
                 step: "06",
-                title: "Banca do Bootcamp (28/05/2026)",
-                desc: "O grande marco: Apresentação do MVP funcional para a banca do Bootcamp da Tascom. Contaremos com a presença de representantes do IFPE de Igarassu e Secretários Municipais de Igarassu.",
-                img: "",
+                title: "Banca do Bootcamp Tascom",
+                desc: "Apresentamos a VIRLA como projeto final no Bootcamp da Tascom Academy. O processo aconteceu em conjunto com a ETE Jurandir Bezerra Lins, que forneceu o espaço para o acontecimento do programa.",
+                img: "bootcamp.jpeg"
+              },
+              {
+                step: "07",
+                title: "Feira do Empreendedor",
+                desc: "Participamos da caravana da ETE Jurandir Bezerra Lins para a Feira do Empreendedor, com o suporte do SEBRAE PE. Lá aprendemos como transformar a VIRLA em uma potência tecnológica, além de fazermos várias conexões.",
+                img: "empreendedor.jpeg"
+              },
+              {
+                step: "08",
+                title: "Missão NEON",
+                desc: "A VIRLA participou da Missão NEON, saindo de Igarassu - PE para Maceió - AL. Tivemos inúmeras conexões, parcerias e conhecimentos, e saímos com a certeza de que estamos um passo mais perto de mudar como as conexões ocorrem no Brasil — com o apoio do SEBRAE PE, ETE Jurandir Bezerra Lins e Hub Canoa Grande.",
+                img: "neon.jpeg"
+              },
+              {
+                step: "09",
+                title: "Reunião Semestral do Hub Canoa Grande",
+                desc: "Participamos da reunião de alinhamento semestral do hub de inovação de Igarassu, o Hub Canoa Grande. Sentamos junto com as startups e gestores da cidade para definir o futuro da inovação de Igarassu.",
+                img: "hub.jpeg"
+              },
+              {
+                step: "10",
+                title: "Pré-Incubação na FOZ",
+                desc: "Agora estamos na pré-incubação da FOZ, centro de inovação especializado em saúde e educação, criado em 2019 pela Faculdade Pernambucana de Saúde (FPS), com sólida relação de pesquisa com o IMIP. Conseguimos entrar graças a Nayara Melo, do SEBRAE PE, que sempre vem nos ajudando nessa caminhada.",
+                img: "foz.png",
                 highlight: true
               }
             ].map((item, idx) => (
-              <div key={idx} className={`flex flex-col md:flex-row gap-6 p-6 rounded-2xl border transition-colors ${item.highlight ? 'bg-purple-50 border-[var(--purple)] shadow-md relative overflow-hidden' : 'bg-gray-50 border-gray-100 hover:border-purple-200'}`}>
-                {item.highlight && <div className="absolute right-0 top-0 w-24 h-24 bg-[var(--purple)] opacity-10 rounded-bl-full"></div>}
-                
-                <div className={`w-16 h-16 rounded-xl flex items-center justify-center flex-shrink-0 font-black text-xl ${item.highlight ? 'bg-[var(--purple)] text-white' : 'bg-purple-100 text-[var(--purple)]'}`}>
-                  {item.step}
-                </div>
-                
-                <div className="flex-1">
-                  <h4 className="text-xl font-bold text-gray-900 mb-2">{item.title}</h4>
-                  <p className={`${item.highlight ? 'text-gray-700 font-medium' : 'text-gray-600'}`}>{item.desc}</p>
-                </div>
-
-                {/* AQUI ESTÁ A CORREÇÃO DE RESPONSIVIDADE!
-                  Substituí as classes antigas por `aspect-video`, `relative` e `absolute inset-0` 
-                  para garantir que as imagens nunca vazem ou distorçam no telemóvel. 
-                */}
-                {item.img && (
-                  <div className="w-full md:w-64 aspect-video md:aspect-auto md:h-40 rounded-xl overflow-hidden flex-shrink-0 shadow-sm border border-gray-200 relative bg-gray-200 mt-4 md:mt-0">
-                    <img src={item.img} alt={`Validação - ${item.title}`} className="absolute inset-0 w-full h-full object-cover object-center" />
+              <div
+                key={idx}
+                className={`group relative rounded-2xl overflow-hidden shadow-sm transition-all duration-500 hover:shadow-2xl hover:-translate-y-1 min-h-[19rem] ${
+                  item.highlight ? 'ring-2 ring-[var(--purple)] ring-offset-2' : 'border border-purple-100'
+                }`}
+              >
+                {/* Fundo: imagem ou gradiente para o item sem foto */}
+                {item.img ? (
+                  <img
+                    src={item.img}
+                    alt={item.title}
+                    loading="lazy"
+                    className="absolute inset-0 w-full h-full object-cover object-center transition-transform duration-700 group-hover:scale-105"
+                  />
+                ) : (
+                  <div className="absolute inset-0 bg-gradient-to-br from-[var(--purple)] to-[var(--purple-dark)] flex items-center justify-center">
+                    <RocketLaunch sx={{ fontSize: 88, color: 'rgba(255,255,255,0.22)' }} />
                   </div>
                 )}
+
+                {/* Overlay para legibilidade do texto */}
+                <div className="absolute inset-0 bg-gradient-to-t from-[var(--purple-dark)] via-[var(--purple-dark)]/55 to-transparent opacity-90 transition-opacity duration-500 group-hover:opacity-95"></div>
+
+                {/* Selo do passo */}
+                <div className="absolute top-4 left-4 w-11 h-11 rounded-xl bg-white/95 backdrop-blur flex items-center justify-center font-black text-lg text-[var(--purple)] shadow-md">
+                  {item.step}
+                </div>
+
+                {/* Selo "Atual" no marco mais recente */}
+                {item.highlight && (
+                  <div className="absolute top-4 right-4 flex items-center gap-1.5 px-3 py-1 rounded-full bg-[var(--purple)] text-white text-[0.7rem] font-bold tracking-wider shadow-md">
+                    <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
+                    ATUAL
+                  </div>
+                )}
+
+                {/* Conteúdo */}
+                <div className="absolute inset-x-0 bottom-0 p-5 text-left">
+                  <h4 className="font-serif font-bold text-lg text-white leading-tight mb-1.5 drop-shadow-sm">
+                    {item.title}
+                  </h4>
+                  <p className="journey-desc text-sm text-white/90 leading-relaxed">
+                    {item.desc}
+                  </p>
+                  <span className="journey-hint hidden md:block text-xs text-white/60 mt-1">
+                    Passe o mouse para ler →
+                  </span>
+                </div>
               </div>
             ))}
           </div>

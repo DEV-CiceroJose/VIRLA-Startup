@@ -40,10 +40,22 @@ export default {
           '0%': { opacity: '0' },
           '100%': { opacity: '1' },
         },
+        // Mobile drawer: slides down from the header edge
+        'virla-slide-down': {
+          '0%': { opacity: '0', transform: 'translateY(-8px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+        // Backdrop overlay fade
+        'virla-backdrop-in': {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' },
+        },
       },
       animation: {
         'fade-up': 'virla-fade-up 0.5s cubic-bezier(0.16,1,0.3,1) both',
         'fade-in': 'virla-fade-in 0.4s ease both',
+        'slide-down': 'virla-slide-down 0.25s cubic-bezier(0.16,1,0.3,1) both',
+        'backdrop-in': 'virla-backdrop-in 0.2s ease both',
       },
     },
   },

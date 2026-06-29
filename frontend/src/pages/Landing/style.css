@@ -1030,8 +1030,123 @@ footer {
   .float-card-2 { right: 0; }
 }
 
+/* ══════════════════════════════════════════════════
+   HAMBURGER — botão toggle
+══════════════════════════════════════════════════ */
+.hamburger-btn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--purple);
+  cursor: pointer;
+  transition: background var(--transition);
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.hamburger-btn:hover  { background: var(--purple-light); }
+.hamburger-btn:focus-visible {
+  outline: 2px solid var(--purple);
+  outline-offset: 2px;
+}
+
+/* ══════════════════════════════════════════════════
+   MOBILE BACKDROP
+══════════════════════════════════════════════════ */
+.mobile-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 98;
+  background: rgba(45, 5, 53, 0.45);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  animation: backdropFadeIn .2s ease both;
+}
+
+.mobile-backdrop.open { display: block; }
+
+@keyframes backdropFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ══════════════════════════════════════════════════
+   MOBILE DRAWER
+══════════════════════════════════════════════════ */
+.mobile-drawer {
+  position: fixed;
+  top: var(--header-h);
+  left: 0;
+  right: 0;
+  z-index: 99;
+  background: rgba(255, 255, 255, 0.97);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+  box-shadow: var(--shadow-lg);
+  padding: 1rem 1.5rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: .25rem;
+  animation: drawerSlideDown .25s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes drawerSlideDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Links dentro do drawer */
+.mobile-drawer a {
+  display: block;
+  padding: .75rem 1rem;
+  border-radius: var(--radius-sm);
+  font-size: .9rem;
+  font-weight: 500;
+  color: var(--muted);
+  transition: color var(--transition), background var(--transition);
+}
+
+.mobile-drawer a:hover,
+.mobile-drawer a:focus-visible {
+  color: var(--purple);
+  background: var(--purple-light);
+}
+
+.mobile-drawer a:focus-visible { outline: 2px solid var(--purple); outline-offset: 2px; }
+
+/* Divisor visual entre nav links e ações */
+.mobile-drawer-divider {
+  height: 1px;
+  background: var(--border);
+  margin: .5rem 0;
+}
+
+/* Botões de ação dentro do drawer */
+.mobile-drawer-actions {
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+  margin-top: .25rem;
+}
+
+.mobile-drawer-actions .btn-ghost,
+.mobile-drawer-actions .btn-primary {
+  width: 100%;
+  justify-content: center;
+  padding: .7rem 1rem;
+  font-size: .9rem;
+}
+
 @media (max-width: 768px) {
   nav, .header-actions { display: none; }
+  .hamburger-btn { display: flex; }
 
   .solution-grid {
     grid-template-columns: 1fr;

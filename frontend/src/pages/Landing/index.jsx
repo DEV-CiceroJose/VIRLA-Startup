@@ -1,18 +1,67 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './style.css'; 
 import {
   VolunteerActivism, Face, CheckCircle, WarningAmber,
   MoodBad, Chat, AccountBalanceWallet,
   AttachMoney, MedicalServices, RocketLaunch, Favorite,
-  Security, Search, Shield, Groups, VpnKey, TrendingUp
+  Security, Search, Shield, Groups, VpnKey, TrendingUp,
+  Menu as MenuIcon, Close,
 } from '@mui/icons-material';
 
 function Landing() {
   const navigate = useNavigate();
   const [isScrolled, setIsScrolled] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
-  const [loadingBtn, setLoadingBtn] = useState(null); 
+  const [loadingBtn, setLoadingBtn] = useState(null);
+
+  // ── Mobile hamburger state ──
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const drawerRef = useRef(null);
+  const hamburgerRef = useRef(null);
+
+  const closeDrawer = useCallback(() => setMobileOpen(false), []);
+
+  // Click outside to close
+  useEffect(() => {
+    if (!mobileOpen) return;
+    function handlePointerDown(e) {
+      const insideDrawer = drawerRef.current?.contains(e.target);
+      const insideBtn    = hamburgerRef.current?.contains(e.target);
+      if (!insideDrawer && !insideBtn) closeDrawer();
+    }
+    document.addEventListener('pointerdown', handlePointerDown, true);
+    return () => document.removeEventListener('pointerdown', handlePointerDown, true);
+  }, [mobileOpen, closeDrawer]);
+
+  // Resize guard — reset if viewport goes back to desktop
+  useEffect(() => {
+    if (!mobileOpen) return;
+    function handleResize() {
+      if (window.innerWidth >= 768) closeDrawer();
+    }
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [mobileOpen, closeDrawer]);
+
+  // Escape key
+  useEffect(() => {
+    if (!mobileOpen) return;
+    function handleKeyDown(e) {
+      if (e.key === 'Escape') {
+        closeDrawer();
+        hamburgerRef.current?.focus();
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [mobileOpen, closeDrawer]);
+
+  // Body scroll lock
+  useEffect(() => {
+    document.body.style.overflow = mobileOpen ? 'hidden' : '';
+    return () => { document.body.style.overflow = ''; };
+  }, [mobileOpen]);
 
   // ── Dados do Carrossel Principal ──
   const carouselItems = [
@@ -89,6 +138,15 @@ function Landing() {
   return (
     <div className='w-full overflow-hidden'>
       {/* ══════════════════════════════
+          BACKDROP MOBILE
+      ══════════════════════════════ */}
+      <div
+        aria-hidden="true"
+        className={`mobile-backdrop${mobileOpen ? ' open' : ''}`}
+        onClick={closeDrawer}
+      />
+
+      {/* ══════════════════════════════
           HEADER
       ══════════════════════════════ */}
       <header id="mainHeader" className={isScrolled ? 'scrolled' : ''}>
@@ -100,6 +158,7 @@ function Landing() {
             <span className="logo-text" style={{ color: 'var(--purple)' }}>VIRLA</span>
           </a>
 
+          {/* Desktop nav */}
           <nav>
             <a href="#historia">Para Quem É?</a>
             <a href="#solucao">A Solução</a>
@@ -107,6 +166,7 @@ function Landing() {
             <a href="#trajetoria">Nossa História</a>
           </nav>
 
+          {/* Desktop actions */}
           <div className="header-actions flex gap-3">
             <button 
               onClick={() => handleNavigate('/login', 'login')} 
@@ -134,8 +194,68 @@ function Landing() {
               )}
             </button>
           </div>
+
+          {/* Hamburger toggle — mobile only */}
+          <button
+            ref={hamburgerRef}
+            type="button"
+            className="hamburger-btn"
+            onClick={() => setMobileOpen(v => !v)}
+            aria-label={mobileOpen ? 'Fechar menu' : 'Abrir menu'}
+            aria-expanded={mobileOpen}
+            aria-controls="landing-mobile-drawer"
+          >
+            {mobileOpen
+              ? <Close sx={{ fontSize: 24 }} />
+              : <MenuIcon sx={{ fontSize: 24 }} />
+            }
+          </button>
         </div>
       </header>
+
+      {/* Mobile drawer */}
+      {mobileOpen && (
+        <div
+          id="landing-mobile-drawer"
+          ref={drawerRef}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Menu de navegação"
+          className="mobile-drawer"
+        >
+          {/* Nav anchor links */}
+          <a href="#historia" onClick={closeDrawer}>Para Quem É?</a>
+          <a href="#solucao"  onClick={closeDrawer}>A Solução</a>
+          <a href="#diferenciais" onClick={closeDrawer}>Diferenciais</a>
+          <a href="#trajetoria"   onClick={closeDrawer}>Nossa História</a>
+
+          <div className="mobile-drawer-divider" aria-hidden="true" />
+
+          {/* Action buttons */}
+          <div className="mobile-drawer-actions">
+            <button
+              onClick={() => { closeDrawer(); handleNavigate('/login', 'login'); }}
+              disabled={loadingBtn !== null}
+              className="btn-ghost flex items-center justify-center"
+            >
+              {loadingBtn === 'login'
+                ? <div className="w-5 h-5 border-2 border-virla-roxo border-t-transparent rounded-full animate-spin" />
+                : 'Fazer Login'
+              }
+            </button>
+            <button
+              onClick={() => { closeDrawer(); handleNavigate('/cadastro', 'cadastro'); }}
+              disabled={loadingBtn !== null}
+              className="btn-primary flex items-center justify-center gap-2"
+            >
+              {loadingBtn === 'cadastro'
+                ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                : <><VpnKey sx={{ fontSize: 18 }} /> Acessar Sistema</>
+              }
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ══════════════════════════════
           HERO SECTION
@@ -519,7 +639,7 @@ function Landing() {
                 { name: "Miguel Alves", role: "COO", initials: "MA", image: "Miguel.jpg" },
                 { name: "Alissomberg Domingos", role: "CTO", initials: "AD", image: "Berg.jpg" },
                 { name: "Argeu Vitor", role: "Co-CTO", initials: "AV", image: "Argeu.jpg" },
-                { name: "Kaua Soares", role: "CMO", initials: "KS", image: "Kauã.jpg" },
+                { name: "Kauã Soares", role: "CMO", initials: "KS", image: "Kaua.jpg" },
                 { name: "Vitor Gabriel", role: "CDO", initials: "VG", image: "Vitor.jpg" },
               ].map((member, i) => (
                 <div key={i} className="flex flex-col items-center p-8 bg-white rounded-3xl border border-gray-100 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all">

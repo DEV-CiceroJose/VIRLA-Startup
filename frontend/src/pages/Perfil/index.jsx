@@ -95,10 +95,9 @@ export default function Perfil() {
   const [userData, setUserData] = useState(emptyUserForm)
 
   const id = localStorage.getItem('meuId')
-  const token = localStorage.getItem('meuToken')
 
   useEffect(() => {
-    if (!token || !id) {
+    if (!id) {
       navigate('/login')
       return
     }

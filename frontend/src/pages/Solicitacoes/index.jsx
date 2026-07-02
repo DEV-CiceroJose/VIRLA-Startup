@@ -252,7 +252,6 @@ export default function Solicitacoes() {
   const [concludingId, setConcludingId] = useState(null)
   const [confirmId, setConfirmId]     = useState(null)       // id aguardando confirmação
 
-  const token = localStorage.getItem('meuToken')
   const meuId = localStorage.getItem('meuId')
 
   // ── Carregamento ──────────────────────────────────────────────────────
@@ -269,9 +268,9 @@ export default function Solicitacoes() {
   }, [])
 
   useEffect(() => {
-    if (!token || !meuId) { navigate('/login'); return }
+    if (!meuId) { navigate('/login'); return }
     load()
-  }, [token, meuId, navigate, load])
+  }, [meuId, navigate, load])
 
   // ── Separar listas por status ─────────────────────────────────────────
   const { ativas, encerradas } = useMemo(() => {

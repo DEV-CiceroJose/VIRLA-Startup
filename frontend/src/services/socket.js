@@ -1,4 +1,5 @@
 import { io } from 'socket.io-client';
+import { getIdToken } from './auth';
 
 // ─── 1. URL DA API ──────────────────────────────────────────────────
 // Pega a URL da nuvem no Render, ou usa localhost se estiver a desenvolver localmente
@@ -21,8 +22,10 @@ export const socket = io(URL, {
   
   // Autenticação Dinâmica
   auth: (cb) => {
-    // É chamado a cada (re)conexão para garantir que o token não está expirado
-    const token = localStorage.getItem('meuToken');
-    cb({ token });
+    // Chamado a cada (re)conexão. Busca o ID token do Firebase (o SDK renova
+    // automaticamente antes de expirar). O callback pode ser assíncrono.
+    getIdToken()
+      .then((token) => cb({ token }))
+      .catch(() => cb({ token: null }));
   }
 });

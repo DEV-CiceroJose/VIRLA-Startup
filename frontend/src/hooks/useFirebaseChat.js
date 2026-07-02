@@ -1,7 +1,6 @@
 import { useEffect, useRef, useCallback, useState } from 'react'
 import { ref, push, onChildAdded, update, get } from 'firebase/database'
 import { rtdb, isFirebaseReady } from '../services/firebase'
-import { connectFirebaseAuth } from '../services/firebaseAuth'
 
 export function chatIdFor(userIdA, userIdB) {
   return [userIdA, userIdB].sort().join('_')
@@ -42,7 +41,9 @@ export function useFirebaseChat({ meId, peerId, onMessage }) {
 
     ;(async () => {
       try {
-        await connectFirebaseAuth()
+        // O usuário já está autenticado no Firebase Auth (AuthContext), então
+        // as Security Rules do RTDB liberam o acesso — não é preciso trocar
+        // custom token aqui.
         if (unsubscribed) return
 
         const messagesRef = ref(rtdb, `chats/${chatId}/messages`)

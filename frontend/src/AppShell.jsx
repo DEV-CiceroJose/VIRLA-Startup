@@ -23,9 +23,10 @@ const PagamentoSucesso  = lazy(() => import('./pages/Pagamento/Sucesso'))
 const User              = lazy(() => import('./pages/User'))
 const Solicitacoes      = lazy(() => import('./pages/Solicitacoes'))
 const SolicitacoesCuidador = lazy(() => import('./pages/SolicitacoesCuidador'))
+const CompletarCadastro = lazy(() => import('./pages/CompletarCadastro'))
 
 // ── Rotas que não exibem o Menu de navegação ─────────────────────────────
-const HIDDEN_MENU_ROUTES = ['/', '/login', '/cadastro']
+const HIDDEN_MENU_ROUTES = ['/', '/login', '/cadastro', '/completar-cadastro']
 
 // ── Fallback exibido enquanto o chunk da página carrega ───────────────────
 function PageFallback() {
@@ -149,6 +150,7 @@ export default function AppShell() {
           <Route path="/home"   element={<ProtectedRoute><Home /></ProtectedRoute>} />
           <Route path="/feed"   element={<FeedRoute><Feed /></FeedRoute>} />
           <Route path="/perfil" element={<ProtectedRoute><Perfil /></ProtectedRoute>} />
+          <Route path="/completar-cadastro" element={<ProtectedRoute><CompletarCadastro /></ProtectedRoute>} />
 
           {/* Solicitações — Familiar gerencia as próprias; Cuidador vê as disponíveis */}
           <Route path="/solicitacoes"            element={<ProtectedRoute><Solicitacoes /></ProtectedRoute>} />

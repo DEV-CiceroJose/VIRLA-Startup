@@ -114,7 +114,7 @@ export default function Perfil() {
       }
     }
     loadUser()
-  }, [id, token, navigate])
+  }, [id, navigate])
 
   async function handleUpdate(e) {
     e.preventDefault()

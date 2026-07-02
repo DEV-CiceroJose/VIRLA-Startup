@@ -39,10 +39,17 @@ export async function emailExists(email, exceptId = null) {
   return snap.docs.some((d) => d.id !== exceptId)
 }
 
-export async function createUser(data) {
-  const ref = col().doc()
-  await ref.set(serialize(data))
-  return getUserById(ref.id)
+/** true se já existe outro usuário com este CPF (ignora `exceptId`). */
+export async function cpfExists(cpf, exceptId = null) {
+  if (!cpf) return false
+  const snap = await col().where('cpf', '==', cpf).limit(2).get()
+  return snap.docs.some((d) => d.id !== exceptId)
+}
+
+/** Cria o perfil com id = uid do Firebase Auth (não usa id automático). */
+export async function createUserWithId(uid, data) {
+  await col().doc(uid).set(serialize(data))
+  return getUserById(uid)
 }
 
 export async function updateUser(id, patch) {

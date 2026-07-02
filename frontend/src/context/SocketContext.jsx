@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { socket } from '../services/socket'
+import { useAuth } from './AuthContext'
 import { playNotificationSound, showBrowserNotification } from '../utils/notifications'
 
 const SocketContext = createContext(null)
@@ -8,9 +9,14 @@ const SocketContext = createContext(null)
 export function SocketProvider({ children }) {
   const [isConnected, setIsConnected] = useState(false)
   const [transport, setTransport] = useState('—')
+  // O id do perfil é populado de forma assíncrona pelo AuthContext (Firebase
+  // Auth), então o socket precisa reagir a ele — não ler o localStorage uma
+  // única vez na montagem (senão, num reload, o effect roda antes do id existir
+  // e nunca reconecta).
+  const { profile } = useAuth()
+  const userId = profile?.id
 
   useEffect(() => {
-    const userId = localStorage.getItem('meuId')
     if (!userId) return
 
     socket.connect()
@@ -71,7 +77,7 @@ export function SocketProvider({ children }) {
       socket.off('receive_message_notify', onReceiveMessageNotify)
       socket.disconnect()
     }
-  }, [])
+  }, [userId])
 
   return (
     <SocketContext.Provider value={{ socket, isConnected, transport }}>

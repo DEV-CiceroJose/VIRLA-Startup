@@ -11,7 +11,6 @@ import userRoutes from './src/routes/userRoutes.js'
 import authRoutes from './src/routes/authRoutes.js'
 import messageRoutes from './src/routes/messageRoutes.js'
 import PaymentRoutes from './src/routes/paymentRoutes.js'
-import firebaseRoutes from './src/routes/firebaseRoutes.js'
 import solicitacaoRoutes from './src/routes/solicitacaoRoutes.js'
 
 import { logger, securityLogger } from './src/lib/logger.js'
@@ -118,7 +117,6 @@ app.use(userRoutes)
 app.use(authRoutes)
 app.use(messageRoutes)
 app.use(PaymentRoutes)
-app.use(firebaseRoutes)
 app.use(solicitacaoRoutes)
 
 // ─── Global error handler ─────────────────────────────────────────

@@ -1,6 +1,6 @@
 import express from "express"
 import { createUsers, getFeedUsers, updateUsers, deleteUsers } from "../controllers/userController.js"
-import checkToken from '../middlewares/checkToken.js'
+import checkToken, { checkTokenAllowUnverified } from '../middlewares/checkToken.js'
 import { requireRole } from '../middlewares/requireRole.js'
 import { validateZod } from '../middlewares/validateZod.js'
 import { rateLimit } from '../middlewares/rateLimit.js'
@@ -11,7 +11,9 @@ const router = express.Router()
 const registerLimiter = rateLimit({ windowMs: 60_000, max: 5, name: 'register' })
 
 // Cadastro é público (auto-registro), mas validado por Zod + rate limit.
-router.post('/users', registerLimiter, validateZod(createUserBodySchema), createUsers)
+// Criação do PERFIL exige token válido do Firebase (uid/email vêm dele), mas
+// permite e-mail ainda não verificado (o signup ocorre antes da verificação).
+router.post('/users', registerLimiter, checkTokenAllowUnverified, validateZod(createUserBodySchema), createUsers)
 
 // CORREÇÃO DE SEGURANÇA (Broken Access Control):
 // as rotas abaixo expunham/alteravam dados de QUALQUER usuário sem autenticação.

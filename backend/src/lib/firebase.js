@@ -3,22 +3,23 @@ import { logger } from './logger.js'
 
 /**
  * Inicialização do Firebase Admin SDK — usado por:
+ *  - checkToken.js (verificação do ID token do Firebase Auth em toda
+ *    requisição autenticada; substituiu o login/JWT próprio)
  *  - chatRealtimeService.js (leitura/escrita administrativa no Realtime Database)
- *  - firebaseController.js (emissão de Custom Tokens para o cliente autenticar
- *    no Firebase Auth usando o MESMO JWT/sessão já validado pelo checkToken)
  *
- * Sprint 0: o Realtime Database substitui o Mongo/Prisma como armazenamento
+ * Migração de autenticação: o backend não emite mais tokens próprios
+ * (JWT/bcrypt) — a verificação de identidade depende inteiramente do
+ * Admin SDK validando o ID token emitido pelo Firebase Auth no cliente.
+ * O Realtime Database também substitui o Mongo/Prisma como armazenamento
  * das mensagens de chat, permitindo sincronização em tempo real nativa
  * (sem depender de Socket.io para a entrega das mensagens).
  *
  * CORREÇÃO (falha em cascata): antes, qualquer variável FIREBASE_* ausente
  * ou mal formatada (ex.: \n da FIREBASE_PRIVATE_KEY) derrubava o processo
- * inteiro com `process.exit(1)` — login, pagamentos e solicitações também
- * paravam de funcionar, mesmo sem nenhuma relação com o chat.
- * Agora a falta de configuração deixa APENAS o chat em tempo real
- * indisponível (erro 503 claro nas rotas de mensagens), sem afetar o resto
- * da API. Isso isola o ponto único de falha que causava quedas totais do
- * backend em produção.
+ * inteiro com `process.exit(1)`. Agora a falta de configuração não derruba
+ * o processo, mas deixa tanto a autenticação quanto o chat em tempo real
+ * indisponíveis (erro claro nas rotas afetadas), já que ambos dependem do
+ * Admin SDK.
  */
 
 const requiredEnvVars = ['FIREBASE_PROJECT_ID', 'FIREBASE_CLIENT_EMAIL', 'FIREBASE_PRIVATE_KEY', 'FIREBASE_DATABASE_URL']
@@ -29,9 +30,8 @@ if (!FIREBASE_CONFIGURED) {
   logger.error('firebase:missing_env', { missing })
   console.error(
     `AVISO: variáveis de ambiente do Firebase ausentes: ${missing.join(', ')}.\n` +
-    'O chat em tempo real (Firebase Realtime Database) ficará indisponível até ' +
-    'isso ser corrigido, mas o restante da API (login, pagamentos, solicitações) ' +
-    'continua funcionando normalmente. Configure-as no .env (veja .env.example).'
+    'Autenticação (verificação de ID token) e o chat em tempo real ficarão ' +
+    'indisponíveis até isso ser corrigido. Configure-as no .env (veja .env.example).'
   )
 }
 

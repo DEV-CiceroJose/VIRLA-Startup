@@ -4,6 +4,7 @@ import { Toaster } from 'sonner'
 import { SocketProvider } from './context/SocketContext'
 import { PageLoader } from './components/Spinner'
 import { PAYMENT_ENABLED } from './utils/featureFlags'
+import { useAuth } from './context/AuthContext'
 import Menu from './components/Menu'
 import RouteErrorBoundary from './components/RouteErrorBoundary'
 
@@ -35,14 +36,31 @@ function PageFallback() {
 
 /**
  * Guarda de autenticação genérica.
- * Redireciona para /login se não houver token + userId no localStorage.
+ * Redireciona conforme o estado do Firebase Auth (via AuthContext):
+ *  - enquanto o Firebase inicializa (`loading`), exibe o fallback (evita
+ *    "flash" para /login antes de o estado de auth carregar);
+ *  - sem usuário logado → /login;
+ *  - logado mas sem perfil no backend (`needsProfile`) → /completar-cadastro.
  */
 function ProtectedRoute({ children }) {
-  const token  = localStorage.getItem('meuToken')
-  const userId = localStorage.getItem('meuId')
-  if (!token || !userId) {
-    return <Navigate to="/login" replace />
-  }
+  const { firebaseUser, needsProfile, loading } = useAuth()
+  if (loading) return <PageFallback />
+  if (!firebaseUser) return <Navigate to="/login" replace />
+  if (needsProfile) return <Navigate to="/completar-cadastro" replace />
+  return children
+}
+
+/**
+ * Guarda da tela de completar cadastro (/completar-cadastro).
+ * Permite acesso justamente a quem AINDA não tem perfil (`needsProfile`), sem
+ * cair em loop de redirecionamento. Quem já completou o cadastro é enviado
+ * para /home.
+ */
+function ProfileSetupRoute({ children }) {
+  const { firebaseUser, needsProfile, loading } = useAuth()
+  if (loading) return <PageFallback />
+  if (!firebaseUser) return <Navigate to="/login" replace />
+  if (!needsProfile) return <Navigate to="/home" replace />
   return children
 }
 
@@ -51,14 +69,11 @@ function ProtectedRoute({ children }) {
  * Familiar diretamente, então é redirecionado para a tela de Solicitações.
  */
 function FeedRoute({ children }) {
-  const token  = localStorage.getItem('meuToken')
-  const userId = localStorage.getItem('meuId')
-  const role   = localStorage.getItem('meuRole')
-
-  if (!token || !userId) {
-    return <Navigate to="/login" replace />
-  }
-  if (role === 'CUIDADOR') {
+  const { firebaseUser, profile, needsProfile, loading } = useAuth()
+  if (loading) return <PageFallback />
+  if (!firebaseUser) return <Navigate to="/login" replace />
+  if (needsProfile) return <Navigate to="/completar-cadastro" replace />
+  if (profile?.role === 'CUIDADOR') {
     return <Navigate to="/solicitacoes-disponiveis" replace />
   }
   return children
@@ -76,8 +91,7 @@ function FeedRoute({ children }) {
  */
 function PagamentoRoute({ children }) {
   const location = useLocation()
-  const token    = localStorage.getItem('meuToken')
-  const userId   = localStorage.getItem('meuId')
+  const { firebaseUser, loading } = useAuth()
 
   // Sprint 6: build sem pagamento (VITE_ENABLE_PAYMENT=false) — bloqueia
   // mesmo se alguém tentar acessar a rota digitando a URL direto.
@@ -85,7 +99,8 @@ function PagamentoRoute({ children }) {
     return <Navigate to="/home" replace />
   }
 
-  if (!token || !userId) {
+  if (loading) return <PageFallback />
+  if (!firebaseUser) {
     return <Navigate to="/login" replace />
   }
 
@@ -107,15 +122,15 @@ function PagamentoRoute({ children }) {
  *    a confirmação.
  */
 function PagamentoSucessoRoute({ children }) {
-  const token       = localStorage.getItem('meuToken')
-  const userId      = localStorage.getItem('meuId')
+  const { firebaseUser, loading } = useAuth()
   const sessaoValida = sessionStorage.getItem('virla_pag_sessao') === 'true'
 
   if (!PAYMENT_ENABLED) {
     return <Navigate to="/home" replace />
   }
 
-  if (!token || !userId) {
+  if (loading) return <PageFallback />
+  if (!firebaseUser) {
     return <Navigate to="/login" replace />
   }
 
@@ -150,7 +165,7 @@ export default function AppShell() {
           <Route path="/home"   element={<ProtectedRoute><Home /></ProtectedRoute>} />
           <Route path="/feed"   element={<FeedRoute><Feed /></FeedRoute>} />
           <Route path="/perfil" element={<ProtectedRoute><Perfil /></ProtectedRoute>} />
-          <Route path="/completar-cadastro" element={<ProtectedRoute><CompletarCadastro /></ProtectedRoute>} />
+          <Route path="/completar-cadastro" element={<ProfileSetupRoute><CompletarCadastro /></ProfileSetupRoute>} />
 
           {/* Solicitações — Familiar gerencia as próprias; Cuidador vê as disponíveis */}
           <Route path="/solicitacoes"            element={<ProtectedRoute><Solicitacoes /></ProtectedRoute>} />

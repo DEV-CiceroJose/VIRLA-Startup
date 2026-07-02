@@ -68,9 +68,8 @@ export default function Chat() {
   }, [peerId])
 
   const fetchHistory = useCallback(async () => {
-    const token = localStorage.getItem('meuToken')
     const id = localStorage.getItem('meuId')
-    if (!token || !id || !peerId) {
+    if (!id || !peerId) {
       navigate('/login')
       return null
     }

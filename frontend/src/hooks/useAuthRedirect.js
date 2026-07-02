@@ -1,19 +1,22 @@
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
 
 /**
- * Redireciona para /login se não houver sessão.
- * @returns {{ userId: string | null; token: string | null; ready: boolean }}
+ * Redireciona para /login quando o Firebase termina de carregar e não há
+ * usuário autenticado. Enquanto `loading` for true, não navega (evita mandar
+ * para /login antes de o estado de auth estabilizar).
+ *
+ * @returns {{ userId: string | null; ready: boolean }}
  */
 export function useAuthRedirect() {
   const navigate = useNavigate()
-  const token = localStorage.getItem('meuToken')
-  const userId = localStorage.getItem('meuId')
-  const ready = Boolean(token && userId)
+  const { firebaseUser, profile, loading } = useAuth()
+  const ready = Boolean(firebaseUser && profile)
 
   useEffect(() => {
-    if (!ready) navigate('/login')
-  }, [ready, navigate])
+    if (!loading && !firebaseUser) navigate('/login')
+  }, [loading, firebaseUser, navigate])
 
-  return { userId, token, ready }
+  return { userId: profile?.id ?? null, ready }
 }

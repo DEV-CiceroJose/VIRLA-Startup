@@ -157,8 +157,7 @@ export default function Feed() {
   const id = localStorage.getItem('meuId')
 
   useEffect(() => {
-    const token = localStorage.getItem('meuToken')
-    if (!token || !id) return undefined
+    if (!id) return undefined
     let cancelled = false
     api
       .get(`/users/${id}`)
@@ -175,8 +174,7 @@ export default function Feed() {
   }, [id])
 
   useEffect(() => {
-    const token = localStorage.getItem('meuToken')
-    if (!token || !id) {
+    if (!id) {
       navigate('/login')
       return undefined
     }

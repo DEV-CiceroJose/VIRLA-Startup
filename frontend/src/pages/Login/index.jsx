@@ -8,7 +8,7 @@ import ArrowBack from '@mui/icons-material/ArrowBack'
 import { Field, Button, Card } from '../../components/ui'
 import EmailVerificationModal from '../../components/EmailVerificationModal'
 import { isValidEmail } from '../../utils/validators'
-import { loginWithEmail, loginWithGoogle, resetPassword, mapAuthError, logout } from '../../services/auth'
+import { loginWithEmail, loginWithGoogle, resetPassword, mapAuthError } from '../../services/auth'
 import api from '../../services/api'
 
 export default function LoginPage() {

@@ -43,7 +43,7 @@ estado: z.string().max(2).optional().nullable(),
 ## 2. BUG-02 + SEC-06 — Validação de data de nascimento (18+ para todos)
 
 **Regra:** idade mínima **18 anos** para CUIDADOR **e** FAMILIAR. Rejeitar data
-futura, data inválida e datas absurdas (idade > 120). `birthDate` passa a ser
+futura, data inválida e datas absurdas (idade > 110). `birthDate` passa a ser
 **obrigatório no cadastro** (Cadastro por e-mail/senha e Completar cadastro do
 Google) e continua editável no Perfil.
 
@@ -54,7 +54,7 @@ Google) e continua editável no Perfil.
 - `calculateAge(birthDate, now = new Date())` → número de anos completos.
 - `validateBirthDate(value, { minAge = 18 })` → `{ valid: true, date }` ou
   `{ valid: false, error }`. Rejeita: não-data / `NaN`, data futura, idade
-  `< minAge`, idade `> 120`.
+  `< minAge`, idade `> 110`.
 
 **Schemas (`userSchemas.js`):**
 
@@ -82,7 +82,7 @@ O `parseBirthDate` do `userController` permanece só para converter a string em
   mensagem de erro 422 do backend (o handler de erro já mostra `message`).
 
 **Testes (backend):** `date.js` — data válida (idade ok), data futura, idade
-`< 18`, string inválida, idade `> 120`. Schema — `birthDate` ausente no create →
+`< 18`, string inválida, idade `> 110`. Schema — `birthDate` ausente no create →
 falha; data futura → falha; 18+ válida → ok; update sem birthDate → ok.
 
 ---

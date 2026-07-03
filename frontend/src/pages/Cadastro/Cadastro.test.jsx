@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 
@@ -75,6 +75,7 @@ describe('Página de Cadastro', () => {
     await user.type(screen.getByPlaceholderText('000.000.000-00'), '11111111111')
     await user.type(screen.getByPlaceholderText('Senha (mín. 6 caracteres)'), 'segredo1')
     await user.type(screen.getByPlaceholderText('Repita a senha'), 'segredo1')
+    fireEvent.change(document.querySelector('input[type="date"]'), { target: { value: '1994-05-10' } })
     await user.click(screen.getByRole('button', { name: /criar conta/i }))
     expect(toast.warning).toHaveBeenCalled()
     expect(registerWithEmail).not.toHaveBeenCalled()
@@ -87,6 +88,7 @@ describe('Página de Cadastro', () => {
     await fillValidFormExceptPasswords(user)
     await user.type(screen.getByPlaceholderText('Senha (mín. 6 caracteres)'), 'segredo1')
     await user.type(screen.getByPlaceholderText('Repita a senha'), 'segredo2')
+    fireEvent.change(document.querySelector('input[type="date"]'), { target: { value: '1994-05-10' } })
     await user.click(screen.getByRole('button', { name: /criar conta/i }))
 
     expect(toast.warning).toHaveBeenCalledWith('As senhas não conferem.')
@@ -103,6 +105,9 @@ describe('Página de Cadastro', () => {
     await fillValidFormExceptPasswords(user)
     await user.type(screen.getByPlaceholderText('Senha (mín. 6 caracteres)'), 'segredo1')
     await user.type(screen.getByPlaceholderText('Repita a senha'), 'segredo1')
+    // data de nascimento (adulto) — o campo type="date" aceita 'YYYY-MM-DD'
+    const dateInput = document.querySelector('input[type="date"]')
+    fireEvent.change(dateInput, { target: { value: '1994-05-10' } })
     await user.click(screen.getByRole('button', { name: /criar conta/i }))
 
     await waitFor(() => expect(registerWithEmail).toHaveBeenCalledWith('ana@provedor.com', 'segredo1'))
@@ -113,6 +118,7 @@ describe('Página de Cadastro', () => {
       name: 'Ana Souza',
       cpf: '52998224725',
       role: 'CUIDADOR',
+      birthDate: '1994-05-10',
     })
     expect(payload).not.toHaveProperty('password')
     expect(payload).not.toHaveProperty('email')

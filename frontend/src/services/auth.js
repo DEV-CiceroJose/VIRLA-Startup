@@ -6,6 +6,8 @@ import {
   sendEmailVerification,
   signOut,
   onAuthStateChanged,
+  EmailAuthProvider,
+  linkWithCredential,
 } from 'firebase/auth'
 import { firebaseAuth, googleProvider } from './firebase'
 
@@ -56,6 +58,20 @@ export function onAuthChange(cb) {
   return onAuthStateChanged(firebaseAuth, cb)
 }
 
+/** true se a conta atual já possui provedor de e-mail/senha. */
+export function hasPasswordProvider() {
+  const u = firebaseAuth.currentUser
+  return u ? u.providerData.some((p) => p.providerId === 'password') : false
+}
+
+/** Vincula uma senha à conta atual (ex.: quem entrou só com Google). */
+export async function linkPassword(novaSenha) {
+  const u = firebaseAuth.currentUser
+  if (!u) throw new Error('Nenhum usuário autenticado.')
+  const credential = EmailAuthProvider.credential(u.email, novaSenha)
+  await linkWithCredential(u, credential)
+}
+
 const MESSAGES = {
   'auth/email-already-in-use': 'Este e-mail já está cadastrado.',
   'auth/invalid-email': 'E-mail inválido.',
@@ -68,6 +84,9 @@ const MESSAGES = {
   'auth/popup-closed-by-user': '',
   'auth/cancelled-popup-request': '',
   'auth/popup-blocked': 'Habilite pop-ups para entrar com o Google.',
+  'auth/requires-recent-login': 'Faça login novamente para criar sua senha.',
+  'auth/credential-already-in-use': 'Esta conta já possui uma senha.',
+  'auth/provider-already-linked': 'Esta conta já possui uma senha.',
 }
 
 /** Mensagem pt-BR para um código de erro do Firebase Auth. '' = silencioso. */

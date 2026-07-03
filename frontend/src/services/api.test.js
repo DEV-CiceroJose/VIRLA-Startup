@@ -1,8 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
+
+const getIdTokenMock = vi.fn()
+vi.mock('./auth', () => ({ getIdToken: (...a) => getIdTokenMock(...a) }))
+
 import api from './api'
 
-// Acessa os handlers registrados nos interceptors do axios para exercitá-los
-// diretamente, sem precisar de uma requisição HTTP real.
 const requestFulfilled = api.interceptors.request.handlers[0].fulfilled
 const responseRejected = api.interceptors.response.handlers[0].rejected
 
@@ -16,50 +18,45 @@ function stubLocation(pathname) {
 }
 
 describe('api · interceptor de requisição', () => {
-  beforeEach(() => localStorage.clear())
+  beforeEach(() => vi.clearAllMocks())
 
-  it('anexa Bearer token quando há sessão', () => {
-    localStorage.setItem('meuToken', 'abc123')
-    const config = requestFulfilled({ headers: {} })
-    expect(config.headers.Authorization).toBe('Bearer abc123')
+  it('anexa Bearer com o ID token do Firebase', async () => {
+    getIdTokenMock.mockResolvedValue('id-token-abc')
+    const config = await requestFulfilled({ headers: {} })
+    expect(config.headers.Authorization).toBe('Bearer id-token-abc')
   })
 
-  it('não anexa Authorization sem token', () => {
-    const config = requestFulfilled({ headers: {} })
+  it('não anexa Authorization quando não há usuário logado', async () => {
+    getIdTokenMock.mockResolvedValue(null)
+    const config = await requestFulfilled({ headers: {} })
     expect(config.headers.Authorization).toBeUndefined()
   })
 })
 
-describe('api · interceptor de resposta (401)', () => {
-  beforeEach(() => localStorage.clear())
+describe('api · interceptor de resposta', () => {
+  beforeEach(() => vi.clearAllMocks())
 
-  it('401 fora do login limpa o token e redireciona para /login', async () => {
-    localStorage.setItem('meuToken', 'tok')
+  it('403 fora do login redireciona para /login', async () => {
     const assign = stubLocation('/home')
     await expect(
-      responseRejected({ response: { status: 401 }, config: { url: '/users/1' } }),
+      responseRejected({ response: { status: 403 }, config: { url: '/users/1' } }),
     ).rejects.toBeTruthy()
-    expect(localStorage.getItem('meuToken')).toBeNull()
     expect(assign).toHaveBeenCalledWith('/login')
   })
 
-  it('401 na tela de login NÃO desloga (erro fica no formulário)', async () => {
-    localStorage.setItem('meuToken', 'tok')
+  it('401 na tela de login NÃO redireciona', async () => {
     const assign = stubLocation('/login')
     await expect(
-      responseRejected({ response: { status: 401 }, config: { url: '/auth/login' } }),
+      responseRejected({ response: { status: 401 }, config: { url: '/users/me' } }),
     ).rejects.toBeTruthy()
-    expect(localStorage.getItem('meuToken')).toBe('tok')
     expect(assign).not.toHaveBeenCalled()
   })
 
-  it('erros não-401 são apenas repassados', async () => {
-    localStorage.setItem('meuToken', 'tok')
+  it('erros não-401/403 são apenas repassados', async () => {
     const assign = stubLocation('/home')
     await expect(
       responseRejected({ response: { status: 500 }, config: { url: '/users/1' } }),
     ).rejects.toBeTruthy()
-    expect(localStorage.getItem('meuToken')).toBe('tok')
     expect(assign).not.toHaveBeenCalled()
   })
 })

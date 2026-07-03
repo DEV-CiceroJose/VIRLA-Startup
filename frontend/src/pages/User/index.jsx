@@ -20,8 +20,7 @@ export default function User() {
   const meId = localStorage.getItem('meuId')
 
   useEffect(() => {
-    const token = localStorage.getItem('meuToken')
-    if (!token || !meId) {
+    if (!meId) {
       navigate('/login')
       return undefined
     }

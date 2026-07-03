@@ -1,11 +1,12 @@
-import jwt from 'jsonwebtoken'
+import { firebaseAdmin } from '../lib/firebase.js'
 import { authLogger } from '../lib/logger.js'
 
 /**
  * Socket.io auth middleware — runs before 'connection' event.
- * Verifies JWT and attaches userId to socket.
+ * Verifica o ID token do Firebase (o cliente envia `getIdToken()`) e anexa o
+ * uid ao socket.
  */
-export function socketAuthMiddleware(socket, next) {
+export async function socketAuthMiddleware(socket, next) {
   const token = socket.handshake.auth?.token
 
   if (!token) {
@@ -17,8 +18,8 @@ export function socketAuthMiddleware(socket, next) {
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.SECRET)
-    socket.userId = decoded.id ?? decoded.userId ?? decoded.sub
+    const decoded = await firebaseAdmin.auth().verifyIdToken(token)
+    socket.userId = decoded.uid
     next()
   } catch (err) {
     authLogger.warn('socket:auth_invalid', {

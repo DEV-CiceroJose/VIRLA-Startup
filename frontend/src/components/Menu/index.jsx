@@ -5,6 +5,7 @@ import MenuIcon from '@mui/icons-material/Menu'
 import Close from '@mui/icons-material/Close'
 import StarRate from '@mui/icons-material/StarRate'
 import api from '../../services/api'
+import { logout } from '../../services/auth'
 
 // ─── Navigation link definitions ──────────────────────────────────────────────
 
@@ -76,8 +77,17 @@ export default function Menu() {
 
   const closeMenu = useCallback(() => setOpen(false), [])
 
-  const fazerLogout = useCallback(() => {
+  const fazerLogout = useCallback(async () => {
     closeMenu()
+    // Encerra a sessão do Firebase Auth. Sem isso, `firebaseAuth.currentUser`
+    // continua válido e o AuthContext re-popula a sessão — o usuário "voltava"
+    // logado. O onAuthChange(null) disparado pelo signOut limpa o AuthContext e
+    // o localStorage (meuId/meuNome/meuRole); o clear() cobre chaves restantes.
+    try {
+      await logout()
+    } catch {
+      /* mesmo se o signOut falhar, seguimos limpando e redirecionando */
+    }
     localStorage.clear()
     navigate('/')
   }, [closeMenu, navigate])

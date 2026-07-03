@@ -15,7 +15,7 @@ import { Field, Button, Card } from '../../components/ui'
 import ProfileImageUpload from '../../components/ProfileImageUpload'
 import { isValidCpf, isValidEmail, maskCpf, stripCpf } from '../../utils/validators'
 import { registerWithEmail, loginWithGoogle, mapAuthError, getIdToken } from '../../services/auth'
-import { COUNCILS } from '../../constants/councils'
+import { COUNCILS, isValidRegister } from '../../constants/councils'
 
 export default function Cadastro() {
   const navigate = useNavigate()
@@ -67,7 +67,10 @@ export default function Cadastro() {
       toast.warning('Informe sua data de nascimento.')
       return
     }
-    if (!/^[\p{L} .'-]{2,}$/u.test(name)) {
+    const okChars = /^[\p{L}][\p{L} .'-]*$/u.test(name) && name.length >= 2
+    const letters = name.replace(/[^\p{L}]/gu, '')
+    const notRepeated = !(letters.length >= 2 && /^(.)\1+$/u.test(letters))
+    if (!okChars || !notRepeated) {
       toast.warning('Informe um nome válido (apenas letras).')
       return
     }
@@ -87,6 +90,11 @@ export default function Cadastro() {
       if (role === 'CUIDADOR') {
         const registerNumber = inputRegister.current?.value?.trim()
         if (council && registerNumber) {
+          if (!isValidRegister(council, registerNumber)) {
+            toast.warning('Número de registro inválido para o conselho informado.')
+            setSubmitting(false)
+            return
+          }
           payload.council = council
           payload.registerNumber = registerNumber
         } else if (council || registerNumber) {

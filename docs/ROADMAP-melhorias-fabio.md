@@ -87,13 +87,26 @@ Sem dependências, alto valor, baixo custo. Fazer primeiro.
 
 ---
 
+## 🆕 Achados em teste manual (02/07/2026 — pós-migração Firebase Auth)
+
+Encontrados testando a branch `tasks-dev` no navegador após a migração de login para Firebase Auth.
+
+| Task | Esforço | Área | Descrição |
+|------|---------|------|-----------|
+| **FEED-01** | **P** | frontend | No Feed (`pages/Feed/index.jsx:269`), bug de pluralização: `'perfil' + 'is'` produz "5 perfilis no total" (correto: "perfis"). Além do typo, avaliar se a contagem total de perfis deve mesmo ser exibida ao Familiar — feedback do usuário é que **não deveria aparecer**. Decidir: remover a contagem, ou só corrigir o texto. |
+| **AUTH-01** | **M** | frontend / backend | Contas criadas via **login Google** não têm senha no Firebase Auth e hoje não existe nenhuma forma de definir uma (sem `linkWithCredential`/`EmailAuthProvider` no código). Se o usuário quiser também entrar com e-mail/senha (ou perder acesso à conta Google), fica sem saída. Adicionar um fluxo em `Perfil` para "criar senha" via `linkWithCredential(EmailAuthProvider.credential(email, senha))` quando `providerData` não incluir `password`. |
+
+**Confirmado em produção:** BUG-02 (data de nascimento futura aceita, gera "0 anos") — reproduzido na tela de Perfil com data 03/07/2026 sendo aceita antes da data-limite de hoje (02/07/2026). Já rastreado acima; nenhuma task nova necessária, só reforça a prioridade.
+
+---
+
 ## Resumo por esforço
 
-- **P (rápidas):** BUG-01, SEC-05, FE-12, CHAT-03, SEC-06, FE-08, FE-04, FE-09, FE-01, FE-03, FE-07, FE-11 → **12 tasks**
-- **M:** BUG-02, SEC-04, FE-05, FE-06, FE-10, FE-02, CHAT-01, PROD-01/last-seen, PROD-02, SEC-03(±) → **~10 tasks**
+- **P (rápidas):** BUG-01, SEC-05, FE-12, CHAT-03, SEC-06, FE-08, FE-04, FE-09, FE-01, FE-03, FE-07, FE-11, FEED-01 → **13 tasks**
+- **M:** BUG-02, SEC-04, FE-05, FE-06, FE-10, FE-02, CHAT-01, PROD-01/last-seen, PROD-02, SEC-03(±), AUTH-01 → **~11 tasks**
 - **G:** FEAT-01, SEC-01, PROD-03, (SEC-03 no cenário robusto)
 - **XG:** CHAT-02 (pacote completo)
 
-**Sugestão de ordem:** Fase 0 (esta semana) → Fase 1 → escolher provedor/estratégia (decisões 1–2) → Fases 2–3 → Fase 4.
+**Sugestão de ordem:** Fase 0 (esta semana) → Fase 1 → escolher provedor/estratégia (decisões 1–2) → Fases 2–3 → Fase 4. FEED-01 e AUTH-01 (achados em teste manual) são independentes e podem entrar na Fase 0/1.
 
-**Estimativa total grosseira:** ~4–6 semanas de dev focado para as 24 tasks; ~1 semana entrega as Fases 0+1 (14 tasks, todo o valor de correção rápida).
+**Estimativa total grosseira:** ~4–6 semanas de dev focado para as 26 tasks; ~1 semana entrega as Fases 0+1 (16 tasks, todo o valor de correção rápida).

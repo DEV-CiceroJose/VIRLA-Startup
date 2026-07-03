@@ -9,6 +9,14 @@ test('calculateAge conta anos completos', () => {
   assert.equal(calculateAge(new Date('2000-07-03T12:00:00Z'), REF), 25) // aniversário ainda não ocorreu
 })
 
+test('validateBirthDate: quem faz 18 amanhã é rejeitado; quem já fez é aceito', () => {
+  const now = new Date('2026-07-02T12:00:00Z')
+  // faz 18 amanhã (2026-07-03) → nasceu 2008-07-03 → hoje ainda tem 17
+  assert.equal(calculateAge('2008-07-03', now), 17)
+  // fez 18 hoje (nasceu 2008-07-02) → 18
+  assert.equal(calculateAge('2008-07-02', now), 18)
+})
+
 test('validateBirthDate rejeita ausência', () => {
   assert.equal(validateBirthDate('').valid, false)
   assert.equal(validateBirthDate(null).valid, false)

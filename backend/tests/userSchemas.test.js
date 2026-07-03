@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { createUserBodySchema, updateUserBodySchema } from '../src/schemas/userSchemas.js'
+import { createUserBodySchema, updateUserBodySchema, profileImageSchema } from '../src/schemas/userSchemas.js'
 
 // helper: data de 30 anos atrás (adulto válido) no formato YYYY-MM-DD
 function adultoISO() {
@@ -59,4 +59,26 @@ test('updateUserBodySchema rejeita birthDate futura quando enviada', () => {
   const futuro = new Date(Date.now() + 86400000).toISOString().split('T')[0]
   const r = updateUserBodySchema.safeParse({ birthDate: futuro })
   assert.equal(r.success, false)
+})
+
+const baseCreate = { role: 'FAMILIAR', cpf: '390.533.447-05', birthDate: adultoISO() }
+
+test('createUserBodySchema rejeita nome inválido', () => {
+  assert.equal(createUserBodySchema.safeParse({ ...baseCreate, name: 'Ana123' }).success, false)
+  assert.equal(createUserBodySchema.safeParse({ ...baseCreate, name: 'Ana Souza' }).success, true)
+})
+
+test('hourlyRate: fora de 10–500 falha; dentro passa; ausente ok', () => {
+  const ok = createUserBodySchema.safeParse({ ...baseCreate, name: 'Ana Souza', hourlyRate: 25 })
+  assert.equal(ok.success, true, JSON.stringify(ok.error?.issues))
+  assert.equal(createUserBodySchema.safeParse({ ...baseCreate, name: 'Ana Souza', hourlyRate: 5 }).success, false)
+  assert.equal(createUserBodySchema.safeParse({ ...baseCreate, name: 'Ana Souza', hourlyRate: 900 }).success, false)
+  assert.equal(createUserBodySchema.safeParse({ ...baseCreate, name: 'Ana Souza', hourlyRate: 'abc' }).success, false)
+  assert.equal(createUserBodySchema.safeParse({ ...baseCreate, name: 'Ana Souza' }).success, true) // ausente
+})
+
+test('profileImageSchema aceita ~5MB e rejeita prefixo não-imagem', () => {
+  const big = 'data:image/png;base64,' + 'A'.repeat(6_000_000)
+  assert.equal(profileImageSchema.safeParse(big).success, true)
+  assert.equal(profileImageSchema.safeParse('data:text/html;base64,AAAA').success, false)
 })

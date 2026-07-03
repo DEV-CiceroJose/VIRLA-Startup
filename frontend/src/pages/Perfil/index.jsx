@@ -19,7 +19,7 @@ import { calculateAge } from '../../utils/dateUtils'
 import ProfileImageUpload from '../../components/ProfileImageUpload'
 import { Button, Card, Alert, ConfirmDialog, Badge as DSBadge } from '../../components/ui'
 import { hasPasswordProvider, linkPassword, mapAuthError } from '../../services/auth'
-import { COUNCILS } from '../../constants/councils'
+import { COUNCILS, isValidRegister } from '../../constants/councils'
 
 const FIELD_CLASS =
   'w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-virla-texto text-sm ' +
@@ -137,6 +137,13 @@ export default function Perfil() {
         setMessage({
           type: 'error',
           text: 'Preencha o conselho e o número de registro juntos, ou deixe os dois em branco.',
+        })
+        return
+      }
+      if (hasCouncil && hasRegisterNumber && !isValidRegister(userData.council, userData.registerNumber.trim())) {
+        setMessage({
+          type: 'error',
+          text: 'Número de registro inválido para o conselho informado.',
         })
         return
       }

@@ -3,6 +3,7 @@ import { isValidCPF, stripCpf } from '../utils/cpf.js'
 import { isValidEmail } from '../utils/email.js'
 import { validateBirthDate } from '../utils/date.js'
 import { isValidName } from '../utils/name.js'
+import { COUNCIL_VALUES, isValidRegister } from '../utils/councils.js'
 
 export const cpfSchema = z
   .string()
@@ -28,6 +29,31 @@ export const birthDateSchema = z.string().superRefine((v, ctx) => {
   const res = validateBirthDate(v)
   if (!res.valid) ctx.addIssue({ code: z.ZodIssueCode.custom, message: res.error })
 })
+
+export const councilSchema = z.enum(COUNCIL_VALUES, {
+  errorMap: () => ({ message: 'Conselho profissional inválido.' }),
+})
+
+/** Regra do par conselho+registro (superRefine reutilizável em create/update). */
+export function refineRegisterPair(data, ctx) {
+  const hasCouncil = !!data.council
+  const hasNumber = !!(data.registerNumber && String(data.registerNumber).trim())
+  if (hasCouncil !== hasNumber) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Informe o conselho e o número do registro.',
+      path: ['registerNumber'],
+    })
+    return
+  }
+  if (hasCouncil && hasNumber && !isValidRegister(data.council, data.registerNumber)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Número de registro inválido para o conselho informado.',
+      path: ['registerNumber'],
+    })
+  }
+}
 
 export const userRoleSchema = z.enum(['CUIDADOR', 'FAMILIAR'], {
   errorMap: () => ({ message: 'Tipo de usuário inválido.' }),
@@ -61,7 +87,7 @@ export const updateUserBodySchema = z
     bio: z.string().max(2000).optional(),
     email: emailSchema.optional(),
     profileImage: profileImageSchema,
-    crm_crf: z.string().max(80).optional().nullable(),
+    council: councilSchema.optional().nullable(),
     hourlyRate: hourlyRateSchema,
     registerNumber: z.string().max(80).optional().nullable(),
     approach: z.string().max(200).optional().nullable(),
@@ -72,6 +98,7 @@ export const updateUserBodySchema = z
   })
   // Bloqueia campos sensíveis/imutáveis que não podem ser alterados por update.
   .strict()
+  .superRefine(refineRegisterPair)
 
 export const createUserBodySchema = z.object({
   name: nameSchema,
@@ -80,7 +107,7 @@ export const createUserBodySchema = z.object({
   bio: z.string().max(2000).optional().default(''),
   cpf: cpfSchema,
   profileImage: profileImageSchema,
-  crm_crf: z.string().max(80).optional().nullable(),
+  council: councilSchema.optional().nullable(),
   hourlyRate: hourlyRateSchema,
   registerNumber: z.string().max(80).optional().nullable(),
   approach: z.string().max(200).optional().nullable(),
@@ -88,4 +115,4 @@ export const createUserBodySchema = z.object({
   description: z.string().max(5000).optional().nullable(),
   city: z.string().max(80).optional().nullable(),
   state: z.string().max(2).optional().nullable(),
-})
+}).superRefine(refineRegisterPair)

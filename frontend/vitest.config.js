@@ -16,6 +16,12 @@ export default defineConfig({
     setupFiles: ['./src/test/setup.js'],
     css: false,
     include: ['src/**/*.{test,spec}.{js,jsx}'],
+    // Execução sequencial entre arquivos: alguns testes mexem em globals do
+    // jsdom (ex.: api.test.js redefine window.location) que vazam entre workers
+    // quando os arquivos rodam em paralelo, causando falhas intermitentes.
+    // Rodar um arquivo por vez torna a suíte determinística (custo desprezível
+    // para ~32 testes).
+    fileParallelism: false,
     reporters: ['default', new MarkdownReporter({ outputFile: 'TEST-REPORT.md' })],
   },
 })

@@ -13,12 +13,13 @@ export default function CompletarCadastroPage() {
   const [loading, setLoading] = useState(false)
   const nome = useRef()
   const cpf = useRef()
+  const birthDate = useRef()
 
   async function handleSubmit(e) {
     e.preventDefault()
     if (loading) return
-    if (!nome.current.value.trim() || !cpf.current.value.trim()) {
-      toast.warning('Preencha nome e CPF.')
+    if (!nome.current.value.trim() || !cpf.current.value.trim() || !birthDate.current.value) {
+      toast.warning('Preencha nome, CPF e data de nascimento.')
       return
     }
     setLoading(true)
@@ -27,6 +28,7 @@ export default function CompletarCadastroPage() {
         name: nome.current.value.trim(),
         cpf: cpf.current.value.trim(),
         role,
+        birthDate: birthDate.current.value,
       })
       await getIdToken(true) // recarrega o token para trazer o custom claim de role
       await refreshProfile()
@@ -50,6 +52,7 @@ export default function CompletarCadastroPage() {
 
           <Field ref={nome} label="Nome completo" name="name" placeholder="Seu nome" />
           <Field ref={cpf} label="CPF" name="cpf" placeholder="000.000.000-00" />
+          <Field ref={birthDate} label="Data de nascimento" type="date" name="birthDate" max={new Date().toISOString().split('T')[0]} />
 
           <div className="flex gap-2">
             <Button type="button" fullWidth variant={role === 'FAMILIAR' ? 'primary' : 'secondary'} onClick={() => setRole('FAMILIAR')}>Familiar</Button>

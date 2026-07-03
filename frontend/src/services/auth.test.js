@@ -5,6 +5,9 @@ const createUserWithEmailAndPassword = vi.fn(() => Promise.resolve({ user: { uid
 const signInWithEmailAndPassword = vi.fn(() => Promise.resolve({ user: { uid: 'u1' } }))
 const signInWithPopup = vi.fn(() => Promise.resolve({ user: { uid: 'g1' } }))
 const sendPasswordResetEmail = vi.fn(() => Promise.resolve())
+const linkWithCredential = vi.fn(() => Promise.resolve())
+const credentialFn = vi.fn((email, senha) => ({ email, senha, _type: 'cred' }))
+const fakeFirebaseAuth = vi.hoisted(() => ({ currentUser: null }))
 
 vi.mock('firebase/auth', () => ({
   createUserWithEmailAndPassword: (...a) => createUserWithEmailAndPassword(...a),
@@ -14,10 +17,12 @@ vi.mock('firebase/auth', () => ({
   sendEmailVerification: (...a) => sendEmailVerification(...a),
   signOut: vi.fn(() => Promise.resolve()),
   onAuthStateChanged: vi.fn(),
+  linkWithCredential: (...a) => linkWithCredential(...a),
+  EmailAuthProvider: { credential: (...a) => credentialFn(...a) },
 }))
-vi.mock('./firebase', () => ({ firebaseAuth: { currentUser: null }, googleProvider: {} }))
+vi.mock('./firebase', () => ({ firebaseAuth: fakeFirebaseAuth, googleProvider: {} }))
 
-import { registerWithEmail, mapAuthError } from './auth'
+import { registerWithEmail, mapAuthError, hasPasswordProvider, linkPassword } from './auth'
 
 describe('services/auth', () => {
   beforeEach(() => vi.clearAllMocks())
@@ -33,5 +38,26 @@ describe('services/auth', () => {
     expect(mapAuthError('auth/invalid-credential')).toMatch(/inválid/i)
     expect(mapAuthError('auth/wrong-password')).toMatch(/inválid/i)
     expect(mapAuthError('codigo/desconhecido')).toMatch(/tente novamente|erro/i)
+  })
+})
+
+describe('services/auth · criar senha (AUTH-01)', () => {
+  beforeEach(() => { vi.clearAllMocks(); fakeFirebaseAuth.currentUser = null })
+
+  it('hasPasswordProvider é false para conta só-Google', () => {
+    fakeFirebaseAuth.currentUser = { providerData: [{ providerId: 'google.com' }] }
+    expect(hasPasswordProvider()).toBe(false)
+  })
+
+  it('hasPasswordProvider é true quando há provedor password', () => {
+    fakeFirebaseAuth.currentUser = { providerData: [{ providerId: 'google.com' }, { providerId: 'password' }] }
+    expect(hasPasswordProvider()).toBe(true)
+  })
+
+  it('linkPassword vincula credencial de e-mail/senha', async () => {
+    fakeFirebaseAuth.currentUser = { email: 'g@x.com', providerData: [{ providerId: 'google.com' }] }
+    await linkPassword('segredo123')
+    expect(credentialFn).toHaveBeenCalledWith('g@x.com', 'segredo123')
+    expect(linkWithCredential).toHaveBeenCalled()
   })
 })

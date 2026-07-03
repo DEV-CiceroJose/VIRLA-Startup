@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { toast } from 'sonner'
 import Person from '@mui/icons-material/Person'
 import CalendarMonth from '@mui/icons-material/CalendarMonth'
 import Cake from '@mui/icons-material/Cake'
@@ -17,6 +18,7 @@ import api from '../../services/api'
 import { calculateAge } from '../../utils/dateUtils'
 import ProfileImageUpload from '../../components/ProfileImageUpload'
 import { Button, Card, Alert, ConfirmDialog, Badge as DSBadge } from '../../components/ui'
+import { hasPasswordProvider, linkPassword, mapAuthError } from '../../services/auth'
 
 const FIELD_CLASS =
   'w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-virla-texto text-sm ' +
@@ -93,6 +95,11 @@ export default function Perfil() {
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [message, setMessage] = useState({ type: '', text: '' })
   const [userData, setUserData] = useState(emptyUserForm)
+  const [needsPassword] = useState(() => !hasPasswordProvider())
+  const [passwordLinked, setPasswordLinked] = useState(false)
+  const [linkingPwd, setLinkingPwd] = useState(false)
+  const novaSenha = useRef()
+  const confirmaNovaSenha = useRef()
 
   const id = localStorage.getItem('meuId')
 
@@ -153,10 +160,35 @@ export default function Perfil() {
       if (updated?.name) localStorage.setItem('meuNome', updated.name)
       setUserData(mapUserToForm(updated))
       setMessage({ type: 'success', text: 'Perfil atualizado com sucesso!' })
-    } catch {
-      setMessage({ type: 'error', text: 'Erro ao atualizar perfil. Tente novamente.' })
+    } catch (err) {
+      setMessage({ type: 'error', text: err.response?.data?.msg ?? 'Erro ao atualizar perfil. Tente novamente.' })
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function handleCriarSenha(e) {
+    e.preventDefault()
+    if (linkingPwd) return
+    const s = novaSenha.current?.value ?? ''
+    const c = confirmaNovaSenha.current?.value ?? ''
+    if (s.length < 6) {
+      toast.warning('A senha deve ter pelo menos 6 caracteres.')
+      return
+    }
+    if (s !== c) {
+      toast.warning('As senhas não conferem.')
+      return
+    }
+    setLinkingPwd(true)
+    try {
+      await linkPassword(s)
+      setPasswordLinked(true)
+      toast.success('Senha criada! Agora você também pode entrar com e-mail e senha.')
+    } catch (err) {
+      toast.error(mapAuthError(err.code) || 'Não foi possível criar a senha.')
+    } finally {
+      setLinkingPwd(false)
     }
   }
 
@@ -421,6 +453,30 @@ export default function Perfil() {
             </Button>
           </form>
         </Card>
+
+        {needsPassword && !passwordLinked && (
+          <Card as="form" onSubmit={handleCriarSenha} className="mt-6 p-6 space-y-4">
+            <h3 className="text-lg font-bold text-virla-texto">Criar senha</h3>
+            <p className="text-sm text-virla-muted">
+              Você entrou com o Google. Crie uma senha para também poder entrar com e-mail e senha.
+            </p>
+            <input
+              ref={novaSenha}
+              type="password"
+              placeholder="Nova senha (mín. 6 caracteres)"
+              autoComplete="new-password"
+              className={FIELD_CLASS}
+            />
+            <input
+              ref={confirmaNovaSenha}
+              type="password"
+              placeholder="Confirmar nova senha"
+              autoComplete="new-password"
+              className={FIELD_CLASS}
+            />
+            <Button type="submit" loading={linkingPwd}>Criar senha</Button>
+          </Card>
+        )}
 
         <Card className="border-red-200 p-6">
           <SectionTitle icon={Shield}>Zona de perigo</SectionTitle>

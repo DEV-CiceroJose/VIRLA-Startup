@@ -135,7 +135,7 @@ export default function Home() {
         !userData.bio ||
         !userData.profileImage ||
         userData.hourlyRate == null ||
-        !userData.crm_crf ||
+        !userData.council ||
         !userData.city ||
         !userData.state
       );

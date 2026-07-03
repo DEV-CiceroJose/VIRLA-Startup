@@ -5,9 +5,9 @@
 /** Idade em anos completos até `now`. Aceita Date ou string parseável. */
 export function calculateAge(birthDate, now = new Date()) {
   const birth = birthDate instanceof Date ? birthDate : new Date(birthDate)
-  let age = now.getFullYear() - birth.getFullYear()
-  const m = now.getMonth() - birth.getMonth()
-  if (m < 0 || (m === 0 && now.getDate() < birth.getDate())) age--
+  let age = now.getUTCFullYear() - birth.getUTCFullYear()
+  const m = now.getUTCMonth() - birth.getUTCMonth()
+  if (m < 0 || (m === 0 && now.getUTCDate() < birth.getUTCDate())) age--
   return age
 }
 

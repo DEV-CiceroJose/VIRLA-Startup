@@ -57,14 +57,33 @@ describe('Página de Cadastro', () => {
     expect(screen.getByRole('button', { name: /cadastrar com google/i })).toBeInTheDocument()
   })
 
-  it('mostra o campo CRM/CRF só para Cuidador', async () => {
+  it('mostra o select de Conselho e o número do registro só para Cuidador', async () => {
     const user = userEvent.setup()
     renderCadastro()
-    // padrão = CUIDADOR → campo CRM presente
-    expect(screen.getByPlaceholderText('Número do conselho')).toBeInTheDocument()
-    // troca para FAMILIAR → campo some
+    // padrão = CUIDADOR → campos de conselho presentes
+    expect(screen.getByLabelText('Conselho')).toBeInTheDocument()
+    expect(screen.getByPlaceholderText('Número do registro')).toBeInTheDocument()
+    // troca para FAMILIAR → campos somem
     await user.selectOptions(screen.getByLabelText('Tipo de conta'), 'FAMILIAR')
-    expect(screen.queryByPlaceholderText('Número do conselho')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Conselho')).not.toBeInTheDocument()
+    expect(screen.queryByPlaceholderText('Número do registro')).not.toBeInTheDocument()
+  })
+
+  it('bloqueia envio quando só o conselho ou só o número do registro for preenchido', async () => {
+    const user = userEvent.setup()
+    renderCadastro()
+    await fillValidFormExceptPasswords(user)
+    await user.type(screen.getByPlaceholderText('Senha (mín. 6 caracteres)'), 'segredo1')
+    await user.type(screen.getByPlaceholderText('Repita a senha'), 'segredo1')
+    fireEvent.change(document.querySelector('input[type="date"]'), { target: { value: '1994-05-10' } })
+    await user.selectOptions(screen.getByLabelText('Conselho'), 'COREN')
+    await user.click(screen.getByRole('button', { name: /criar conta/i }))
+
+    expect(toast.warning).toHaveBeenCalledWith(
+      'Informe o conselho e o número do registro (ou deixe ambos em branco).',
+    )
+    expect(registerWithEmail).not.toHaveBeenCalled()
+    expect(api.post).not.toHaveBeenCalled()
   })
 
   it('bloqueia envio com CPF inválido e avisa', async () => {

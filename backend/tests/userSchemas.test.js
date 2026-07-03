@@ -82,3 +82,21 @@ test('profileImageSchema aceita ~5MB e rejeita prefixo não-imagem', () => {
   assert.equal(profileImageSchema.safeParse(big).success, true)
   assert.equal(profileImageSchema.safeParse('data:text/html;base64,AAAA').success, false)
 })
+
+test('registro: par válido ok; só um dos dois falha; ambos ausentes ok', () => {
+  const base = { ...baseCreate, name: 'Ana Souza' }
+  assert.equal(createUserBodySchema.safeParse({ ...base, council: 'COREN', registerNumber: '123456' }).success, true)
+  assert.equal(createUserBodySchema.safeParse({ ...base, council: 'COREN' }).success, false) // sem número
+  assert.equal(createUserBodySchema.safeParse({ ...base, registerNumber: '123456' }).success, false) // sem conselho
+  assert.equal(createUserBodySchema.safeParse({ ...base }).success, true) // nenhum
+})
+
+test('registro: formato inválido para o conselho falha', () => {
+  const base = { ...baseCreate, name: 'Ana Souza' }
+  assert.equal(createUserBodySchema.safeParse({ ...base, council: 'COREN', registerNumber: 'abc' }).success, false)
+  assert.equal(createUserBodySchema.safeParse({ ...base, council: 'XPTO', registerNumber: '123456' }).success, false)
+})
+
+test('crm_crf não é mais aceito no update (strict)', () => {
+  assert.equal(updateUserBodySchema.safeParse({ crm_crf: '123' }).success, false)
+})

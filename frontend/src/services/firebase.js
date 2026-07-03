@@ -1,6 +1,6 @@
 import { initializeApp, getApps, getApp } from 'firebase/app'
 import { getDatabase } from 'firebase/database'
-import { getAuth } from 'firebase/auth'
+import { getAuth, GoogleAuthProvider } from 'firebase/auth'
 
 // ─── Config do Firebase (preencher via .env — ver .env.example) ────────────
 const firebaseConfig = {
@@ -50,5 +50,6 @@ if (isFirebaseReady()) {
   )
 }
 
+export const googleProvider = new GoogleAuthProvider()
 export { rtdb, firebaseAuth }
 export default firebaseApp

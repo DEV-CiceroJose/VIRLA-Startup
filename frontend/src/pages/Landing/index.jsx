@@ -694,7 +694,7 @@ function Landing() {
                 { name: "Fabio Henrique", role: "CEO", initials: "FH", image: "Fabio.jpg" },
                 { name: "Miguel Alves", role: "COO", initials: "MA", image: "Miguel.jpg" },
                 { name: "Alissomberg Domingos", role: "CTO", initials: "AD", image: "Berg.jpg" },
-                { name: "Cicero José", role: "Co-CTO", initials: "AV", image: "Cicero.jpeg" },
+                { name: "Cicero José", role: "Co-CTO", initials: "CJ", image: "Cicero.jpeg" },
                 { name: "Kauã Soares", role: "CMO", initials: "KS", image: "Kaua.jpg" },
                 { name: "Vitor Gabriel", role: "CDO", initials: "VG", image: "Vitor.jpg" },
               ].map((member, i) => (

@@ -130,7 +130,6 @@ export default function SolicitacoesCuidador() {
   const [message, setMessage] = useState({ type: '', text: '' })
   const [busyId, setBusyId] = useState(null)
 
-  const token = localStorage.getItem('meuToken')
   const meuId = localStorage.getItem('meuId')
 
   async function loadSolicitacoes() {
@@ -146,13 +145,13 @@ export default function SolicitacoesCuidador() {
   }
 
   useEffect(() => {
-    if (!token) {
+    if (!meuId) {
       navigate('/login')
       return
     }
     loadSolicitacoes()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token])
+  }, [meuId])
 
   const { disponiveis, visualizadas, andamento } = useMemo(() => {
     const disp = []

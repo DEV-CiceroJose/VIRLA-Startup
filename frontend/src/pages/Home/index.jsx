@@ -69,10 +69,9 @@ export default function Home() {
   }, [fetchUnreadCount])
 
   useEffect(() => {
-    const token = localStorage.getItem('meuToken')
     const id = localStorage.getItem('meuId')
 
-    if (!token || !id) {
+    if (!id) {
       navigate('/login')
       return
     }

@@ -9,12 +9,19 @@ vi.mock('react-router-dom', async (orig) => {
   return { ...actual, useNavigate: () => navigateMock }
 })
 vi.mock('../../services/api', () => ({ default: { post: vi.fn() } }))
+vi.mock('../../services/auth', () => ({
+  registerWithEmail: vi.fn(),
+  loginWithGoogle: vi.fn(),
+  mapAuthError: vi.fn(() => ''),
+  getIdToken: vi.fn(),
+}))
 vi.mock('sonner', () => ({ toast: { warning: vi.fn(), error: vi.fn(), success: vi.fn() } }))
 // Upload de imagem usa FileReader/canvas — fora do escopo deste fluxo.
 vi.mock('../../components/ProfileImageUpload', () => ({ default: () => null }))
 
 import Cadastro from './index'
 import api from '../../services/api'
+import { registerWithEmail, loginWithGoogle, getIdToken } from '../../services/auth'
 import { toast } from 'sonner'
 
 function renderCadastro() {
@@ -23,6 +30,12 @@ function renderCadastro() {
       <Cadastro />
     </MemoryRouter>,
   )
+}
+
+async function fillValidFormExceptPasswords(user) {
+  await user.type(screen.getByPlaceholderText('Nome completo'), 'Ana Souza')
+  await user.type(screen.getByPlaceholderText('seu@email.com'), 'ana@provedor.com')
+  await user.type(screen.getByPlaceholderText('000.000.000-00'), '52998224725')
 }
 
 describe('Página de Cadastro', () => {
@@ -39,7 +52,9 @@ describe('Página de Cadastro', () => {
     expect(screen.getByPlaceholderText('Nome completo')).toBeInTheDocument()
     expect(screen.getByPlaceholderText('000.000.000-00')).toBeInTheDocument()
     expect(screen.getByPlaceholderText('seu@email.com')).toBeInTheDocument()
+    expect(screen.getByPlaceholderText('Repita a senha')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /criar conta/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /cadastrar com google/i })).toBeInTheDocument()
   })
 
   it('mostra o campo CRM/CRF só para Cuidador', async () => {
@@ -58,31 +73,60 @@ describe('Página de Cadastro', () => {
     await user.type(screen.getByPlaceholderText('Nome completo'), 'Ana Souza')
     await user.type(screen.getByPlaceholderText('seu@email.com'), 'ana@provedor.com')
     await user.type(screen.getByPlaceholderText('000.000.000-00'), '11111111111')
-    await user.type(screen.getByPlaceholderText(/Senha/i), 'segredo1')
+    await user.type(screen.getByPlaceholderText('Senha (mín. 6 caracteres)'), 'segredo1')
+    await user.type(screen.getByPlaceholderText('Repita a senha'), 'segredo1')
     await user.click(screen.getByRole('button', { name: /criar conta/i }))
     expect(toast.warning).toHaveBeenCalled()
+    expect(registerWithEmail).not.toHaveBeenCalled()
     expect(api.post).not.toHaveBeenCalled()
   })
 
-  it('cadastro válido envia para /users e navega para /login', async () => {
-    api.post.mockResolvedValue({ data: { user: { id: 'u9' } } })
+  it('bloqueia envio com senhas divergentes e avisa', async () => {
     const user = userEvent.setup()
     renderCadastro()
-    await user.type(screen.getByPlaceholderText('Nome completo'), 'Ana Souza')
-    await user.type(screen.getByPlaceholderText('seu@email.com'), 'ana@provedor.com')
-    await user.type(screen.getByPlaceholderText('000.000.000-00'), '52998224725')
-    await user.type(screen.getByPlaceholderText(/Senha/i), 'segredo1')
+    await fillValidFormExceptPasswords(user)
+    await user.type(screen.getByPlaceholderText('Senha (mín. 6 caracteres)'), 'segredo1')
+    await user.type(screen.getByPlaceholderText('Repita a senha'), 'segredo2')
     await user.click(screen.getByRole('button', { name: /criar conta/i }))
 
+    expect(toast.warning).toHaveBeenCalledWith('As senhas não conferem.')
+    expect(registerWithEmail).not.toHaveBeenCalled()
+    expect(api.post).not.toHaveBeenCalled()
+  })
+
+  it('cadastro válido cria credencial no Firebase, envia perfil sem senha e navega para /login', async () => {
+    registerWithEmail.mockResolvedValue({ uid: 'u9' })
+    api.post.mockResolvedValue({ data: { user: { id: 'u9' } } })
+    getIdToken.mockResolvedValue('token')
+    const user = userEvent.setup()
+    renderCadastro()
+    await fillValidFormExceptPasswords(user)
+    await user.type(screen.getByPlaceholderText('Senha (mín. 6 caracteres)'), 'segredo1')
+    await user.type(screen.getByPlaceholderText('Repita a senha'), 'segredo1')
+    await user.click(screen.getByRole('button', { name: /criar conta/i }))
+
+    await waitFor(() => expect(registerWithEmail).toHaveBeenCalledWith('ana@provedor.com', 'segredo1'))
     await waitFor(() => expect(api.post).toHaveBeenCalledTimes(1))
     const [url, payload] = api.post.mock.calls[0]
     expect(url).toBe('/users')
     expect(payload).toMatchObject({
       name: 'Ana Souza',
-      email: 'ana@provedor.com',
       cpf: '52998224725',
       role: 'CUIDADOR',
     })
+    expect(payload).not.toHaveProperty('password')
+    expect(payload).not.toHaveProperty('email')
+    expect(getIdToken).toHaveBeenCalledWith(true)
     expect(navigateMock).toHaveBeenCalledWith('/login')
+  })
+
+  it('cadastro com Google chama loginWithGoogle e navega para completar cadastro', async () => {
+    loginWithGoogle.mockResolvedValue({ uid: 'g1' })
+    const user = userEvent.setup()
+    renderCadastro()
+    await user.click(screen.getByRole('button', { name: /cadastrar com google/i }))
+
+    await waitFor(() => expect(loginWithGoogle).toHaveBeenCalledTimes(1))
+    expect(navigateMock).toHaveBeenCalledWith('/completar-cadastro')
   })
 })

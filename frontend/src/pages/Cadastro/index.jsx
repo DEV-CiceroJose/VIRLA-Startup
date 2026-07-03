@@ -13,15 +13,7 @@ import api from '../../services/api'
 import { Field, Button, Card } from '../../components/ui'
 import ProfileImageUpload from '../../components/ProfileImageUpload'
 import { isValidCpf, isValidEmail, maskCpf, stripCpf } from '../../utils/validators'
-
-function formatRegisterError(err) {
-  const data = err.response?.data
-  const msg = data?.msg ?? data?.message
-  if (typeof msg === 'string') return msg
-  if (Array.isArray(msg)) return msg.join('\n')
-  if (msg && typeof msg === 'object') return JSON.stringify(msg)
-  return err.message || 'Erro ao criar conta. Verifique os dados e tente novamente.'
-}
+import { registerWithEmail, loginWithGoogle, mapAuthError, getIdToken } from '../../services/auth'
 
 export default function Cadastro() {
   const navigate = useNavigate()
@@ -33,6 +25,7 @@ export default function Cadastro() {
   const inputName = useRef()
   const inputEmail = useRef()
   const inputPassword = useRef()
+  const inputConfirmPassword = useRef()
   const inputCrmCrf = useRef()
 
   async function createUser(e) {
@@ -42,6 +35,7 @@ export default function Cadastro() {
     const name = inputName.current?.value?.trim()
     const email = inputEmail.current?.value?.trim()
     const password = inputPassword.current?.value
+    const confirmPassword = inputConfirmPassword.current?.value
     const cpfDigits = stripCpf(cpf)
 
     if (!name) {
@@ -60,6 +54,10 @@ export default function Cadastro() {
       toast.warning('A senha deve ter pelo menos 6 caracteres.')
       return
     }
+    if (password !== confirmPassword) {
+      toast.warning('As senhas não conferem.')
+      return
+    }
 
     setSubmitting(true)
     try {
@@ -67,9 +65,7 @@ export default function Cadastro() {
         name,
         role,
         bio: '',
-        email,
         cpf: cpfDigits,
-        password,
       }
 
       if (profileImage) payload.profileImage = profileImage
@@ -79,12 +75,29 @@ export default function Cadastro() {
         if (crmCrf) payload.crm_crf = crmCrf
       }
 
+      await registerWithEmail(email, password)
       await api.post('/users', payload)
-      toast.success('Conta criada! Faça login para continuar.')
+      await getIdToken(true)
+      toast.success('Conta criada! Confirme seu e-mail para entrar.')
       navigate('/login')
     } catch (err) {
       console.error(err)
-      toast.error(formatRegisterError(err))
+      const msg = mapAuthError(err.code) || err.response?.data?.msg || 'Não foi possível criar a conta.'
+      if (msg) toast.error(msg)
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  async function handleGoogle() {
+    if (submitting) return
+    setSubmitting(true)
+    try {
+      await loginWithGoogle()
+      navigate('/completar-cadastro')
+    } catch (err) {
+      const msg = mapAuthError(err.code)
+      if (msg) toast.error(msg)
     } finally {
       setSubmitting(false)
     }
@@ -172,8 +185,22 @@ export default function Cadastro() {
             autoComplete="new-password"
           />
 
+          <Field
+            ref={inputConfirmPassword}
+            label="Confirmar senha"
+            required
+            icon={Lock}
+            type="password"
+            placeholder="Repita a senha"
+            autoComplete="new-password"
+          />
+
           <Button type="submit" fullWidth loading={submitting} icon={PersonAdd} className="mt-2">
             {submitting ? 'Criando conta…' : 'Criar conta'}
+          </Button>
+
+          <Button type="button" fullWidth variant="secondary" onClick={handleGoogle} disabled={submitting}>
+            Cadastrar com Google
           </Button>
 
           <p className="text-center text-sm text-virla-muted pt-1">

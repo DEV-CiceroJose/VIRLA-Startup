@@ -11,8 +11,8 @@ export const createSolicitacaoBodySchema = z.object({
     .max(10, 'Selecione no máximo 10 tipos de cuidado.')
     .optional()
     .default([]),
-  cidade: z.string().max(80).optional(),
-  estado: z.string().max(2).optional(),
+  cidade: z.string().max(80).optional().nullable(),
+  estado: z.string().max(2).optional().nullable(),
   urgencia: z.enum(URGENCIAS).optional().default('MEDIA'),
 })
 

@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { isValidCPF, stripCpf } from '../utils/cpf.js'
 import { isValidEmail } from '../utils/email.js'
+import { validateBirthDate } from '../utils/date.js'
 
 export const cpfSchema = z
   .string()
@@ -15,6 +16,11 @@ export const emailSchema = z
   .max(254)
   .transform((v) => v.trim().toLowerCase())
   .refine(isValidEmail, { message: 'E-mail inválido.' })
+
+export const birthDateSchema = z.string().superRefine((v, ctx) => {
+  const res = validateBirthDate(v)
+  if (!res.valid) ctx.addIssue({ code: z.ZodIssueCode.custom, message: res.error })
+})
 
 export const userRoleSchema = z.enum(['CUIDADOR', 'FAMILIAR'], {
   errorMap: () => ({ message: 'Tipo de usuário inválido.' }),
@@ -35,7 +41,7 @@ export const profileImageSchema = z
 export const updateUserBodySchema = z
   .object({
     name: z.string().min(1).max(120).optional(),
-    birthDate: z.string().optional().nullable(),
+    birthDate: birthDateSchema.optional().nullable(),
     bio: z.string().max(2000).optional(),
     email: emailSchema.optional(),
     profileImage: profileImageSchema,
@@ -53,7 +59,7 @@ export const updateUserBodySchema = z
 
 export const createUserBodySchema = z.object({
   name: z.string().min(1, 'Nome é obrigatório.').max(120),
-  birthDate: z.string().optional().nullable(),
+  birthDate: birthDateSchema,
   role: userRoleSchema,
   bio: z.string().max(2000).optional().default(''),
   cpf: cpfSchema,

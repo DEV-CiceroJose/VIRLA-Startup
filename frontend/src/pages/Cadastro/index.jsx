@@ -9,6 +9,7 @@ import PersonAdd from '@mui/icons-material/PersonAdd'
 import ArrowBack from '@mui/icons-material/ArrowBack'
 import Badge from '@mui/icons-material/Badge'
 import VerifiedUser from '@mui/icons-material/VerifiedUser'
+import CalendarMonth from '@mui/icons-material/CalendarMonth'
 import api from '../../services/api'
 import { Field, Button, Card } from '../../components/ui'
 import ProfileImageUpload from '../../components/ProfileImageUpload'
@@ -27,6 +28,7 @@ export default function Cadastro() {
   const inputPassword = useRef()
   const inputConfirmPassword = useRef()
   const inputCrmCrf = useRef()
+  const inputBirthDate = useRef()
 
   async function createUser(e) {
     e?.preventDefault()
@@ -36,6 +38,7 @@ export default function Cadastro() {
     const email = inputEmail.current?.value?.trim()
     const password = inputPassword.current?.value
     const confirmPassword = inputConfirmPassword.current?.value
+    const birthDate = inputBirthDate.current?.value
     const cpfDigits = stripCpf(cpf)
 
     if (!name) {
@@ -58,6 +61,10 @@ export default function Cadastro() {
       toast.warning('As senhas não conferem.')
       return
     }
+    if (!birthDate) {
+      toast.warning('Informe sua data de nascimento.')
+      return
+    }
 
     setSubmitting(true)
     try {
@@ -66,6 +73,7 @@ export default function Cadastro() {
         role,
         bio: '',
         cpf: cpfDigits,
+        birthDate,
       }
 
       if (profileImage) payload.profileImage = profileImage
@@ -153,6 +161,15 @@ export default function Cadastro() {
             value={cpf}
             onChange={(e) => setCpf(maskCpf(e.target.value))}
             maxLength={14}
+          />
+
+          <Field
+            ref={inputBirthDate}
+            label="Data de nascimento"
+            required
+            icon={CalendarMonth}
+            type="date"
+            max={new Date().toISOString().split('T')[0]}
           />
 
           {role === 'CUIDADOR' && (

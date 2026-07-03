@@ -61,6 +61,17 @@ export async function deleteUser(id) {
   await col().doc(id).delete()
 }
 
+/** true se já existe outro usuário com o mesmo par (conselho, registro). */
+export async function registerExists(council, registerNumber, exceptId = null) {
+  if (!council || !registerNumber) return false
+  const snap = await col()
+    .where('council', '==', council)
+    .where('registerNumber', '==', registerNumber)
+    .limit(2)
+    .get()
+  return snap.docs.some((d) => d.id !== exceptId)
+}
+
 /** Todos os usuários (uso administrativo/interno). */
 export async function listAll() {
   return mapQuery(await col().get())

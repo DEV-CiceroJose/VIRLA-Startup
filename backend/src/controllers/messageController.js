@@ -85,7 +85,7 @@ export const getMessageHistory = async (req, res) => {
             role: otherFull.role,
             profileImage: otherFull.profileImage ?? null,
             approach: otherFull.approach ?? null,
-            crm_crf: otherFull.crm_crf ?? null,
+            council: otherFull.council ?? null,
         }
 
         const messages = await getHistory(me, otherId)

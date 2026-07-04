@@ -17,16 +17,9 @@ import Shield from '@mui/icons-material/Shield'
 import api from '../../services/api'
 import { calculateAge } from '../../utils/dateUtils'
 import ProfileImageUpload from '../../components/ProfileImageUpload'
-import { Button, Card, Alert, ConfirmDialog, Badge as DSBadge } from '../../components/ui'
+import { Field, Button, Card, Alert, ConfirmDialog, Badge as DSBadge } from '../../components/ui'
 import { hasPasswordProvider, linkPassword, mapAuthError } from '../../services/auth'
 import { COUNCILS, isValidRegister } from '../../constants/councils'
-
-const FIELD_CLASS =
-  'w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-virla-texto text-sm ' +
-  'focus:outline-none focus:ring-2 focus:ring-virla-roxo/30 focus:border-virla-roxo transition-all duration-200'
-
-const DISABLED_CLASS =
-  'w-full px-4 py-3 rounded-xl border border-gray-100 bg-gray-50 text-virla-texto/40 text-sm cursor-not-allowed'
 
 function SectionTitle({ icon: Icon, children }) {
   return (
@@ -97,6 +90,7 @@ export default function Perfil() {
   const [deleting, setDeleting] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [message, setMessage] = useState({ type: '', text: '' })
+  const [fieldErrors, setFieldErrors] = useState({})
   const [userData, setUserData] = useState(emptyUserForm)
   const [needsPassword] = useState(() => !hasPasswordProvider())
   const [passwordLinked, setPasswordLinked] = useState(false)
@@ -129,22 +123,17 @@ export default function Perfil() {
   async function handleUpdate(e) {
     e.preventDefault()
     setMessage({ type: '', text: '' })
+    setFieldErrors({})
     const isFamiliar = userData.role === 'FAMILIAR'
     if (!isFamiliar) {
       const hasCouncil = Boolean(userData.council)
       const hasRegisterNumber = Boolean(userData.registerNumber.trim())
       if (hasCouncil !== hasRegisterNumber) {
-        setMessage({
-          type: 'error',
-          text: 'Preencha o conselho e o número de registro juntos, ou deixe os dois em branco.',
-        })
+        setFieldErrors({ registerNumber: 'Informe o conselho e o número do registro.' })
         return
       }
       if (hasCouncil && hasRegisterNumber && !isValidRegister(userData.council, userData.registerNumber.trim())) {
-        setMessage({
-          type: 'error',
-          text: 'Número de registro inválido para o conselho informado.',
-        })
+        setFieldErrors({ registerNumber: 'Número de registro inválido para o conselho informado.' })
         return
       }
     }
@@ -269,74 +258,45 @@ export default function Perfil() {
               </DSBadge>
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-virla-texto/60 uppercase tracking-wide mb-1.5">
-                Nome completo
-              </label>
-              <div className="relative">
-                <Person
-                  sx={{ fontSize: 16 }}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-virla-roxo/40 pointer-events-none"
-                />
-                <input
-                  type="text"
-                  value={userData.name}
-                  onChange={(e) => setUserData({ ...userData, name: e.target.value })}
-                  className={`${FIELD_CLASS} pl-9`}
-                />
-              </div>
-            </div>
+            <Field
+              label="Nome completo"
+              icon={Person}
+              type="text"
+              value={userData.name}
+              onChange={(e) => setUserData({ ...userData, name: e.target.value })}
+            />
 
-            <div>
-              <label className="block text-xs font-semibold text-virla-texto/60 uppercase tracking-wide mb-1.5">
-                E-mail (não editável)
-              </label>
-              <input type="text" value={userData.email} disabled className={DISABLED_CLASS} />
-            </div>
+            <Field
+              label="E-mail (não editável)"
+              type="text"
+              value={userData.email}
+              disabled
+            />
 
-            <div>
-              <label className="block text-xs font-semibold text-virla-texto/60 uppercase tracking-wide mb-1.5">
-                Data de Nascimento
-              </label>
-              <div className="relative">
-                <CalendarMonth
-                  sx={{ fontSize: 16 }}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-virla-roxo/40 pointer-events-none"
-                />
-                <input
-                  type="date"
-                  value={userData.birthDate ? userData.birthDate.split('T')[0] : ''}
-                  onChange={(e) => setUserData({ ...userData, birthDate: e.target.value })}
-                  max={new Date().toISOString().split('T')[0]}
-                  className={`${FIELD_CLASS} pl-9 cursor-pointer`}
-                />
-              </div>
-              {age !== null && (
-                <p className="flex items-center gap-1.5 mt-1.5 text-xs text-virla-roxo/70 font-medium">
-                  <Cake sx={{ fontSize: 14 }} />
-                  {age} anos
-                </p>
-              )}
-            </div>
+            <Field
+              label="Data de Nascimento"
+              icon={CalendarMonth}
+              type="date"
+              value={userData.birthDate ? userData.birthDate.split('T')[0] : ''}
+              onChange={(e) => setUserData({ ...userData, birthDate: e.target.value })}
+              max={new Date().toISOString().split('T')[0]}
+            />
+            {age !== null && (
+              <p className="!mt-1.5 flex items-center gap-1.5 text-xs text-virla-roxo/70 font-medium">
+                <Cake sx={{ fontSize: 14 }} />
+                {age} anos
+              </p>
+            )}
 
-            <div>
-              <label className="block text-xs font-semibold text-virla-texto/60 uppercase tracking-wide mb-1.5">
-                Bio / Apresentação
-              </label>
-              <div className="relative">
-                <Description
-                  sx={{ fontSize: 16 }}
-                  className="absolute left-3 top-3.5 text-virla-roxo/40 pointer-events-none"
-                />
-                <textarea
-                  rows={4}
-                  value={userData.bio ?? ''}
-                  onChange={(e) => setUserData({ ...userData, bio: e.target.value })}
-                  className={`${FIELD_CLASS} pl-9 resize-none`}
-                  placeholder="Resumo curto para o feed…"
-                />
-              </div>
-            </div>
+            <Field
+              as="textarea"
+              label="Bio / Apresentação"
+              icon={Description}
+              rows={4}
+              value={userData.bio ?? ''}
+              onChange={(e) => setUserData({ ...userData, bio: e.target.value })}
+              placeholder="Resumo curto para o feed…"
+            />
 
             <div className="pt-2 border-t border-virla-roxo/10">
               <SectionTitle icon={Image}>{isFamiliar ? 'Foto de perfil' : 'Imagem e valor'}</SectionTitle>
@@ -349,142 +309,85 @@ export default function Perfil() {
 
             {!isFamiliar && (
               <>
-                <div>
-                  <label className="block text-xs font-semibold text-virla-texto/60 uppercase tracking-wide mb-1.5">
-                    Valor por hora (R$)
-                  </label>
-                  <div className="relative">
-                    <Payments
-                      sx={{ fontSize: 16 }}
-                      className="absolute left-3 top-1/2 -translate-y-1/2 text-virla-roxo/40 pointer-events-none"
-                    />
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={userData.hourlyRate}
-                      onChange={(e) => setUserData({ ...userData, hourlyRate: e.target.value })}
-                      className={`${FIELD_CLASS} pl-9`}
-                      placeholder="Ex.: 150"
-                    />
-                  </div>
-                </div>
+                <Field
+                  label="Valor por hora (R$)"
+                  icon={Payments}
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={userData.hourlyRate}
+                  onChange={(e) => setUserData({ ...userData, hourlyRate: e.target.value })}
+                  placeholder="Ex.: 150"
+                />
 
-                <div>
-                  <label className="block text-xs font-semibold text-virla-texto/60 uppercase tracking-wide mb-1.5">
-                    Conselho profissional
-                  </label>
-                  <select
-                    value={userData.council}
-                    onChange={(e) => setUserData({ ...userData, council: e.target.value })}
-                    className={FIELD_CLASS}
-                  >
-                    <option value="">Selecione…</option>
-                    {COUNCILS.map((c) => (
-                      <option key={c.value} value={c.value}>
-                        {c.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <Field
+                  as="select"
+                  label="Conselho profissional"
+                  icon={Badge}
+                  value={userData.council}
+                  onChange={(e) => setUserData({ ...userData, council: e.target.value })}
+                >
+                  <option value="">Selecione…</option>
+                  {COUNCILS.map((c) => (
+                    <option key={c.value} value={c.value}>
+                      {c.label}
+                    </option>
+                  ))}
+                </Field>
 
-                <div>
-                  <label className="block text-xs font-semibold text-virla-texto/60 uppercase tracking-wide mb-1.5">
-                    Registro profissional (COREN, CRP, etc.)
-                  </label>
-                  <div className="relative">
-                    <Badge
-                      sx={{ fontSize: 16 }}
-                      className="absolute left-3 top-1/2 -translate-y-1/2 text-virla-roxo/40 pointer-events-none"
-                    />
-                    <input
-                      type="text"
-                      value={userData.registerNumber}
-                      onChange={(e) => setUserData({ ...userData, registerNumber: e.target.value })}
-                      className={`${FIELD_CLASS} pl-9`}
-                      placeholder="Número do conselho"
-                    />
-                  </div>
-                </div>
+                <Field
+                  label="Registro profissional (COREN, CRP, etc.)"
+                  icon={Badge}
+                  type="text"
+                  value={userData.registerNumber}
+                  onChange={(e) => setUserData({ ...userData, registerNumber: e.target.value })}
+                  placeholder="Número do conselho"
+                  error={fieldErrors.registerNumber}
+                />
 
-                <div>
-                  <label className="block text-xs font-semibold text-virla-texto/60 uppercase tracking-wide mb-1.5">
-                    Abordagem (ex.: TCC, home care)
-                  </label>
-                  <div className="relative">
-                    <Psychology
-                      sx={{ fontSize: 16 }}
-                      className="absolute left-3 top-1/2 -translate-y-1/2 text-virla-roxo/40 pointer-events-none"
-                    />
-                    <input
-                      type="text"
-                      value={userData.approach}
-                      onChange={(e) => setUserData({ ...userData, approach: e.target.value })}
-                      className={`${FIELD_CLASS} pl-9`}
-                    />
-                  </div>
-                </div>
+                <Field
+                  label="Abordagem (ex.: TCC, home care)"
+                  icon={Psychology}
+                  type="text"
+                  value={userData.approach}
+                  onChange={(e) => setUserData({ ...userData, approach: e.target.value })}
+                />
 
-                <div>
-                  <label className="block text-xs font-semibold text-virla-texto/60 uppercase tracking-wide mb-1.5">
-                    Especialidades (separadas por vírgula)
-                  </label>
-                  <div className="relative">
-                    <LocalOffer
-                      sx={{ fontSize: 16 }}
-                      className="absolute left-3 top-3.5 text-virla-roxo/40 pointer-events-none"
-                    />
-                    <textarea
-                      rows={2}
-                      value={userData.specialtiesStr}
-                      onChange={(e) => setUserData({ ...userData, specialtiesStr: e.target.value })}
-                      className={`${FIELD_CLASS} pl-9 resize-none`}
-                      placeholder="Idosos, pós-cirúrgico, Alzheimer…"
-                    />
-                  </div>
-                </div>
+                <Field
+                  as="textarea"
+                  label="Especialidades (separadas por vírgula)"
+                  icon={LocalOffer}
+                  rows={2}
+                  value={userData.specialtiesStr}
+                  onChange={(e) => setUserData({ ...userData, specialtiesStr: e.target.value })}
+                  placeholder="Idosos, pós-cirúrgico, Alzheimer…"
+                />
 
-                <div>
-                  <label className="block text-xs font-semibold text-virla-texto/60 uppercase tracking-wide mb-1.5">
-                    Descrição longa (opcional)
-                  </label>
-                  <textarea
-                    rows={4}
-                    value={userData.description}
-                    onChange={(e) => setUserData({ ...userData, description: e.target.value })}
-                    className={FIELD_CLASS}
-                    placeholder="Currículo, experiência, formação…"
-                  />
-                </div>
+                <Field
+                  as="textarea"
+                  label="Descrição longa (opcional)"
+                  rows={4}
+                  value={userData.description}
+                  onChange={(e) => setUserData({ ...userData, description: e.target.value })}
+                  placeholder="Currículo, experiência, formação…"
+                />
               </>
             )}
 
             {!isFamiliar && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-virla-texto/60 uppercase tracking-wide mb-1.5">
-                    Cidade
-                  </label>
-                  <input
-                    type="text"
-                    value={userData.city}
-                    onChange={(e) => setUserData({ ...userData, city: e.target.value })}
-                    className={FIELD_CLASS}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-virla-texto/60 uppercase tracking-wide mb-1.5">
-                    Estado (UF)
-                  </label>
-                  <input
-                    type="text"
-                    value={userData.state}
-                    onChange={(e) => setUserData({ ...userData, state: e.target.value })}
-                    className={FIELD_CLASS}
-                    maxLength={2}
-                    placeholder="PE"
-                  />
-                </div>
+                <Field
+                  label="Cidade"
+                  value={userData.city}
+                  onChange={(e) => setUserData({ ...userData, city: e.target.value })}
+                />
+                <Field
+                  label="Estado (UF)"
+                  value={userData.state}
+                  onChange={(e) => setUserData({ ...userData, state: e.target.value })}
+                  maxLength={2}
+                  placeholder="PE"
+                />
               </div>
             )}
 
@@ -505,14 +408,14 @@ export default function Perfil() {
               type="password"
               placeholder="Nova senha (mín. 6 caracteres)"
               autoComplete="new-password"
-              className={FIELD_CLASS}
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-virla-texto text-sm focus:outline-none focus:ring-2 focus:ring-virla-roxo/30 focus:border-virla-roxo transition-all duration-200"
             />
             <input
               ref={confirmaNovaSenha}
               type="password"
               placeholder="Confirmar nova senha"
               autoComplete="new-password"
-              className={FIELD_CLASS}
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-virla-texto text-sm focus:outline-none focus:ring-2 focus:ring-virla-roxo/30 focus:border-virla-roxo transition-all duration-200"
             />
             <Button type="submit" loading={linkingPwd}>Criar senha</Button>
           </Card>

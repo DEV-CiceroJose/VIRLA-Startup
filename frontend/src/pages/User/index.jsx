@@ -143,10 +143,10 @@ export default function User() {
                   {rateLabel}
                 </p>
               )}
-              {(user.crm_crf || user.registerNumber) && (
+              {user.council && user.registerNumber && (
                 <p className="text-sm text-virla-texto/70">
-                  <span className="font-semibold">CRM/CRF: </span>
-                  {user.crm_crf || user.registerNumber}
+                  <span className="font-semibold">Registro: </span>
+                  {user.council} {user.registerNumber}
                 </p>
               )}
               {user.approach && (

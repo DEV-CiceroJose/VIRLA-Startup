@@ -16,7 +16,7 @@ export const USER_PUBLIC_SELECT = {
   role: true,
   bio: true,
   profileImage: true,
-  crm_crf: true,
+  council: true,
   registerNumber: true,
   hourlyRate: true,
   specialties: true,

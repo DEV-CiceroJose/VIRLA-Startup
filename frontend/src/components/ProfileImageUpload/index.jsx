@@ -2,8 +2,8 @@ import { useRef, useState } from 'react'
 import Image from '@mui/icons-material/Image'
 import Upload from '@mui/icons-material/Upload'
 
-const MAX_BYTES = 2 * 1024 * 1024
-const ACCEPT = 'image/jpeg,image/png,image/webp,image/gif'
+const MAX_BYTES = 5 * 1024 * 1024
+const ACCEPT = 'image/jpeg,image/png,image/webp'
 
 /**
  * Upload de arquivo (<input type="file">) → data URL (base64) para profileImage.
@@ -19,12 +19,13 @@ export default function ProfileImageUpload({ value, onChange }) {
     const file = e.target.files?.[0]
     if (!file) return
 
-    if (!file.type.startsWith('image/')) {
-      setError('Selecione um arquivo de imagem (JPEG, PNG, WebP ou GIF).')
+    const ALLOWED = ['image/jpeg', 'image/png', 'image/webp']
+    if (!ALLOWED.includes(file.type)) {
+      setError('Formato inválido. Envie JPG, PNG ou WEBP.')
       return
     }
     if (file.size > MAX_BYTES) {
-      setError('Imagem muito grande. Máximo 2 MB.')
+      setError('Imagem muito grande. Máximo 5 MB.')
       return
     }
 

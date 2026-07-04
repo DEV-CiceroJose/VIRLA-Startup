@@ -15,6 +15,7 @@ import { Field, Button, Card } from '../../components/ui'
 import ProfileImageUpload from '../../components/ProfileImageUpload'
 import { isValidCpf, isValidEmail, maskCpf, stripCpf } from '../../utils/validators'
 import { registerWithEmail, loginWithGoogle, mapAuthError, getIdToken } from '../../services/auth'
+import { COUNCILS, isValidRegister } from '../../constants/councils'
 
 export default function Cadastro() {
   const navigate = useNavigate()
@@ -22,12 +23,13 @@ export default function Cadastro() {
   const [submitting, setSubmitting] = useState(false)
   const [cpf, setCpf] = useState('')
   const [profileImage, setProfileImage] = useState('')
+  const [council, setCouncil] = useState('')
 
   const inputName = useRef()
   const inputEmail = useRef()
   const inputPassword = useRef()
   const inputConfirmPassword = useRef()
-  const inputCrmCrf = useRef()
+  const inputRegister = useRef()
   const inputBirthDate = useRef()
 
   async function createUser(e) {
@@ -65,6 +67,13 @@ export default function Cadastro() {
       toast.warning('Informe sua data de nascimento.')
       return
     }
+    const okChars = /^[\p{L}][\p{L} .'-]*$/u.test(name) && name.length >= 2
+    const letters = name.replace(/[^\p{L}]/gu, '')
+    const notRepeated = !(letters.length >= 2 && /^(.)\1+$/u.test(letters))
+    if (!okChars || !notRepeated) {
+      toast.warning('Informe um nome válido (apenas letras).')
+      return
+    }
 
     setSubmitting(true)
     try {
@@ -79,8 +88,20 @@ export default function Cadastro() {
       if (profileImage) payload.profileImage = profileImage
 
       if (role === 'CUIDADOR') {
-        const crmCrf = inputCrmCrf.current?.value?.trim()
-        if (crmCrf) payload.crm_crf = crmCrf
+        const registerNumber = inputRegister.current?.value?.trim()
+        if (council && registerNumber) {
+          if (!isValidRegister(council, registerNumber)) {
+            toast.warning('Número de registro inválido para o conselho informado.')
+            setSubmitting(false)
+            return
+          }
+          payload.council = council
+          payload.registerNumber = registerNumber
+        } else if (council || registerNumber) {
+          toast.warning('Informe o conselho e o número do registro (ou deixe ambos em branco).')
+          setSubmitting(false)
+          return
+        }
       }
 
       await registerWithEmail(email, password)
@@ -173,13 +194,30 @@ export default function Cadastro() {
           />
 
           {role === 'CUIDADOR' && (
-            <Field
-              ref={inputCrmCrf}
-              label="CRM / CRF (opcional)"
-              icon={Badge}
-              type="text"
-              placeholder="Número do conselho"
-            />
+            <>
+              <Field
+                as="select"
+                label="Conselho"
+                icon={Badge}
+                value={council}
+                onChange={(e) => setCouncil(e.target.value)}
+              >
+                <option value="">Conselho (opcional)</option>
+                {COUNCILS.map((c) => (
+                  <option key={c.value} value={c.value}>
+                    {c.label}
+                  </option>
+                ))}
+              </Field>
+
+              <Field
+                ref={inputRegister}
+                label="Número do registro"
+                icon={Badge}
+                type="text"
+                placeholder="Número do registro"
+              />
+            </>
           )}
 
           <Field

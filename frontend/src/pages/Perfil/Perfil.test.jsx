@@ -112,4 +112,26 @@ describe('Página de Perfil', () => {
     expect(select.tagName).toBe('SELECT')
     expect(screen.getByRole('option', { name: 'Pernambuco' })).toBeInTheDocument()
   })
+
+  it('mostra e envia o valor por hora com máscara de moeda', async () => {
+    api.get.mockResolvedValue({ data: { user: CUIDADOR } })
+    api.put.mockResolvedValue({ data: { user: CUIDADOR } })
+    const user = userEvent.setup()
+    renderPerfil()
+    // toLocaleString('pt-BR', {style:'currency',...}) pode usar espaço normal
+    // ou non-breaking space (U+00A0) dependendo do ICU do runtime — normaliza
+    // antes de comparar pra não depender de qual dos dois o Node usa.
+    const normalize = (v) => v.replace(/ /g, ' ')
+    const hourlyInput = await screen.findByLabelText('Valor por hora (R$)')
+    expect(normalize(hourlyInput.value)).toBe('R$ 25,00')
+
+    await user.clear(hourlyInput)
+    await user.type(hourlyInput, '3000')
+    expect(normalize(hourlyInput.value)).toBe('R$ 30,00')
+
+    await user.click(screen.getByRole('button', { name: /salvar altera/i }))
+    await screen.findByText('Perfil atualizado com sucesso!')
+    const [, payload] = api.put.mock.calls[0]
+    expect(payload.hourlyRate).toBe(30)
+  })
 })

@@ -23,7 +23,7 @@ import { hasPasswordProvider, linkPassword, mapAuthError } from '../../services/
 import { COUNCILS, isValidRegister } from '../../constants/councils'
 import { STATES } from '../../constants/states'
 import { lookupCep } from '../../services/viacep'
-import { maskCep } from '../../utils/formatters'
+import { maskCep, maskCurrencyInput, parseCurrencyInput } from '../../utils/formatters'
 
 function SectionTitle({ icon: Icon, children }) {
   return (
@@ -63,7 +63,10 @@ function mapUserToForm(user) {
     email: user.email ?? '',
     role: user.role ?? '',
     profileImage: user.profileImage ?? '',
-    hourlyRate: user.hourlyRate != null && user.hourlyRate !== '' ? String(user.hourlyRate) : '',
+    hourlyRate:
+      user.hourlyRate != null && user.hourlyRate !== ''
+        ? maskCurrencyInput(String(Math.round(Number(user.hourlyRate) * 100)))
+        : '',
     council: user.council ?? '',
     registerNumber: user.registerNumber ?? '',
     approach: user.approach ?? '',
@@ -167,10 +170,7 @@ export default function Perfil() {
           approach: userData.approach.trim() || null,
           description: userData.description.trim() || null,
           specialties,
-          hourlyRate:
-            userData.hourlyRate === '' || userData.hourlyRate == null
-              ? null
-              : Number(String(userData.hourlyRate).replace(',', '.')),
+          hourlyRate: userData.hourlyRate === '' ? null : Number(parseCurrencyInput(userData.hourlyRate)),
         }
       }
       const res = await api.put(`/users/${id}`, payload)
@@ -335,12 +335,11 @@ export default function Perfil() {
                 <Field
                   label="Valor por hora (R$)"
                   icon={Payments}
-                  type="number"
-                  min="0"
-                  step="0.01"
+                  type="text"
+                  inputMode="numeric"
                   value={userData.hourlyRate}
-                  onChange={(e) => setUserData({ ...userData, hourlyRate: e.target.value })}
-                  placeholder="Ex.: 150"
+                  onChange={(e) => setUserData({ ...userData, hourlyRate: maskCurrencyInput(e.target.value) })}
+                  placeholder="R$ 0,00"
                 />
 
                 <Field

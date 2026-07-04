@@ -16,9 +16,11 @@ vi.mock('../../services/auth', () => ({
 }))
 vi.mock('sonner', () => ({ toast: { warning: vi.fn(), error: vi.fn(), success: vi.fn() } }))
 vi.mock('../../components/ProfileImageUpload', () => ({ default: () => null }))
+vi.mock('../../services/viacep', () => ({ lookupCep: vi.fn() }))
 
 import Perfil from './index'
 import api from '../../services/api'
+import { lookupCep } from '../../services/viacep'
 
 const CUIDADOR = {
   id: 'u1',
@@ -88,5 +90,26 @@ describe('Página de Perfil', () => {
 
     expect(await screen.findByText('Perfil atualizado com sucesso!')).toBeInTheDocument()
     expect(api.put).toHaveBeenCalledTimes(1)
+  })
+
+  it('autopreenche cidade/estado ao digitar um CEP válido', async () => {
+    api.get.mockResolvedValue({ data: { user: CUIDADOR } })
+    lookupCep.mockResolvedValue({ city: 'Recife', state: 'PE' })
+    const user = userEvent.setup()
+    renderPerfil()
+    const cepInput = await screen.findByLabelText('CEP')
+    await user.type(cepInput, '50030230')
+
+    expect(await screen.findByDisplayValue('Recife')).toBeInTheDocument()
+    expect(screen.getByLabelText('Estado (UF)')).toHaveValue('PE')
+    expect(lookupCep).toHaveBeenCalledWith('50030230')
+  })
+
+  it('estado (UF) é um select com as 27 opções', async () => {
+    api.get.mockResolvedValue({ data: { user: CUIDADOR } })
+    renderPerfil()
+    const select = await screen.findByLabelText('Estado (UF)')
+    expect(select.tagName).toBe('SELECT')
+    expect(screen.getByRole('option', { name: 'Pernambuco' })).toBeInTheDocument()
   })
 })

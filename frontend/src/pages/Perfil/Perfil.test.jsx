@@ -134,4 +134,28 @@ describe('Página de Perfil', () => {
     const [, payload] = api.put.mock.calls[0]
     expect(payload.hourlyRate).toBe(30)
   })
+
+  it('especialidades: mostra os chips e envia como array de values', async () => {
+    api.get.mockResolvedValue({ data: { user: { ...CUIDADOR, specialties: ['IDOSOS'] } } })
+    api.put.mockResolvedValue({ data: { user: CUIDADOR } })
+    const user = userEvent.setup()
+    renderPerfil()
+    await screen.findByLabelText('Nome completo')
+
+    expect(screen.getByRole('button', { name: 'Idosos' })).toHaveAttribute('aria-pressed', 'true')
+    await user.click(screen.getByRole('button', { name: 'Diabetes' }))
+
+    await user.click(screen.getByRole('button', { name: /salvar altera/i }))
+    await screen.findByText('Perfil atualizado com sucesso!')
+    const [, payload] = api.put.mock.calls[0]
+    expect(payload.specialties.sort()).toEqual(['DIABETES', 'IDOSOS'])
+  })
+
+  it('especialidades gravadas fora da lista fixa (dado legado) não aparecem pré-marcadas', async () => {
+    api.get.mockResolvedValue({ data: { user: { ...CUIDADOR, specialties: ['Cuidado com idosos (texto livre antigo)'] } } })
+    renderPerfil()
+    await screen.findByLabelText('Nome completo')
+    const buttons = screen.queryAllByRole('button', { pressed: true })
+    expect(buttons).toHaveLength(0)
+  })
 })

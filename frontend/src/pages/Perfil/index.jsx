@@ -12,16 +12,16 @@ import Image from '@mui/icons-material/Image'
 import Payments from '@mui/icons-material/Payments'
 import Badge from '@mui/icons-material/Badge'
 import Psychology from '@mui/icons-material/Psychology'
-import LocalOffer from '@mui/icons-material/LocalOffer'
 import Shield from '@mui/icons-material/Shield'
 import LocationOn from '@mui/icons-material/LocationOn'
 import api from '../../services/api'
 import { calculateAge } from '../../utils/dateUtils'
 import ProfileImageUpload from '../../components/ProfileImageUpload'
-import { Field, Button, Card, Alert, ConfirmDialog, Badge as DSBadge } from '../../components/ui'
+import { Field, Button, Card, Alert, ConfirmDialog, Badge as DSBadge, TagSelect } from '../../components/ui'
 import { hasPasswordProvider, linkPassword, mapAuthError } from '../../services/auth'
 import { COUNCILS, isValidRegister } from '../../constants/councils'
 import { STATES } from '../../constants/states'
+import { SPECIALTIES, SPECIALTY_VALUES } from '../../constants/specialties'
 import { lookupCep } from '../../services/viacep'
 import { maskCep, maskCurrencyInput, parseCurrencyInput } from '../../utils/formatters'
 
@@ -46,7 +46,7 @@ function emptyUserForm() {
     council: '',
     registerNumber: '',
     approach: '',
-    specialtiesStr: '',
+    specialties: [],
     description: '',
     zipCode: '',
     city: '',
@@ -70,7 +70,12 @@ function mapUserToForm(user) {
     council: user.council ?? '',
     registerNumber: user.registerNumber ?? '',
     approach: user.approach ?? '',
-    specialtiesStr: Array.isArray(user.specialties) ? user.specialties.join(', ') : '',
+    // Especialidades gravadas antes da lista fixa (FE-06) que não batem com
+    // nenhum value válido são descartadas do estado editável — o usuário
+    // pode re-selecioná-las entre as opções atuais.
+    specialties: Array.isArray(user.specialties)
+      ? user.specialties.filter((s) => SPECIALTY_VALUES.includes(s))
+      : [],
     description: user.description ?? '',
     zipCode: user.zipCode ?? '',
     city: user.city ?? '',
@@ -156,10 +161,6 @@ export default function Perfil() {
       }
       let payload = basePayload
       if (!isFamiliar) {
-        const specialties = userData.specialtiesStr
-          .split(/[,;]/)
-          .map((s) => s.trim())
-          .filter(Boolean)
         payload = {
           ...basePayload,
           zipCode: userData.zipCode.trim() || null,
@@ -169,7 +170,7 @@ export default function Perfil() {
           registerNumber: userData.registerNumber.trim() || null,
           approach: userData.approach.trim() || null,
           description: userData.description.trim() || null,
-          specialties,
+          specialties: userData.specialties,
           hourlyRate: userData.hourlyRate === '' ? null : Number(parseCurrencyInput(userData.hourlyRate)),
         }
       }
@@ -375,14 +376,12 @@ export default function Perfil() {
                   onChange={(e) => setUserData({ ...userData, approach: e.target.value })}
                 />
 
-                <Field
-                  as="textarea"
-                  label="Especialidades (separadas por vírgula)"
-                  icon={LocalOffer}
-                  rows={2}
-                  value={userData.specialtiesStr}
-                  onChange={(e) => setUserData({ ...userData, specialtiesStr: e.target.value })}
-                  placeholder="Idosos, pós-cirúrgico, Alzheimer…"
+                <TagSelect
+                  label="Especialidades"
+                  options={SPECIALTIES}
+                  value={userData.specialties}
+                  onChange={(specialties) => setUserData({ ...userData, specialties })}
+                  max={12}
                 />
 
                 <Field

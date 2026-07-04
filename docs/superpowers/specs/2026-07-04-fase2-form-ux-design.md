@@ -51,6 +51,11 @@ Diagnóstico do estado atual:
   - `zipCode` (novo campo, opcional): `z.string().max(9).optional().nullable()`
     com `.transform()` normalizando pra 8 dígitos (remove `-`), espelhando
     `cpfSchema`. Formato aceito: `\d{5}-?\d{3}`.
+- **Privacidade:** `zipCode` entra só em `USER_SELF_SELECT`
+  (`backend/src/lib/userSelects.js`), não em `USER_PUBLIC_SELECT`. CEP é
+  mais granular que `city`/`state` (que já são públicos) — não expande a
+  superfície de dados visíveis a terceiros no feed/perfil público. O CEP
+  serve só pra autopreencher `city`/`state` no próprio Perfil.
 - Sem outras mudanças de schema — `hourlyRate` já valida 10–500; só o
   frontend ganha máscara visual.
 - **Migração de dados:** usuários existentes no Firestore podem ter

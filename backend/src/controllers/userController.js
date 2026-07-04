@@ -2,6 +2,7 @@ import {
   getUserById,
   emailExists,
   cpfExists,
+  registerExists,
   createUserWithId,
   updateUser,
   deleteUser,
@@ -60,7 +61,7 @@ const createUsers = async (req, res) => {
   const email = req.email
   const {
     name, birthDate: birthDateRaw, role, bio, cpf,
-    profileImage, crm_crf, hourlyRate: hourlyRateRaw, registerNumber,
+    profileImage, council, hourlyRate: hourlyRateRaw, registerNumber,
     approach, specialties, description, city, state,
   } = req.body
 
@@ -83,6 +84,9 @@ const createUsers = async (req, res) => {
     if (await cpfExists(cpf, uid)) {
       return res.status(409).json({ msg: 'Este CPF já está cadastrado' })
     }
+    if (council && registerNumber && (await registerExists(council, registerNumber, uid))) {
+      return res.status(409).json({ msg: 'Este registro profissional já está cadastrado.' })
+    }
 
     const created = await createUserWithId(uid, {
       name,
@@ -92,7 +96,7 @@ const createUsers = async (req, res) => {
       email,
       cpf: cpf ?? null,
       profileImage: emptyToNull(profileImage),
-      crm_crf: role === 'CUIDADOR' ? emptyToNull(crm_crf) : null,
+      council: role === 'CUIDADOR' ? (council || null) : null,
       registerNumber: emptyToNull(registerNumber),
       hourlyRate,
       specialties: parseSpecialties(specialties),
@@ -193,7 +197,7 @@ const updateUsers = async (req, res) => {
     ...(birthDate !== undefined && { birthDate }),
     ...(req.body.bio != null && { bio: req.body.bio }),
     ...(req.body.profileImage !== undefined && { profileImage: req.body.profileImage || null }),
-    ...(req.body.crm_crf !== undefined && { crm_crf: req.body.crm_crf || null }),
+    ...(req.body.council !== undefined && { council: req.body.council || null }),
     ...(req.body.registerNumber !== undefined && { registerNumber: req.body.registerNumber || null }),
     ...(hourlyRatePatch != null && hourlyRatePatch),
     ...(req.body.specialties !== undefined && { specialties: parseSpecialties(req.body.specialties) }),
@@ -201,6 +205,10 @@ const updateUsers = async (req, res) => {
     ...(req.body.description !== undefined && { description: req.body.description || null }),
     ...(req.body.city !== undefined && { city: req.body.city || null }),
     ...(req.body.state !== undefined && { state: req.body.state || null }),
+  }
+
+  if (data.council && data.registerNumber && (await registerExists(data.council, data.registerNumber, req.params.id))) {
+    return res.status(409).json({ msg: 'Este registro profissional já está cadastrado.' })
   }
 
   try {

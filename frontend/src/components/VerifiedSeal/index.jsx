@@ -2,7 +2,7 @@ import CheckCircle from '@mui/icons-material/CheckCircle'
 
 /** Selo de verificado quando o perfil possui CRM/CRF cadastrado. */
 export function hasVerifiedCrm(user) {
-  const v = user?.crm_crf
+  const v = user?.council
   return typeof v === 'string' && v.trim().length > 0
 }
 

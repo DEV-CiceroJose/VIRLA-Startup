@@ -19,6 +19,7 @@ import { calculateAge } from '../../utils/dateUtils'
 import ProfileImageUpload from '../../components/ProfileImageUpload'
 import { Button, Card, Alert, ConfirmDialog, Badge as DSBadge } from '../../components/ui'
 import { hasPasswordProvider, linkPassword, mapAuthError } from '../../services/auth'
+import { COUNCILS, isValidRegister } from '../../constants/councils'
 
 const FIELD_CLASS =
   'w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-virla-texto text-sm ' +
@@ -45,6 +46,7 @@ function emptyUserForm() {
     role: '',
     profileImage: '',
     hourlyRate: '',
+    council: '',
     registerNumber: '',
     approach: '',
     specialtiesStr: '',
@@ -64,6 +66,7 @@ function mapUserToForm(user) {
     role: user.role ?? '',
     profileImage: user.profileImage ?? '',
     hourlyRate: user.hourlyRate != null && user.hourlyRate !== '' ? String(user.hourlyRate) : '',
+    council: user.council ?? '',
     registerNumber: user.registerNumber ?? '',
     approach: user.approach ?? '',
     specialtiesStr: Array.isArray(user.specialties) ? user.specialties.join(', ') : '',
@@ -126,9 +129,27 @@ export default function Perfil() {
   async function handleUpdate(e) {
     e.preventDefault()
     setMessage({ type: '', text: '' })
+    const isFamiliar = userData.role === 'FAMILIAR'
+    if (!isFamiliar) {
+      const hasCouncil = Boolean(userData.council)
+      const hasRegisterNumber = Boolean(userData.registerNumber.trim())
+      if (hasCouncil !== hasRegisterNumber) {
+        setMessage({
+          type: 'error',
+          text: 'Preencha o conselho e o número de registro juntos, ou deixe os dois em branco.',
+        })
+        return
+      }
+      if (hasCouncil && hasRegisterNumber && !isValidRegister(userData.council, userData.registerNumber.trim())) {
+        setMessage({
+          type: 'error',
+          text: 'Número de registro inválido para o conselho informado.',
+        })
+        return
+      }
+    }
     try {
       setSaving(true)
-      const isFamiliar = userData.role === 'FAMILIAR'
       const basePayload = {
         name: userData.name,
         birthDate: userData.birthDate ? new Date(userData.birthDate).toISOString() : undefined,
@@ -145,6 +166,7 @@ export default function Perfil() {
           ...basePayload,
           city: userData.city.trim() || null,
           state: userData.state.trim() || null,
+          council: userData.council || null,
           registerNumber: userData.registerNumber.trim() || null,
           approach: userData.approach.trim() || null,
           description: userData.description.trim() || null,
@@ -346,6 +368,24 @@ export default function Perfil() {
                       placeholder="Ex.: 150"
                     />
                   </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-virla-texto/60 uppercase tracking-wide mb-1.5">
+                    Conselho profissional
+                  </label>
+                  <select
+                    value={userData.council}
+                    onChange={(e) => setUserData({ ...userData, council: e.target.value })}
+                    className={FIELD_CLASS}
+                  >
+                    <option value="">Selecione…</option>
+                    {COUNCILS.map((c) => (
+                      <option key={c.value} value={c.value}>
+                        {c.label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 <div>

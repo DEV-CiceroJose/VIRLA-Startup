@@ -250,6 +250,8 @@ export default function Perfil() {
 
   const age = calculateAge(userData.birthDate)
   const isFamiliar = userData.role === 'FAMILIAR'
+  const bioLength = (userData.bio ?? '').length
+  const bioOverLimit = bioLength > 1900
 
   return (
     <div
@@ -320,6 +322,8 @@ export default function Perfil() {
               value={userData.bio ?? ''}
               onChange={(e) => setUserData({ ...userData, bio: e.target.value })}
               placeholder="Resumo curto para o feed…"
+              hint={bioOverLimit ? undefined : `${bioLength}/2000`}
+              error={bioOverLimit ? `${bioLength}/2000` : undefined}
             />
 
             <div className="pt-2 border-t border-virla-roxo/10">

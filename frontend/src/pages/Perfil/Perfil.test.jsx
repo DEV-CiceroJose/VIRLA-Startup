@@ -158,4 +158,17 @@ describe('Página de Perfil', () => {
     const buttons = screen.queryAllByRole('button', { pressed: true })
     expect(buttons).toHaveLength(0)
   })
+
+  it('bio: mostra contador de caracteres e vira erro visual acima de 1900', async () => {
+    api.get.mockResolvedValue({ data: { user: CUIDADOR } })
+    const user = userEvent.setup()
+    renderPerfil()
+    const bioInput = await screen.findByLabelText('Bio / Apresentação')
+    expect(screen.getByText('9/2000')).toBeInTheDocument() // 'Sobre mim' tem 9 caracteres
+
+    await user.clear(bioInput)
+    await user.type(bioInput, 'a'.repeat(1901))
+    expect(screen.getByText('1901/2000')).toBeInTheDocument()
+    expect(screen.getByText('1901/2000')).toHaveClass('text-red-600')
+  }, 60000) // digitar 1901 caracteres um a um (userEvent.type) re-renderiza o form inteiro a cada tecla; excede o timeout padrão de 5s
 })

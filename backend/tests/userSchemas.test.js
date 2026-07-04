@@ -100,3 +100,21 @@ test('registro: formato inválido para o conselho falha', () => {
 test('crm_crf não é mais aceito no update (strict)', () => {
   assert.equal(updateUserBodySchema.safeParse({ crm_crf: '123' }).success, false)
 })
+
+test('specialties: aceita valores da lista fixa; rejeita valor fora da lista; rejeita mais de 12 itens', () => {
+  const base = { ...baseCreate, name: 'Ana Souza' }
+  const ok = createUserBodySchema.safeParse({ ...base, specialties: ['IDOSOS', 'DIABETES'] })
+  assert.equal(ok.success, true, JSON.stringify(ok.error?.issues))
+
+  assert.equal(createUserBodySchema.safeParse({ ...base, specialties: ['NAO_EXISTE'] }).success, false)
+
+  const treze = Array(13).fill('IDOSOS')
+  assert.equal(createUserBodySchema.safeParse({ ...base, specialties: treze }).success, false)
+
+  assert.equal(createUserBodySchema.safeParse({ ...base }).success, true) // ausente ok
+})
+
+test('specialties: string livre (formato pré-FE-06) não é mais aceita', () => {
+  const base = { ...baseCreate, name: 'Ana Souza' }
+  assert.equal(createUserBodySchema.safeParse({ ...base, specialties: 'Idosos, Diabetes' }).success, false)
+})

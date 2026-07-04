@@ -14,12 +14,16 @@ import Badge from '@mui/icons-material/Badge'
 import Psychology from '@mui/icons-material/Psychology'
 import LocalOffer from '@mui/icons-material/LocalOffer'
 import Shield from '@mui/icons-material/Shield'
+import LocationOn from '@mui/icons-material/LocationOn'
 import api from '../../services/api'
 import { calculateAge } from '../../utils/dateUtils'
 import ProfileImageUpload from '../../components/ProfileImageUpload'
 import { Field, Button, Card, Alert, ConfirmDialog, Badge as DSBadge } from '../../components/ui'
 import { hasPasswordProvider, linkPassword, mapAuthError } from '../../services/auth'
 import { COUNCILS, isValidRegister } from '../../constants/councils'
+import { STATES } from '../../constants/states'
+import { lookupCep } from '../../services/viacep'
+import { maskCep } from '../../utils/formatters'
 
 function SectionTitle({ icon: Icon, children }) {
   return (
@@ -44,6 +48,7 @@ function emptyUserForm() {
     approach: '',
     specialtiesStr: '',
     description: '',
+    zipCode: '',
     city: '',
     state: '',
   }
@@ -64,6 +69,7 @@ function mapUserToForm(user) {
     approach: user.approach ?? '',
     specialtiesStr: Array.isArray(user.specialties) ? user.specialties.join(', ') : '',
     description: user.description ?? '',
+    zipCode: user.zipCode ?? '',
     city: user.city ?? '',
     state: user.state ?? '',
   }
@@ -153,6 +159,7 @@ export default function Perfil() {
           .filter(Boolean)
         payload = {
           ...basePayload,
+          zipCode: userData.zipCode.trim() || null,
           city: userData.city.trim() || null,
           state: userData.state.trim() || null,
           council: userData.council || null,
@@ -175,6 +182,22 @@ export default function Perfil() {
       setMessage({ type: 'error', text: err.response?.data?.msg ?? 'Erro ao atualizar perfil. Tente novamente.' })
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function handleZipCodeChange(e) {
+    const masked = maskCep(e.target.value)
+    setUserData((prev) => ({ ...prev, zipCode: masked }))
+    const digits = masked.replace(/\D/g, '')
+    if (digits.length === 8) {
+      const result = await lookupCep(digits)
+      if (result) {
+        setUserData((prev) => ({
+          ...prev,
+          city: result.city || prev.city,
+          state: result.state || prev.state,
+        }))
+      }
     }
   }
 
@@ -375,20 +398,39 @@ export default function Perfil() {
             )}
 
             {!isFamiliar && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <>
                 <Field
-                  label="Cidade"
-                  value={userData.city}
-                  onChange={(e) => setUserData({ ...userData, city: e.target.value })}
+                  label="CEP"
+                  icon={LocationOn}
+                  type="text"
+                  inputMode="numeric"
+                  value={userData.zipCode}
+                  onChange={handleZipCodeChange}
+                  maxLength={9}
+                  placeholder="00000-000"
                 />
-                <Field
-                  label="Estado (UF)"
-                  value={userData.state}
-                  onChange={(e) => setUserData({ ...userData, state: e.target.value })}
-                  maxLength={2}
-                  placeholder="PE"
-                />
-              </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <Field
+                    label="Cidade"
+                    value={userData.city}
+                    onChange={(e) => setUserData({ ...userData, city: e.target.value })}
+                  />
+                  <Field
+                    as="select"
+                    label="Estado (UF)"
+                    value={userData.state}
+                    onChange={(e) => setUserData({ ...userData, state: e.target.value })}
+                  >
+                    <option value="">Selecione…</option>
+                    {STATES.map((s) => (
+                      <option key={s.value} value={s.value}>
+                        {s.label}
+                      </option>
+                    ))}
+                  </Field>
+                </div>
+              </>
             )}
 
             <Button type="submit" fullWidth loading={saving} disabled={deleting} icon={Save} className="mt-2">

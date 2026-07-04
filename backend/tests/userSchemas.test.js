@@ -118,3 +118,18 @@ test('specialties: string livre (formato pré-FE-06) não é mais aceita', () =>
   const base = { ...baseCreate, name: 'Ana Souza' }
   assert.equal(createUserBodySchema.safeParse({ ...base, specialties: 'Idosos, Diabetes' }).success, false)
 })
+
+test('zipCode: aceita com/sem hífen e normaliza pra 8 dígitos; rejeita formato inválido; ausente ok', () => {
+  const base = { ...baseCreate, name: 'Ana Souza' }
+
+  const comHifen = createUserBodySchema.safeParse({ ...base, zipCode: '50030-230' })
+  assert.equal(comHifen.success, true, JSON.stringify(comHifen.error?.issues))
+  assert.equal(comHifen.data.zipCode, '50030230')
+
+  const semHifen = createUserBodySchema.safeParse({ ...base, zipCode: '50030230' })
+  assert.equal(semHifen.success, true)
+  assert.equal(semHifen.data.zipCode, '50030230')
+
+  assert.equal(createUserBodySchema.safeParse({ ...base, zipCode: '123' }).success, false)
+  assert.equal(createUserBodySchema.safeParse({ ...base }).success, true)
+})

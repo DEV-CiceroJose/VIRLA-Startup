@@ -70,6 +70,14 @@ export const profileImageSchema = z
     { message: 'Imagem inválida. Envie um JPG, PNG ou WEBP.' },
   )
 
+export const zipCodeSchema = z
+  .string()
+  .max(9)
+  .optional()
+  .nullable()
+  .transform((v) => (v ? v.replace(/\D/g, '') : v))
+  .refine((v) => !v || /^\d{8}$/.test(v), { message: 'CEP deve ter 8 dígitos (ex.: 00000-000).' })
+
 export const hourlyRateSchema = z
   .union([z.number(), z.string()])
   .nullable()
@@ -96,6 +104,7 @@ export const updateUserBodySchema = z
     description: z.string().max(5000).optional().nullable(),
     city: z.string().max(80).optional().nullable(),
     state: z.string().max(2).optional().nullable(),
+    zipCode: zipCodeSchema,
   })
   // Bloqueia campos sensíveis/imutáveis que não podem ser alterados por update.
   .strict()
@@ -116,4 +125,5 @@ export const createUserBodySchema = z.object({
   description: z.string().max(5000).optional().nullable(),
   city: z.string().max(80).optional().nullable(),
   state: z.string().max(2).optional().nullable(),
+  zipCode: zipCodeSchema,
 }).superRefine(refineRegisterPair)

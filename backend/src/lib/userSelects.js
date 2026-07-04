@@ -30,4 +30,5 @@ export const USER_SELF_SELECT = {
   ...USER_PUBLIC_SELECT,
   email: true,
   cpf: true,
+  zipCode: true,
 }

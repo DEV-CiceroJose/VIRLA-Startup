@@ -22,9 +22,13 @@ export function useFirebaseChat({ meId, peerId, onMessage, onMessageChanged }) {
   // realtimeActive=false → a página de Chat deve buscar histórico por HTTP.
   const [realtimeActive, setRealtimeActive] = useState(false)
   const onMessageRef = useRef(onMessage)
-  onMessageRef.current = onMessage
   const onMessageChangedRef = useRef(onMessageChanged)
-  onMessageChangedRef.current = onMessageChanged
+  // Mantém os refs "latest" sem tocá-los durante o render (os callbacks são
+  // chamados de forma assíncrona pelos listeners do RTDB, já depois do effect).
+  useEffect(() => {
+    onMessageRef.current = onMessage
+    onMessageChangedRef.current = onMessageChanged
+  })
 
   const chatId = meId && peerId ? chatIdFor(meId, peerId) : null
 

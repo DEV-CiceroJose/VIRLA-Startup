@@ -15,3 +15,10 @@ export const SPECIALTIES = [
 ]
 
 export const SPECIALTY_VALUES = SPECIALTIES.map((s) => s.value)
+
+const LABEL_BY_VALUE = Object.fromEntries(SPECIALTIES.map((s) => [s.value, s.label]))
+
+/** Rótulo visível de uma especialidade; devolve o próprio valor se não estiver na lista fixa (dado legado em texto livre). */
+export function specialtyLabel(value) {
+  return LABEL_BY_VALUE[value] ?? value
+}

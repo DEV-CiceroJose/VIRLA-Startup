@@ -15,7 +15,7 @@ export function chatIdFor(userIdA, userIdB) {
  * console), o hook NÃO derruba a tela — ele apenas reporta `realtimeActive:
  * false`, e a página de Chat assume o modo de contingência por HTTP (polling).
  *
- * @param {{ meId: string, peerId: string, onMessage: (msg: object) => void }} params
+ * @param {{ meId: string, peerId: string, onMessage: (msg: object) => void, onMessageChanged?: (msg: object) => void }} params
  */
 export function useFirebaseChat({ meId, peerId, onMessage, onMessageChanged }) {
   const [ready, setReady] = useState(false)

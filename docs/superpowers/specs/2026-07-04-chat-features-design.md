@@ -137,10 +137,11 @@ tombstone otimista pra resposta imediata e deixar o eco confirmar.
   player de áudio.
 - **`onMessageChanged`** → troca-por-id em `setMessages` (cobre tombstone +
   atualização de leitura, idempotente por id).
-- **Sair da conversa:** item "Sair da conversa" no header (menu overflow "⋮" pra
-  não lotar os botões de cobrança/pagar/histórico já existentes). Abre
-  `ConfirmDialog` ("Sair desta conversa? Ela sai da sua lista de conversas; a
-  outra pessoa continua vendo, e você não perde o histórico."). Confirmar →
+- **Sair da conversa:** um botão de ação único no header (ícone `ExitToApp`,
+  `title="Sair da conversa"`), ao lado dos botões de cobrança/pagar/histórico
+  já existentes — sem menu dropdown (mais simples, YAGNI). Abre `ConfirmDialog`
+  ("Sair desta conversa? Ela sai da sua lista de conversas; a outra pessoa
+  continua vendo, e você não perde o histórico."). Confirmar →
   `PATCH /conversations/{peerId}/archive {archived:true}` → navega pra
   `/home?tab=mensagens`.
 

@@ -734,7 +734,7 @@ vi.mock('react-router-dom', async (orig) => {
   const actual = await orig()
   return { ...actual, useNavigate: () => navigateMock, useParams: () => ({ userId: 'bob' }) }
 })
-vi.mock('../../services/api', () => ({ default: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn() } }))
+vi.mock('../../services/api', () => ({ default: { get: vi.fn(), post: vi.fn(), patch: vi.fn().mockResolvedValue({ data: {} }), delete: vi.fn() } }))
 vi.mock('../../hooks/useFirebaseChat', () => ({
   useFirebaseChat: () => ({
     chatId: 'ana_bob', ready: true, realtimeActive: true,
@@ -801,7 +801,7 @@ Expected: FAIL (não há lixeira/ConfirmDialog de apagar ainda)
 Em `frontend/src/pages/Chat/index.jsx`, adicionar aos imports:
 
 ```js
-import DeleteOutline from '@mui/icons-material/DeleteOutline'
+import DeleteOutlined from '@mui/icons-material/DeleteOutlined'
 import { ConfirmDialog } from '../../components/ui'
 import { canDeleteMessage, mergeMessageById } from '../../utils/chatMessages'
 ```
@@ -898,7 +898,7 @@ Substituir o corpo do `.map((m) => {...})` das mensagens (linhas ~356-384) por u
                     className="absolute -top-2 -left-2 bg-white text-red-600 border border-red-200 rounded-full p-1 shadow-sm hover:bg-red-50"
                     aria-label="Apagar mensagem"
                   >
-                    <DeleteOutline sx={{ fontSize: 16 }} />
+                    <DeleteOutlined sx={{ fontSize: 16 }} />
                   </button>
                 )}
               </div>

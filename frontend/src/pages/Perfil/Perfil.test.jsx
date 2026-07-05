@@ -121,7 +121,7 @@ describe('Página de Perfil', () => {
     // toLocaleString('pt-BR', {style:'currency',...}) pode usar espaço normal
     // ou non-breaking space (U+00A0) dependendo do ICU do runtime — normaliza
     // antes de comparar pra não depender de qual dos dois o Node usa.
-    const normalize = (v) => v.replace(/ /g, ' ')
+    const normalize = (v) => v.replace(/\u00A0/g, ' ')
     const hourlyInput = await screen.findByLabelText('Valor por hora (R$)')
     expect(normalize(hourlyInput.value)).toBe('R$ 25,00')
 

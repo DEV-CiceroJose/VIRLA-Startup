@@ -15,6 +15,7 @@ import { formatHourly } from '../../utils/formatters'
 import { PageLoader, LoadingOverlay } from '../../components/Spinner'
 import VerifiedSeal from '../../components/VerifiedSeal'
 import { EmptyState, Alert } from '../../components/ui'
+import { specialtyLabel } from '../../constants/specialties'
 
 function RoleBadge({ role }) {
   const isCuidador = role === 'CUIDADOR'
@@ -85,7 +86,7 @@ function UserCard({ user, onOpenChat, viewerIsFamiliar, onVerMais }) {
               key={`${tag}-${i}`}
               className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-violet-100/95 text-violet-800 border border-violet-200/90"
             >
-              {tag}
+              {specialtyLabel(tag)}
             </span>
           ))}
           {specialties.length > 8 && (
@@ -213,7 +214,7 @@ export default function Feed() {
 
   const filtered = feedUsers.filter((u) => {
     const q = search.toLowerCase()
-    const spec = (Array.isArray(u.specialties) ? u.specialties : []).join(' ').toLowerCase()
+    const spec = (Array.isArray(u.specialties) ? u.specialties : []).map(specialtyLabel).join(' ').toLowerCase()
     return (
       u.name?.toLowerCase().includes(q) ||
       u.bio?.toLowerCase().includes(q) ||

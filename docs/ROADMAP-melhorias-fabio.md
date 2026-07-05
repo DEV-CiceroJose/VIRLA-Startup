@@ -39,11 +39,13 @@ Sem dependências, alto valor, baixo custo. Fazer primeiro.
 |------|---------|--------------|
 | **BUG-01** | **P** | Causa-raiz achada: `PUT /solicitacoes/:id` usa `createSolicitacaoBodySchema` onde `cidade`/`estado` são `.optional()` mas não `.nullable()`. Solicitação salva com `null` reenvia `null` → *"Esperava-se uma string…"*. Corrigir com `.nullable()` (ou schema de update dedicado). `schemas/solicitacaoSchemas.js` |
 | **BUG-02** | **M** | Criar `utils/date.js` (formato válido, sem data futura, idade mínima) e refine em `birthDate` nos schemas de create/update. Base para SEC-06. |
-| **SEC-05** | **P** | Auditar campos restantes sem `.max()` (ex.: `titulo`/`descricao` já têm). Fechar lacunas pontuais. |
+| **SEC-05** | **P** | ✅ **Concluído (branch `fase2-form-ux`):** única lacuna era `specialties` (sem limite) — agora `z.array(z.enum(...)).max(12)`. Demais campos já tinham `.max()`. |
 | **FE-12** | **P** | Confirmação de senha no `pages/Cadastro` (só frontend). |
 | **CHAT-03** | **P** | Reusar `ui/ConfirmDialog` em excluir mensagem / cancelar solicitação / sair de conversa. |
 
 ## Fase 1 — Endurecimento de validações (≈3–5 dias) — depende de BUG-02
+
+> ✅ **Concluído no branch `fase2-form-ux` (2026-07-04):** FE-01, FE-02 (só CEP→cidade/estado; sem bairro/rua), FE-03, FE-06 (lista fixa de 12 especialidades como multi-select), FE-07 (limite real da bio é 2000, não 500), FE-10 e FE-11. SEC-06/SEC-04/FE-08/FE-04/FE-05/FE-09 já haviam sido concluídos nas Fases 0/1 anteriores.
 
 | Task | Esforço | O quê / onde |
 |------|---------|--------------|

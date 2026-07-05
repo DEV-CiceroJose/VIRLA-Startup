@@ -8,7 +8,9 @@ import {
     getMessageHistory,
     getConversations,
     getUnreadCount,
-    markAsRead
+    markAsRead,
+    deleteMessage,
+    archiveConversation,
 } from '../controllers/messageController.js';
 
 const router = express.Router();
@@ -41,5 +43,9 @@ router.get('/conversations', checkToken, getConversations);
 // Rotas de notificação (O nosso contador e o marcador de leitura)
 router.get('/messages/unread-count', checkToken, getUnreadCount);
 router.patch('/messages/read/:userId', checkToken, markAsRead);
+
+// Apagar mensagem própria (janela 10min) e sair/arquivar conversa
+router.delete('/messages/:peerId/:messageId', checkToken, deleteMessage);
+router.patch('/conversations/:peerId/archive', checkToken, archiveConversation);
 
 export default router;

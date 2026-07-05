@@ -63,3 +63,20 @@ describe('Chat — apagar mensagem', () => {
     await waitFor(() => expect(api.delete).toHaveBeenCalledWith('/messages/bob/m1'))
   })
 })
+
+describe('Chat — sair da conversa', () => {
+  it('arquiva via api.patch e navega para a lista de conversas', async () => {
+    api.patch.mockResolvedValue({ data: { msg: 'Conversa arquivada' } })
+    const user = userEvent.setup()
+    renderChat()
+
+    await screen.findByText('oi') // conversa carregada
+    await user.click(screen.getByRole('button', { name: /sair da conversa/i }))
+
+    const confirm = await screen.findByRole('button', { name: /^sair$/i })
+    await user.click(confirm)
+
+    await waitFor(() => expect(api.patch).toHaveBeenCalledWith('/conversations/bob/archive', { archived: true }))
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/home?tab=mensagens'))
+  })
+})

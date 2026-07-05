@@ -48,10 +48,10 @@ async function ensureMembership(chatId, userIdA, userIdB) {
 }
 
 /** Atualiza o índice de conversas recentes de ambos os participantes. */
-async function touchUserChats(chatId, senderId, receiverId, lastMessage, lastMessageAt) {
+export async function touchUserChats(chatId, senderId, receiverId, lastMessage, lastMessageAt, db = rtdb) {
   await Promise.all([
-    rtdb.ref(`userChats/${senderId}/${chatId}`).update({ peerId: receiverId, lastMessage, lastMessageAt }),
-    rtdb.ref(`userChats/${receiverId}/${chatId}`).update({ peerId: senderId, lastMessage, lastMessageAt }),
+    db.ref(`userChats/${senderId}/${chatId}`).update({ peerId: receiverId, lastMessage, lastMessageAt, archived: false }),
+    db.ref(`userChats/${receiverId}/${chatId}`).update({ peerId: senderId, lastMessage, lastMessageAt, archived: false }),
   ])
 }
 
@@ -102,12 +102,13 @@ export async function getHistory(meId, otherId) {
 }
 
 /** Lista as conversas recentes do usuário (para o dashboard / aba de mensagens). */
-export async function getConversations(meId) {
-  const snap = await rtdb.ref(`userChats/${meId}`).get()
+export async function getConversations(meId, db = rtdb) {
+  const snap = await db.ref(`userChats/${meId}`).get()
   if (!snap.exists()) return []
   const entries = []
   snap.forEach((child) => {
     const v = child.val()
+    if (v.archived === true) return // conversa arquivada some da lista de recentes
     entries.push({
       peerId: v.peerId,
       lastMessage: v.lastMessage,
@@ -203,6 +204,12 @@ export async function deleteMessage(meId, peerId, messageId, db = rtdb) {
 
   messageLogger.info('message:deleted', { userId: meId, action: 'delete_message', metadata: { peerId, messageId } })
   return { ...msg, deleted: true, content: '', audioUrl: null }
+}
+
+/** Arquiva/desarquiva a conversa SÓ para o próprio usuário (o índice do peer não é tocado). */
+export async function setArchived(meId, peerId, archived, db = rtdb) {
+  const chatId = chatIdFor(meId, peerId)
+  await db.ref(`userChats/${meId}/${chatId}`).update({ archived: Boolean(archived) })
 }
 
 /** Busca os dados (nome) de um peer a partir do índice de conversas — usado só como fallback. */

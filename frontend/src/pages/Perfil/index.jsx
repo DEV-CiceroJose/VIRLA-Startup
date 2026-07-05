@@ -17,6 +17,7 @@ import LocationOn from '@mui/icons-material/LocationOn'
 import api from '../../services/api'
 import { calculateAge } from '../../utils/dateUtils'
 import ProfileImageUpload from '../../components/ProfileImageUpload'
+import ProfileCompleteness from '../../components/ProfileCompleteness'
 import { Field, Button, Card, Alert, ConfirmDialog, Badge as DSBadge, TagSelect } from '../../components/ui'
 import { hasPasswordProvider, linkPassword, mapAuthError } from '../../services/auth'
 import { COUNCILS, isValidRegister } from '../../constants/councils'
@@ -266,6 +267,8 @@ export default function Perfil() {
           <h1 className="text-3xl font-display font-black text-virla-roxo">Meu Perfil</h1>
           <p className="text-virla-muted text-sm mt-1">Gerencie suas informações pessoais e profissionais</p>
         </div>
+
+        <ProfileCompleteness userData={userData} role={userData.role} />
 
         {message.text && (
           <Alert tone={message.type === 'success' ? 'success' : 'error'}>{message.text}</Alert>

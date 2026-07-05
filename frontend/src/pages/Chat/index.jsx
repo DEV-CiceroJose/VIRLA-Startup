@@ -10,6 +10,7 @@ import Mic from '@mui/icons-material/Mic'
 import StopCircle from '@mui/icons-material/StopCircle'
 import Delete from '@mui/icons-material/Delete'
 import DeleteOutlined from '@mui/icons-material/DeleteOutlined'
+import ExitToApp from '@mui/icons-material/ExitToApp'
 
 import api from '../../services/api'
 import { PageLoader, ButtonSpinner } from '../../components/Spinner'
@@ -47,6 +48,8 @@ export default function Chat() {
   const [confirmDeleteId, setConfirmDeleteId] = useState(null)
   const [deletingMsg, setDeletingMsg] = useState(false)
   const [activeMsgId, setActiveMsgId] = useState(null) // bolha "aberta" que mostra a lixeira
+  const [confirmLeave, setConfirmLeave] = useState(false)
+  const [leaving, setLeaving] = useState(false)
 
   const listRef = useRef(null)
 
@@ -295,6 +298,18 @@ export default function Chat() {
     }
   }, [confirmDeleteId, peerId])
 
+  const handleConfirmLeave = useCallback(async () => {
+    setLeaving(true)
+    try {
+      await api.patch(`/conversations/${peerId}/archive`, { archived: true })
+      navigate('/home?tab=mensagens')
+    } catch {
+      toast.error('Não foi possível sair da conversa.')
+      setLeaving(false)
+      setConfirmLeave(false)
+    }
+  }, [peerId, navigate])
+
   const myRoleNorm = normalizeVirlaRole(myRole)
   const peerRoleNorm = normalizeVirlaRole(peer?.role)
   const isCaregiver = myRoleNorm === 'CUIDADOR'
@@ -369,6 +384,16 @@ export default function Chat() {
         <Link to="/home?tab=mensagens" className="text-xs font-semibold text-white/90 hover:underline hidden sm:inline">
           Histórico
         </Link>
+
+        <button
+          type="button"
+          onClick={() => setConfirmLeave(true)}
+          className="p-2 rounded-xl hover:bg-white/15 transition-colors flex-shrink-0"
+          title="Sair da conversa"
+          aria-label="Sair da conversa"
+        >
+          <ExitToApp sx={{ fontSize: 24 }} />
+        </button>
       </header>
 
       {canPay && (
@@ -517,6 +542,17 @@ export default function Chat() {
         loading={deletingMsg}
         onConfirm={handleConfirmDelete}
         onCancel={() => setConfirmDeleteId(null)}
+      />
+
+      <ConfirmDialog
+        open={confirmLeave}
+        title="Sair desta conversa?"
+        description="Ela sai da sua lista de conversas; a outra pessoa continua vendo, e você não perde o histórico."
+        confirmLabel="Sair"
+        cancelLabel="Cancelar"
+        loading={leaving}
+        onConfirm={handleConfirmLeave}
+        onCancel={() => setConfirmLeave(false)}
       />
     </div>
   )

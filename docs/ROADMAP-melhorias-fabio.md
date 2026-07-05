@@ -77,9 +77,11 @@ Sem dependências, alto valor, baixo custo. Fazer primeiro.
 
 ## Fase 4 — Chat & Produto (≈8–12 dias) — precisa da decisão #3
 
+> ✅ **Concluído no branch `chat-features` (2026-07-05):** CHAT-01 (apagar mensagem própria em janela de 10min, tombstone "mensagem apagada") e "sair/arquivar conversa" (parte que faltava do antigo CHAT-03). Correção de premissa: o chat roda no **Realtime Database**, não no Firestore. Restam CHAT-02 (pacote grande), PROD-01/02/03.
+
 | Task | Esforço | O quê |
 |------|---------|-------|
-| **CHAT-01** | **M** | Apagar mensagem dentro de janela (5–10 min) — Firestore + UI. |
+| **CHAT-01** | **M** | ✅ **Concluído (branch `chat-features`):** apagar mensagem própria em janela de 10min (tombstone). Feito no RTDB (não Firestore) + UI com ConfirmDialog. |
 | **PROD-01 + "visto por último" (CHAT-02)** | **M** | Consolidar: status online / last-seen (presença no Firestore). São a mesma feature. |
 | **CHAT-02 (restante)** | **XG** | Guarda-chuva: typing, envio/entrega/leitura, imagens, arquivos, emojis. **Dividir em sub-tasks**; imagens/arquivos exigem Storage. |
 | **PROD-02** | **M** | Tela de solicitações completa (localização, valor, horário, frequência, início). Alguns campos podem não existir ainda no modelo. |

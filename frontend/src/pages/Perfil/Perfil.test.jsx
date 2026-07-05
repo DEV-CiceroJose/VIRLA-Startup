@@ -172,4 +172,13 @@ describe('Página de Perfil', () => {
     expect(screen.getByText('1901/2000')).toBeInTheDocument()
     expect(screen.getByText('1901/2000')).toHaveClass('text-red-600')
   })
+
+  it('mostra a barra de perfil incompleto quando faltam campos', async () => {
+    api.get.mockResolvedValue({
+      data: { user: { ...CUIDADOR, hourlyRate: null, description: '' } },
+    })
+    renderPerfil()
+    await screen.findByLabelText('Nome completo')
+    expect(screen.getByText(/perfil \d+% completo/i)).toBeInTheDocument()
+  })
 })

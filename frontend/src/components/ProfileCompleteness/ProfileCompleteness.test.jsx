@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import ProfileCompleteness, { computeCompleteness } from './index'
+import ProfileCompleteness from './index'
+import { computeCompleteness } from './completeness'
 
 const CUIDADOR_COMPLETO = {
   profileImage: 'data:image/png;base64,x',

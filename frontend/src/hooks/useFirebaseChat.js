@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback, useState } from 'react'
-import { ref, push, onChildAdded, update, get } from 'firebase/database'
+import { ref, push, onChildAdded, onChildChanged, update, get } from 'firebase/database'
 import { rtdb, isFirebaseReady } from '../services/firebase'
 
 export function chatIdFor(userIdA, userIdB) {
@@ -15,14 +15,20 @@ export function chatIdFor(userIdA, userIdB) {
  * console), o hook NÃO derruba a tela — ele apenas reporta `realtimeActive:
  * false`, e a página de Chat assume o modo de contingência por HTTP (polling).
  *
- * @param {{ meId: string, peerId: string, onMessage: (msg: object) => void }} params
+ * @param {{ meId: string, peerId: string, onMessage: (msg: object) => void, onMessageChanged?: (msg: object) => void }} params
  */
-export function useFirebaseChat({ meId, peerId, onMessage }) {
+export function useFirebaseChat({ meId, peerId, onMessage, onMessageChanged }) {
   const [ready, setReady] = useState(false)
   // realtimeActive=false → a página de Chat deve buscar histórico por HTTP.
   const [realtimeActive, setRealtimeActive] = useState(false)
   const onMessageRef = useRef(onMessage)
-  onMessageRef.current = onMessage
+  const onMessageChangedRef = useRef(onMessageChanged)
+  // Mantém os refs "latest" sem tocá-los durante o render (os callbacks são
+  // chamados de forma assíncrona pelos listeners do RTDB, já depois do effect).
+  useEffect(() => {
+    onMessageRef.current = onMessage
+    onMessageChangedRef.current = onMessageChanged
+  })
 
   const chatId = meId && peerId ? chatIdFor(meId, peerId) : null
 
@@ -47,10 +53,15 @@ export function useFirebaseChat({ meId, peerId, onMessage }) {
         if (unsubscribed) return
 
         const messagesRef = ref(rtdb, `chats/${chatId}/messages`)
-        unsubscribe = onChildAdded(messagesRef, (snapshot) => {
+        const offAdded = onChildAdded(messagesRef, (snapshot) => {
           const message = { id: snapshot.key, ...snapshot.val() }
           onMessageRef.current?.(message)
         })
+        const offChanged = onChildChanged(messagesRef, (snapshot) => {
+          const message = { id: snapshot.key, ...snapshot.val() }
+          onMessageChangedRef.current?.(message)
+        })
+        unsubscribe = () => { offAdded(); offChanged() }
 
         setRealtimeActive(true)
         setReady(true)

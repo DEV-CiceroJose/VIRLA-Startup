@@ -6,6 +6,8 @@ import {
   getConversations as getConversationsRTDB,
   getUnreadCount as getUnreadCountRTDB,
   markAsRead as markAsReadRTDB,
+  deleteMessage as deleteMessageRTDB,
+  setArchived as setArchivedRTDB,
 } from '../services/chatRealtimeService.js'
 
 /**
@@ -149,5 +151,42 @@ export const markAsRead = async (req, res) => {
     } catch (e) {
         messageLogger.error('message:mark_read_failed', { error: e.message, stack: e.stack, userId: req.userId })
         res.status(500).json({ msg: "Erro ao marcar como lida" })
+    }
+}
+
+/** DELETE /messages/:peerId/:messageId — apaga (tombstone) a própria mensagem em janela de 10min. */
+export const deleteMessage = async (req, res) => {
+    try {
+        const me = req.userId
+        const { peerId, messageId } = req.params
+        if (!peerId || !messageId) return res.status(400).json({ msg: "Parâmetros inválidos" })
+        if (peerId === me) return res.status(400).json({ msg: "Conversa inválida" })
+
+        const message = await deleteMessageRTDB(me, peerId, messageId)
+        res.status(200).json({ message })
+    } catch (e) {
+        const statusByCode = { not_found: 404, forbidden: 403, window_expired: 409 }
+        const status = statusByCode[e.code]
+        if (status) return res.status(status).json({ msg: e.message })
+        messageLogger.error('message:delete_failed', { error: e.message, stack: e.stack, userId: req.userId, endpoint: req.originalUrl })
+        res.status(500).json({ msg: "Erro ao apagar mensagem" })
+    }
+}
+
+/** PATCH /conversations/:peerId/archive — arquiva/desarquiva a conversa só para o usuário. */
+export const archiveConversation = async (req, res) => {
+    try {
+        const me = req.userId
+        const { peerId } = req.params
+        const { archived } = req.body
+        if (!peerId) return res.status(400).json({ msg: "Usuário inválido" })
+        if (peerId === me) return res.status(400).json({ msg: "Conversa inválida" })
+        if (typeof archived !== 'boolean') return res.status(422).json({ msg: 'Campo "archived" deve ser booleano' })
+
+        await setArchivedRTDB(me, peerId, archived)
+        res.status(200).json({ msg: archived ? "Conversa arquivada" : "Conversa desarquivada" })
+    } catch (e) {
+        messageLogger.error('message:archive_failed', { error: e.message, stack: e.stack, userId: req.userId, endpoint: req.originalUrl })
+        res.status(500).json({ msg: "Erro ao arquivar conversa" })
     }
 }

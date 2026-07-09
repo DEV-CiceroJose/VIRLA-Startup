@@ -84,10 +84,14 @@ export const sendAttachmentMessage = async (req, res) => {
         const attachmentType = attachmentTypeFor(file.mimetype)
         if (!attachmentType) return res.status(422).json({ msg: "Tipo de arquivo não permitido." })
 
+        // Rótulo textual pro preview da lista de conversas (userChats.lastMessage).
+        // Não aparece na bolha: o render prioriza o ramo de imagem/PDF sobre o texto.
+        const label = attachmentType === 'pdf' ? '📎 Documento' : '📷 Imagem'
+
         const message = await createMessage({
             senderId,
             receiverId,
-            content: "",
+            content: label,
             attachmentUrl: `/uploads/${file.filename}`,
             attachmentType,
             attachmentName: String(file.originalname || "").slice(0, 120),

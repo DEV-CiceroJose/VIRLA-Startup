@@ -353,9 +353,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 
+// navigateMock estável (hoisted) — NÃO use `useNavigate: () => vi.fn()`: uma
+// função nova a cada render re-dispara o effect de carga do Chat (que depende de
+// `navigate`) num loop infinito e trava o Vitest. Mesmo padrão de Cadastro/Login.test.
+const navigateMock = vi.fn()
 vi.mock('react-router-dom', async (orig) => {
   const actual = await orig()
-  return { ...actual, useNavigate: () => vi.fn(), useParams: () => ({ userId: 'bob' }) }
+  return { ...actual, useNavigate: () => navigateMock, useParams: () => ({ userId: 'bob' }) }
 })
 vi.mock('../../services/api', () => ({ default: { get: vi.fn(), post: vi.fn(), patch: vi.fn().mockResolvedValue({ data: {} }), delete: vi.fn() } }))
 vi.mock('../../hooks/useFirebaseChat', () => ({

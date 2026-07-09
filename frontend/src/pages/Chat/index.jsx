@@ -18,6 +18,8 @@ import { PAYMENT_ENABLED } from '../../utils/featureFlags'
 import { useSocket } from '../../hooks/useSocket'
 import { useFirebaseChat } from '../../hooks/useFirebaseChat'
 import { useAudioRecorder } from '../../hooks/useAudioRecorder'
+import { usePeerPresence } from '../../hooks/usePresence'
+import { formatLastSeen } from '../../utils/lastSeen'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3002'
 
@@ -30,6 +32,7 @@ export default function Chat() {
   const { userId: peerId } = useParams()
   const navigate = useNavigate()
   const meId = localStorage.getItem('meuId')
+  const peerPresence = usePeerPresence(peerId)
 
   const [peer, setPeer] = useState(null)
   const [myRole, setMyRole] = useState(localStorage.getItem('meuRole') ?? '')
@@ -319,9 +322,20 @@ export default function Chat() {
         </div>
         <div className="min-w-0 flex-1">
           <h1 className="font-bold text-lg truncate">{peer?.name ?? 'Conversa'}</h1>
-          <p className="text-xs text-white/70 truncate">
-            {peer?.approach || (peerRoleNorm === 'CUIDADOR' ? 'Cuidador' : peerRoleNorm === 'FAMILIAR' ? 'Familiar' : '')}
-          </p>
+          {peerPresence?.state === 'online' ? (
+            <p className="text-xs text-green-300 truncate flex items-center gap-1">
+              <span className="inline-block w-2 h-2 rounded-full bg-green-400" aria-hidden />
+              online
+            </p>
+          ) : peerPresence?.lastChanged ? (
+            <p className="text-xs text-white/70 truncate">
+              visto por último {formatLastSeen(peerPresence.lastChanged)}
+            </p>
+          ) : (
+            <p className="text-xs text-white/70 truncate">
+              {peer?.approach || (peerRoleNorm === 'CUIDADOR' ? 'Cuidador' : peerRoleNorm === 'FAMILIAR' ? 'Familiar' : '')}
+            </p>
+          )}
         </div>
 
         {canGenerateCharge && (

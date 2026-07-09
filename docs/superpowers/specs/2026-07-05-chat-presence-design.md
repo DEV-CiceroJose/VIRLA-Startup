@@ -60,16 +60,19 @@ Adicionar um nó `status` de topo em `backend/firebase.rules.json`:
 
 ## Publicar a própria presença (app-wide)
 
-Novo hook `usePresence()` em `frontend/src/hooks/usePresence.js`, montado **uma
-vez** no `AppShell` (onde o usuário já é conhecido/autenticado). Usa o Web SDK do
+Novo hook `usePresence(uid)` em `frontend/src/hooks/usePresence.js`, acionado por
+um componente `<PresenceManager />` montado **uma vez** no `AppShell` (dentro do
+`SocketProvider`), que lê `firebaseUser?.uid` do `AuthContext`. Usa o Web SDK do
 Firebase:
 
 - Assina o caminho especial `.info/connected`.
 - Quando `connected === true`:
   1. **Primeiro** registra `onDisconnect(statusRef).set({ state:'offline', lastChanged: serverTimestamp() })` — o servidor do Firebase dispara isso ao cair a conexão (fechar aba, crash, queda de rede).
   2. **Depois** `set(statusRef, { state:'online', lastChanged: serverTimestamp() })`.
-- Fonte do uid: `localStorage.getItem('meuId')` — a mesma fonte que a página de
-  Chat já usa para `meId`. O hook reage a mudança de uid (login/logout).
+- Fonte do uid: o `usePresence(uid)` recebe o uid como argumento; um componente
+  `<PresenceManager />` montado no `AppShell` passa `firebaseUser?.uid` do
+  `AuthContext` (`useAuth()`), que é **reativo** a login/logout (o `localStorage
+  'meuId'` não dispararia re-render). Com `uid` nulo (deslogado), o hook no-opa.
 - **Resiliência:** se `isFirebaseReady()` for falso ou `rtdb` não existir, o hook
   **no-opa** — a presença simplesmente não aparece, consistente com o fallback
   HTTP do chat. Nunca derruba a tela.

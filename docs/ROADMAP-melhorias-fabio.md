@@ -80,8 +80,8 @@ Sem dependências, alto valor, baixo custo. Fazer primeiro.
 | Task | Esforço | O quê |
 |------|---------|-------|
 | **CHAT-01** | **M** | Apagar mensagem dentro de janela (5–10 min) — Firestore + UI. |
-| **PROD-01 + "visto por último" (CHAT-02)** | **M** | Consolidar: status online / last-seen (presença no Firestore). São a mesma feature. |
-| **CHAT-02 (restante)** | **XG** | Guarda-chuva: typing, envio/entrega/leitura, imagens, arquivos, emojis. **Dividir em sub-tasks**; imagens/arquivos exigem Storage. |
+| **PROD-01 + "visto por último" (CHAT-02)** | **M** | ✅ **Concluído (branch `chat-presence`, 2026-07-05):** presença online + "visto por último" no header do Chat, via RTDB `onDisconnect` (não Firestore). Correção de premissa: presença vive no **RTDB**, não no Firestore. |
+| **CHAT-02 (restante)** | **XG** | Guarda-chuva decomposto em sub-projetos. ✅ **Prontos:** typing, leitura (✓✓), envio (✓), presença/visto por último (branch `chat-presence`). **Restam:** emojis (seletor no composer) e imagens+arquivos (mesmo pipeline de upload; decisão de Storage). |
 | **PROD-02** | **M** | Tela de solicitações completa (localização, valor, horário, frequência, início). Alguns campos podem não existir ainda no modelo. |
 | **PROD-03** | **G** | Sistema de notificações (mensagens, solicitações, status). Overlap com presença/chat. |
 

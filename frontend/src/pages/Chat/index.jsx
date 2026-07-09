@@ -13,6 +13,7 @@ import DeleteOutlined from '@mui/icons-material/DeleteOutlined'
 import ExitToApp from '@mui/icons-material/ExitToApp'
 
 import api from '../../services/api'
+import EmojiPicker from '../../components/EmojiPicker'
 import { PageLoader, ButtonSpinner } from '../../components/Spinner'
 import GenerateChargeModal from '../../components/GenerateChargeModal'
 import { ConfirmDialog } from '../../components/ui'
@@ -482,7 +483,10 @@ export default function Chat() {
 
       <form onSubmit={handleSend} className="flex-shrink-0 bg-white/95 backdrop-blur border-t border-virla-roxo/15 px-4 py-3 shadow-[0_-4px_20px_rgba(128,0,128,0.08)]">
         <div className="max-w-3xl mx-auto flex gap-2 items-end">
-          
+          {!isRecording && !audioBlob && (
+            <EmojiPicker onSelect={(emoji) => setInput((v) => v + emoji)} />
+          )}
+
           {isRecording ? (
             <div className="flex-1 flex items-center justify-between bg-red-50 rounded-xl px-4 min-h-[44px] border border-red-200">
               <div className="flex items-center gap-2 text-red-600 font-medium animate-pulse">

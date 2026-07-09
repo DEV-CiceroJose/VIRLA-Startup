@@ -5,6 +5,7 @@ import { SocketProvider } from './context/SocketContext'
 import { PageLoader } from './components/Spinner'
 import { PAYMENT_ENABLED } from './utils/featureFlags'
 import { useAuth } from './context/AuthContext'
+import { usePresence } from './hooks/usePresence'
 import Menu from './components/Menu'
 import RouteErrorBoundary from './components/RouteErrorBoundary'
 
@@ -141,6 +142,17 @@ function PagamentoSucessoRoute({ children }) {
   return children
 }
 
+/**
+ * Publica a presença do usuário logado enquanto o app estiver aberto.
+ * Renderiza nada — só aciona o efeito app-wide. Fica dentro do SocketProvider,
+ * junto das rotas autenticadas.
+ */
+function PresenceManager() {
+  const { firebaseUser } = useAuth()
+  usePresence(firebaseUser?.uid)
+  return null
+}
+
 export default function AppShell() {
   const location = useLocation()
   const showMenu = !HIDDEN_MENU_ROUTES.includes(location.pathname)
@@ -148,6 +160,7 @@ export default function AppShell() {
   return (
     <SocketProvider>
       <Toaster position="top-right" richColors />
+      <PresenceManager />
       {showMenu && <Menu />}
 
       {/* Suspense envolve todas as rotas: exibe PageLoader enquanto o chunk

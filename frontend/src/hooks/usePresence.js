@@ -40,15 +40,18 @@ export function usePeerPresence(peerId) {
   const [presence, setPresence] = useState(null)
 
   useEffect(() => {
-    if (!peerId || !isFirebaseReady() || !rtdb) {
-      setPresence(null)
-      return undefined
-    }
+    if (!peerId || !isFirebaseReady() || !rtdb) return undefined
     const statusRef = ref(rtdb, `status/${peerId}`)
     const unsub = onValue(statusRef, (snap) => {
       setPresence(snap.exists() ? snap.val() : null)
     })
-    return () => unsub()
+    // O cleanup limpa a presença ao trocar de peer (evita mostrar a do peer
+    // anterior enquanto o onValue do novo ainda não disparou). setState só no
+    // callback do onValue e no cleanup — nunca síncrono no corpo do effect.
+    return () => {
+      unsub()
+      setPresence(null)
+    }
   }, [peerId])
 
   return presence

@@ -30,6 +30,13 @@
           ".write": "auth != null && root.child('chats/' + $chatId + '/members/' + auth.uid).exists()"
         }
       }
+    },
+
+    "status": {
+      "$uid": {
+        ".read": "auth != null",
+        ".write": "auth != null && auth.uid == $uid"
+      }
     }
   }
 }

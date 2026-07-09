@@ -85,7 +85,7 @@ Sem dependências, alto valor, baixo custo. Fazer primeiro.
 |------|---------|-------|
 | **CHAT-01** | **M** | ✅ **Concluído (branch `chat-features`):** apagar mensagem própria em janela de 10min (tombstone). Feito no RTDB (não Firestore) + UI com ConfirmDialog. |
 | **PROD-01 + "visto por último" (CHAT-02)** | **M** | ✅ **Concluído (branch `chat-presence`, 2026-07-05):** presença online + "visto por último" no header do Chat, via RTDB `onDisconnect` (não Firestore). Correção de premissa: presença vive no **RTDB**, não no Firestore. |
-| **CHAT-02 (restante)** | **XG** | Guarda-chuva decomposto em sub-projetos. ✅ **Prontos:** typing, leitura (✓✓), envio (✓), presença/visto por último (branch `chat-presence`). **Restam:** emojis (seletor no composer) e imagens+arquivos (mesmo pipeline de upload; decisão de Storage). |
+| **CHAT-02 (restante)** | **XG** | ✅ **Concluído.** Guarda-chuva decomposto e fechado: typing, leitura (✓✓), envio (✓), presença/visto por último (branch `chat-presence`), **emojis** (seletor próprio no composer) e **imagens+arquivos** (imagem/PDF via disco local, branch `chat-anexos-emojis`, 2026-07-09). CHAT-02 encerrado. |
 | **PROD-02** | **M** | Tela de solicitações completa (localização, valor, horário, frequência, início). Alguns campos podem não existir ainda no modelo. |
 | **PROD-03** | **G** | Sistema de notificações (mensagens, solicitações, status). Overlap com presença/chat. |
 

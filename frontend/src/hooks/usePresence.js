@@ -1,0 +1,55 @@
+import { useEffect, useState } from 'react'
+import { ref, onValue, onDisconnect, set, serverTimestamp } from 'firebase/database'
+import { rtdb, isFirebaseReady } from '../services/firebase'
+
+/**
+ * Publica a presença do próprio usuário no RTDB (padrão canônico do Firebase).
+ * Enquanto conectado, mantém status/{uid} = { state:'online', lastChanged } e
+ * registra um onDisconnect que grava 'offline' quando a conexão cair (fechar
+ * aba, crash, queda de rede) — o servidor do Firebase dispara isso sozinho.
+ *
+ * No-opa se não houver uid ou o Firebase não estiver disponível (resiliência:
+ * a presença simplesmente não aparece, sem derrubar a tela).
+ */
+export function usePresence(uid) {
+  useEffect(() => {
+    if (!uid || !isFirebaseReady() || !rtdb) return undefined
+
+    const statusRef = ref(rtdb, `status/${uid}`)
+    const connectedRef = ref(rtdb, '.info/connected')
+
+    const unsub = onValue(connectedRef, (snap) => {
+      if (snap.val() !== true) return
+      // Registra o "offline ao desconectar" ANTES de marcar online, pra garantir
+      // que o servidor tenha o handler mesmo se a conexão cair logo em seguida.
+      onDisconnect(statusRef)
+        .set({ state: 'offline', lastChanged: serverTimestamp() })
+        .then(() => set(statusRef, { state: 'online', lastChanged: serverTimestamp() }))
+        .catch((err) => console.error('[presence] falha ao publicar presença:', err))
+    })
+
+    return () => unsub()
+  }, [uid])
+}
+
+/**
+ * Assina a presença de um peer. Devolve { state, lastChanged } ou null
+ * (sem peer / Firebase indisponível / ainda sem dado).
+ */
+export function usePeerPresence(peerId) {
+  const [presence, setPresence] = useState(null)
+
+  useEffect(() => {
+    if (!peerId || !isFirebaseReady() || !rtdb) {
+      setPresence(null)
+      return undefined
+    }
+    const statusRef = ref(rtdb, `status/${peerId}`)
+    const unsub = onValue(statusRef, (snap) => {
+      setPresence(snap.exists() ? snap.val() : null)
+    })
+    return () => unsub()
+  }, [peerId])
+
+  return presence
+}

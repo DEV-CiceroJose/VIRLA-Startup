@@ -28,7 +28,14 @@ export function usePresence(uid) {
         .catch((err) => console.error('[presence] falha ao publicar presença:', err))
     })
 
-    return () => unsub()
+    return () => {
+      unsub()
+      // Logout em SPA (sem fechar a aba): a conexão RTDB continua viva, então o
+      // onDisconnect não dispara. Marca offline explicitamente ao trocar/limpar o
+      // uid, pra o usuário deslogado não ficar "online" fantasma. (Fechar a aba /
+      // crash continua coberto pelo onDisconnect registrado acima.)
+      set(statusRef, { state: 'offline', lastChanged: serverTimestamp() }).catch(() => {})
+    }
   }, [uid])
 }
 

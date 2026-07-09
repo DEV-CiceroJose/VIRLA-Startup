@@ -32,6 +32,13 @@ export function chatIdFor(userIdA, userIdB) {
   return [userIdA, userIdB].sort().join('_')
 }
 
+export const DELETE_WINDOW_MS = 600_000
+
+/** true se a mensagem ainda está dentro da janela de apagar (10 min). */
+export function isWithinDeleteWindow(createdAt, nowMs = Date.now()) {
+  return nowMs - createdAt <= DELETE_WINDOW_MS
+}
+
 /** Garante que os dois participantes estão registrados como membros do chat (usado pelas Security Rules). */
 async function ensureMembership(chatId, userIdA, userIdB) {
   await rtdb.ref(`chats/${chatId}/members`).update({
@@ -41,10 +48,10 @@ async function ensureMembership(chatId, userIdA, userIdB) {
 }
 
 /** Atualiza o índice de conversas recentes de ambos os participantes. */
-async function touchUserChats(chatId, senderId, receiverId, lastMessage, lastMessageAt) {
+export async function touchUserChats(chatId, senderId, receiverId, lastMessage, lastMessageAt, db = rtdb) {
   await Promise.all([
-    rtdb.ref(`userChats/${senderId}/${chatId}`).update({ peerId: receiverId, lastMessage, lastMessageAt }),
-    rtdb.ref(`userChats/${receiverId}/${chatId}`).update({ peerId: senderId, lastMessage, lastMessageAt }),
+    db.ref(`userChats/${senderId}/${chatId}`).update({ peerId: receiverId, lastMessage, lastMessageAt, archived: false }),
+    db.ref(`userChats/${receiverId}/${chatId}`).update({ peerId: senderId, lastMessage, lastMessageAt, archived: false }),
   ])
 }
 
@@ -95,12 +102,13 @@ export async function getHistory(meId, otherId) {
 }
 
 /** Lista as conversas recentes do usuário (para o dashboard / aba de mensagens). */
-export async function getConversations(meId) {
-  const snap = await rtdb.ref(`userChats/${meId}`).get()
+export async function getConversations(meId, db = rtdb) {
+  const snap = await db.ref(`userChats/${meId}`).get()
   if (!snap.exists()) return []
   const entries = []
   snap.forEach((child) => {
     const v = child.val()
+    if (v.archived === true) return // conversa arquivada some da lista de recentes
     entries.push({
       peerId: v.peerId,
       lastMessage: v.lastMessage,
@@ -155,6 +163,53 @@ export async function markAsRead(meId, otherId) {
   if (Object.keys(updates).length > 0) {
     await rtdb.ref(`chats/${chatId}/messages`).update(updates)
   }
+}
+
+/**
+ * Apaga (tombstone) a própria mensagem do usuário, se dentro da janela.
+ * Lança Error com .code = 'not_found' | 'forbidden' | 'window_expired'.
+ * O nó permanece com deleted:true / content:'' / audioUrl:null.
+ */
+export async function deleteMessage(meId, peerId, messageId, db = rtdb) {
+  const chatId = chatIdFor(meId, peerId)
+  const msgRef = db.ref(`chats/${chatId}/messages/${messageId}`)
+  const snap = await msgRef.get()
+  if (!snap.exists()) {
+    throw Object.assign(new Error('Mensagem não encontrada.'), { code: 'not_found' })
+  }
+  const msg = snap.val()
+  if (msg.senderId !== meId) {
+    throw Object.assign(new Error('Você só pode apagar suas próprias mensagens.'), { code: 'forbidden' })
+  }
+  if (!isWithinDeleteWindow(msg.createdAt)) {
+    throw Object.assign(new Error('O prazo para apagar esta mensagem já passou.'), { code: 'window_expired' })
+  }
+
+  await msgRef.update({ deleted: true, content: '', audioUrl: null })
+
+  // Se era a mensagem mais recente do chat, atualiza o preview da lista de conversas.
+  const allSnap = await db.ref(`chats/${chatId}/messages`).get()
+  let latestId = null
+  let latestAt = -1
+  allSnap.forEach((child) => {
+    const at = child.val().createdAt ?? 0
+    if (at > latestAt) { latestAt = at; latestId = child.key }
+  })
+  if (latestId === messageId) {
+    await Promise.all([
+      db.ref(`userChats/${meId}/${chatId}`).update({ lastMessage: '🚫 Mensagem apagada' }),
+      db.ref(`userChats/${peerId}/${chatId}`).update({ lastMessage: '🚫 Mensagem apagada' }),
+    ])
+  }
+
+  messageLogger.info('message:deleted', { userId: meId, action: 'delete_message', metadata: { peerId, messageId } })
+  return { ...msg, deleted: true, content: '', audioUrl: null }
+}
+
+/** Arquiva/desarquiva a conversa SÓ para o próprio usuário (o índice do peer não é tocado). */
+export async function setArchived(meId, peerId, archived, db = rtdb) {
+  const chatId = chatIdFor(meId, peerId)
+  await db.ref(`userChats/${meId}/${chatId}`).update({ archived: Boolean(archived) })
 }
 
 /** Busca os dados (nome) de um peer a partir do índice de conversas — usado só como fallback. */

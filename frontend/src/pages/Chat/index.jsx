@@ -9,12 +9,16 @@ import Receipt from '@mui/icons-material/Receipt'
 import Mic from '@mui/icons-material/Mic'
 import StopCircle from '@mui/icons-material/StopCircle'
 import Delete from '@mui/icons-material/Delete'
+import DeleteOutlined from '@mui/icons-material/DeleteOutlined'
+import ExitToApp from '@mui/icons-material/ExitToApp'
 
 import api from '../../services/api'
 import { PageLoader, ButtonSpinner } from '../../components/Spinner'
 import GenerateChargeModal from '../../components/GenerateChargeModal'
+import { ConfirmDialog } from '../../components/ui'
 import { formatCentsBRL } from '../../utils/paymentFees'
 import { PAYMENT_ENABLED } from '../../utils/featureFlags'
+import { canDeleteMessage, mergeMessageById } from '../../utils/chatMessages'
 import { useSocket } from '../../hooks/useSocket'
 import { useFirebaseChat } from '../../hooks/useFirebaseChat'
 import { useAudioRecorder } from '../../hooks/useAudioRecorder'
@@ -44,6 +48,11 @@ export default function Chat() {
   const [showChargeModal, setShowChargeModal] = useState(false)
   const [pendingCharge, setPendingCharge] = useState(null)
   const [peerTyping, setPeerTyping] = useState(false)
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null)
+  const [deletingMsg, setDeletingMsg] = useState(false)
+  const [activeMsgId, setActiveMsgId] = useState(null) // bolha "aberta" que mostra a lixeira
+  const [confirmLeave, setConfirmLeave] = useState(false)
+  const [leaving, setLeaving] = useState(false)
 
   const listRef = useRef(null)
 
@@ -163,12 +172,17 @@ export default function Chat() {
     }
   }, [peerId, meId])
 
+  const handleChangedMessage = useCallback((message) => {
+    setMessages((prev) => mergeMessageById(prev, message))
+  }, [])
+
   // Sprint 0: a entrega de mensagens em tempo real agora é feita via Firebase
   // Realtime Database (não depende mais de reconexão do Socket.io).
   const { sendMessage: sendFirebaseMessage, markRead: markFirebaseRead, realtimeActive } = useFirebaseChat({
     meId,
     peerId,
     onMessage: handleIncomingMessage,
+    onMessageChanged: handleChangedMessage,
   })
 
   // Socket.io continua de pé apenas para sinais efêmeros: digitando, leitura e status de conexão.
@@ -268,6 +282,37 @@ export default function Chat() {
     emitTyping(peerId)
   }, [peerId, emitTyping])
 
+  const handleConfirmDelete = useCallback(async () => {
+    if (!confirmDeleteId) return
+    setDeletingMsg(true)
+    try {
+      await api.delete(`/messages/${peerId}/${confirmDeleteId}`)
+      // O tombstone ao vivo chega via onChildChanged; atualiza otimista também:
+      setMessages((prev) => mergeMessageById(prev, { id: confirmDeleteId, deleted: true, content: '', audioUrl: null }))
+    } catch (err) {
+      const msg = err.response?.status === 409
+        ? 'O prazo para apagar esta mensagem já passou.'
+        : 'Não foi possível apagar a mensagem.'
+      toast.error(msg)
+    } finally {
+      setDeletingMsg(false)
+      setConfirmDeleteId(null)
+      setActiveMsgId(null)
+    }
+  }, [confirmDeleteId, peerId])
+
+  const handleConfirmLeave = useCallback(async () => {
+    setLeaving(true)
+    try {
+      await api.patch(`/conversations/${peerId}/archive`, { archived: true })
+      navigate('/home?tab=mensagens')
+    } catch {
+      toast.error('Não foi possível sair da conversa.')
+      setLeaving(false)
+      setConfirmLeave(false)
+    }
+  }, [peerId, navigate])
+
   const myRoleNorm = normalizeVirlaRole(myRole)
   const peerRoleNorm = normalizeVirlaRole(peer?.role)
   const isCaregiver = myRoleNorm === 'CUIDADOR'
@@ -353,6 +398,16 @@ export default function Chat() {
         <Link to="/home?tab=mensagens" className="text-xs font-semibold text-white/90 hover:underline hidden sm:inline">
           Histórico
         </Link>
+
+        <button
+          type="button"
+          onClick={() => setConfirmLeave(true)}
+          className="p-2 rounded-xl hover:bg-white/15 transition-colors flex-shrink-0"
+          title="Sair da conversa"
+          aria-label="Sair da conversa"
+        >
+          <ExitToApp sx={{ fontSize: 24 }} />
+        </button>
       </header>
 
       {canPay && (
@@ -369,29 +424,46 @@ export default function Chat() {
         
         {messages.map((m) => {
           const mine = m.senderId === meId
+          const deletable = mine && canDeleteMessage(m, meId)
           return (
-            <div key={m.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
+            <div key={m.id} className={`flex ${mine ? 'justify-end' : 'justify-start'} group`}>
               <div
-                className={`max-w-[85%] sm:max-w-[70%] rounded-2xl px-4 py-2.5 text-sm shadow-sm transition-opacity duration-200
+                onClick={() => deletable && setActiveMsgId((cur) => (cur === m.id ? null : m.id))}
+                className={`relative max-w-[85%] sm:max-w-[70%] rounded-2xl px-4 py-2.5 text-sm shadow-sm transition-opacity duration-200
                   ${mine ? 'bg-virla-roxo text-white rounded-br-md' : 'bg-white text-virla-texto border border-virla-roxo/10 rounded-bl-md'}
                   ${m._optimistic ? 'opacity-70' : 'opacity-100'}
+                  ${deletable ? 'cursor-pointer' : ''}
                 `}
               >
-                {m.audioUrl ? (
+                {m.deleted ? (
+                  <p className="italic opacity-70 flex items-center gap-1">🚫 Esta mensagem foi apagada</p>
+                ) : m.audioUrl ? (
                   <audio src={`${API_URL}${m.audioUrl}`} controls className="max-w-full h-10 mt-1 rounded" />
                 ) : (
                   <p className="whitespace-pre-wrap break-words leading-relaxed">{m.content}</p>
                 )}
-                
-                {/* Sistema visual de horário e visualização (✓✓) */}
-                <p className={`text-[10px] mt-1.5 flex items-center gap-1 ${mine ? 'text-white/70 justify-end' : 'text-virla-texto/40 justify-start'}`}>
-                  {new Date(m.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                  {mine && !m._optimistic && (
-                    <span className={m.read ? 'text-blue-300' : 'text-white/50'}>
-                      {m.read ? '✓✓' : '✓'}
-                    </span>
-                  )}
-                </p>
+
+                {!m.deleted && (
+                  <p className={`text-[10px] mt-1.5 flex items-center gap-1 ${mine ? 'text-white/70 justify-end' : 'text-virla-texto/40 justify-start'}`}>
+                    {new Date(m.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                    {mine && !m._optimistic && (
+                      <span className={m.read ? 'text-blue-300' : 'text-white/50'}>
+                        {m.read ? '✓✓' : '✓'}
+                      </span>
+                    )}
+                  </p>
+                )}
+
+                {deletable && activeMsgId === m.id && (
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(m.id) }}
+                    className="absolute -top-2 -left-2 bg-white text-red-600 border border-red-200 rounded-full p-1 shadow-sm hover:bg-red-50"
+                    aria-label="Apagar mensagem"
+                  >
+                    <DeleteOutlined sx={{ fontSize: 16 }} />
+                  </button>
+                )}
               </div>
             </div>
           )
@@ -474,6 +546,28 @@ export default function Chat() {
           onSuccess={() => loadPendingCharge()}
         />
       )}
+
+      <ConfirmDialog
+        open={confirmDeleteId !== null}
+        title="Apagar mensagem?"
+        description="Ela aparecerá como apagada para você e para a outra pessoa."
+        confirmLabel="Apagar"
+        cancelLabel="Cancelar"
+        loading={deletingMsg}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setConfirmDeleteId(null)}
+      />
+
+      <ConfirmDialog
+        open={confirmLeave}
+        title="Sair desta conversa?"
+        description="Ela sai da sua lista de conversas; a outra pessoa continua vendo, e você não perde o histórico."
+        confirmLabel="Sair"
+        cancelLabel="Cancelar"
+        loading={leaving}
+        onConfirm={handleConfirmLeave}
+        onCancel={() => setConfirmLeave(false)}
+      />
     </div>
   )
 }

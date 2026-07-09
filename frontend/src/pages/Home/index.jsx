@@ -18,6 +18,7 @@ import { calculateAge, formatDateBR } from '../../utils/dateUtils'
 import { formatHourly } from '../../utils/formatters'
 import { PageLoader, Spinner, InlineSpinner } from '../../components/Spinner'
 import VerifiedSeal from '../../components/VerifiedSeal'
+import { specialtyLabel } from '../../constants/specialties'
 
 function InfoRow({ icon: Icon, label, value }) {
   return (
@@ -220,7 +221,7 @@ export default function Home() {
                       key={`${tag}-${i}`}
                       className="text-[10px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full bg-white/20 text-white border border-white/25"
                     >
-                      {tag}
+                      {specialtyLabel(tag)}
                     </span>
                   ))}
                 </div>
@@ -357,7 +358,7 @@ export default function Home() {
                         key={`${tag}-${i}`}
                         className="text-xs font-semibold px-2.5 py-1 rounded-full bg-violet-100 text-violet-800 border border-violet-200/80"
                       >
-                        {tag}
+                        {specialtyLabel(tag)}
                       </span>
                     ))}
                   </div>

@@ -4,6 +4,7 @@ import { isValidEmail } from '../utils/email.js'
 import { validateBirthDate } from '../utils/date.js'
 import { isValidName } from '../utils/name.js'
 import { COUNCIL_VALUES, isValidRegister } from '../utils/councils.js'
+import { SPECIALTY_VALUES } from '../utils/specialties.js'
 
 export const cpfSchema = z
   .string()
@@ -69,6 +70,14 @@ export const profileImageSchema = z
     { message: 'Imagem inválida. Envie um JPG, PNG ou WEBP.' },
   )
 
+export const zipCodeSchema = z
+  .string()
+  .max(9)
+  .optional()
+  .nullable()
+  .transform((v) => (v ? v.replace(/\D/g, '') : v))
+  .refine((v) => !v || /^\d{8}$/.test(v), { message: 'CEP deve ter 8 dígitos (ex.: 00000-000).' })
+
 export const hourlyRateSchema = z
   .union([z.number(), z.string()])
   .nullable()
@@ -91,10 +100,11 @@ export const updateUserBodySchema = z
     hourlyRate: hourlyRateSchema,
     registerNumber: z.string().max(80).optional().nullable(),
     approach: z.string().max(200).optional().nullable(),
-    specialties: z.union([z.string(), z.array(z.string())]).optional().nullable(),
+    specialties: z.array(z.enum(SPECIALTY_VALUES)).max(12).optional().nullable(),
     description: z.string().max(5000).optional().nullable(),
     city: z.string().max(80).optional().nullable(),
     state: z.string().max(2).optional().nullable(),
+    zipCode: zipCodeSchema,
   })
   // Bloqueia campos sensíveis/imutáveis que não podem ser alterados por update.
   .strict()
@@ -111,8 +121,9 @@ export const createUserBodySchema = z.object({
   hourlyRate: hourlyRateSchema,
   registerNumber: z.string().max(80).optional().nullable(),
   approach: z.string().max(200).optional().nullable(),
-  specialties: z.union([z.string(), z.array(z.string())]).optional().nullable(),
+  specialties: z.array(z.enum(SPECIALTY_VALUES)).max(12).optional().nullable(),
   description: z.string().max(5000).optional().nullable(),
   city: z.string().max(80).optional().nullable(),
   state: z.string().max(2).optional().nullable(),
+  zipCode: zipCodeSchema,
 }).superRefine(refineRegisterPair)

@@ -62,7 +62,7 @@ const createUsers = async (req, res) => {
   const {
     name, birthDate: birthDateRaw, role, bio, cpf,
     profileImage, council, hourlyRate: hourlyRateRaw, registerNumber,
-    approach, specialties, description, city, state,
+    approach, specialties, description, city, state, zipCode,
   } = req.body
 
   const birthDate = parseBirthDate(birthDateRaw)
@@ -104,6 +104,7 @@ const createUsers = async (req, res) => {
       description: emptyToNull(description),
       city: emptyToNull(city),
       state: emptyToNull(state),
+      zipCode: emptyToNull(zipCode),
     })
 
     // role em custom claim → checkToken/requireRole leem sem read extra no Firestore.
@@ -205,6 +206,7 @@ const updateUsers = async (req, res) => {
     ...(req.body.description !== undefined && { description: req.body.description || null }),
     ...(req.body.city !== undefined && { city: req.body.city || null }),
     ...(req.body.state !== undefined && { state: req.body.state || null }),
+    ...(req.body.zipCode !== undefined && { zipCode: req.body.zipCode || null }),
   }
 
   if (data.council && data.registerNumber && (await registerExists(data.council, data.registerNumber, req.params.id))) {

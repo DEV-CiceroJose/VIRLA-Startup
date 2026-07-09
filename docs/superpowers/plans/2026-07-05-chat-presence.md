@@ -45,10 +45,16 @@ Em `backend/firebase.rules.json`, dentro do objeto `"rules"` (no mesmo nível de
 
 (Atenção à vírgula: como `userChats` é hoje a última chave dentro de `rules`, adicione uma vírgula após o fecho de `userChats` e então o bloco `status`.)
 
-- [ ] **Step 2: Validar que o JSON continua válido**
+- [ ] **Step 2: Validar que a estrutura do arquivo continua válida**
 
-Run: `cd backend && node -e "JSON.parse(require('fs').readFileSync('firebase.rules.json','utf8')); console.log('rules JSON OK')"`
-Expected: imprime `rules JSON OK`
+> Nota: `backend/firebase.rules.json` **não** é JSON estrito — a regra
+> `.write` de `chats/$chatId/messages/$messageId` (pré-existente) é uma string
+> com quebras de linha literais, que `JSON.parse` rejeita. Para validar só a
+> estrutura (chaves/vírgulas/aspas balanceadas), colapse as quebras de linha
+> antes do parse:
+
+Run: `cd backend && node -e "const s=require('fs').readFileSync('firebase.rules.json','utf8').replace(/\s*\n\s*/g,' '); const r=JSON.parse(s); console.log('rules OK; status node:', !!r.rules.status)"`
+Expected: imprime `rules OK; status node: true`
 
 - [ ] **Step 3: Commit**
 

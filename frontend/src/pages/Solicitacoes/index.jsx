@@ -11,6 +11,9 @@ import Cancel from '@mui/icons-material/Cancel'
 import api from '../../services/api'
 import { PageLoader } from '../../components/Spinner'
 import { Button, Card, Alert, Badge, EmptyState, Field, ConfirmDialog } from '../../components/ui'
+import { STATES } from '../../constants/states'
+import { TURNOS, FREQUENCIAS } from '../../constants/solicitacaoOptions'
+import { maskCurrencyInput, parseCurrencyInput } from '../../utils/formatters'
 
 // ── Constantes de apresentação ─────────────────────────────────────────────
 const URGENCIA_OPTIONS = ['BAIXA', 'MEDIA', 'ALTA']
@@ -38,7 +41,32 @@ const TIPO_CUIDADO_OPTIONS = [
   'Acompanhamento diurno', 'Pernoite',
 ]
 
-const FORM_EMPTY = { titulo: '', descricao: '', urgencia: 'BAIXA', tipoCuidado: [] }
+const FORM_EMPTY = {
+  titulo: '', descricao: '', urgencia: 'BAIXA', tipoCuidado: [],
+  cidade: '', estado: '', dataInicio: '', valorHora: '', turno: '', frequencia: '',
+}
+
+/** Data de hoje em YYYY-MM-DD (comparável lexicograficamente com o input date). */
+function todayISO() {
+  return new Date().toISOString().slice(0, 10)
+}
+
+/** Normaliza uma solicitação existente para o estado do form (edição). */
+function toFormState(initial) {
+  return {
+    ...FORM_EMPTY,
+    ...initial,
+    cidade: initial.cidade ?? '',
+    estado: initial.estado ?? '',
+    dataInicio: initial.dataInicio ? String(initial.dataInicio).slice(0, 10) : '',
+    valorHora:
+      initial.valorHora != null
+        ? maskCurrencyInput(String(Math.round(Number(initial.valorHora) * 100)))
+        : '',
+    turno: initial.turno ?? '',
+    frequencia: initial.frequencia ?? '',
+  }
+}
 
 function formatDate(iso) {
   if (!iso) return ''
@@ -61,10 +89,12 @@ function Skeleton() {
 }
 
 // ── Formulário de criação / edição ─────────────────────────────────────────
-function SolicitacaoForm({ initial = FORM_EMPTY, onSave, onCancel, saving }) {
-  const [form, setForm] = useState(initial)
+function SolicitacaoForm({ initial = FORM_EMPTY, isEditing = false, onSave, onCancel, saving }) {
+  const [form, setForm] = useState(() => toFormState(initial))
+  const [erro, setErro] = useState('')
 
   const set = (field) => (e) => setForm((f) => ({ ...f, [field]: e.target.value }))
+  const setValor = (e) => setForm((f) => ({ ...f, valorHora: maskCurrencyInput(e.target.value) }))
 
   function toggleTipo(tag) {
     setForm((f) => ({
@@ -75,18 +105,43 @@ function SolicitacaoForm({ initial = FORM_EMPTY, onSave, onCancel, saving }) {
     }))
   }
 
+  function buildPayload() {
+    const parsed = parseCurrencyInput(form.valorHora) // '' ou '45.00'
+    return {
+      titulo: form.titulo,
+      descricao: form.descricao,
+      urgencia: form.urgencia,
+      tipoCuidado: form.tipoCuidado,
+      cidade: form.cidade.trim(),
+      estado: form.estado,
+      dataInicio: form.dataInicio,
+      valorHora: parsed ? Number(parsed) : null,
+      turno: form.turno || null,
+      frequencia: form.frequencia || null,
+    }
+  }
+
   function handleSubmit(e) {
     e.preventDefault()
-    onSave(form)
+    if (!form.cidade.trim() || !form.estado || !form.dataInicio) {
+      setErro('Preencha a cidade, estado e a data de início.')
+      return
+    }
+    if (!isEditing && form.dataInicio < todayISO()) {
+      setErro('A data de início não pode estar no passado.')
+      return
+    }
+    setErro('')
+    onSave(buildPayload())
   }
 
   return (
     <Card className="p-6 space-y-4 border border-virla-roxo/20">
       <h2 className="font-display font-bold text-virla-roxo text-lg">
-        {initial.titulo ? 'Editar solicitação' : 'Nova solicitação'}
+        {isEditing ? 'Editar solicitação' : 'Nova solicitação'}
       </h2>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} noValidate className="space-y-4">
         <Field
           label="Título"
           required
@@ -106,6 +161,56 @@ function SolicitacaoForm({ initial = FORM_EMPTY, onSave, onCancel, saving }) {
           onChange={set('descricao')}
           maxLength={1200}
         />
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Field
+            label="Cidade"
+            required
+            placeholder="Ex: Fortaleza"
+            value={form.cidade}
+            onChange={set('cidade')}
+            maxLength={80}
+          />
+          <Field label="Estado" required as="select" value={form.estado} onChange={set('estado')}>
+            <option value="">Selecione…</option>
+            {STATES.map((uf) => (
+              <option key={uf.value} value={uf.value}>{uf.label}</option>
+            ))}
+          </Field>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Field
+            label="Data de início"
+            required
+            type="date"
+            min={todayISO()}
+            value={form.dataInicio}
+            onChange={set('dataInicio')}
+          />
+          <Field
+            label="Valor/hora (opcional)"
+            placeholder="R$ 0,00"
+            inputMode="numeric"
+            value={form.valorHora}
+            onChange={setValor}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Field label="Turno (opcional)" as="select" value={form.turno} onChange={set('turno')}>
+            <option value="">Indiferente</option>
+            {TURNOS.map((t) => (
+              <option key={t.value} value={t.value}>{t.label}</option>
+            ))}
+          </Field>
+          <Field label="Frequência (opcional)" as="select" value={form.frequencia} onChange={set('frequencia')}>
+            <option value="">Indiferente</option>
+            {FREQUENCIAS.map((fr) => (
+              <option key={fr.value} value={fr.value}>{fr.label}</option>
+            ))}
+          </Field>
+        </div>
 
         <Field label="Urgência" as="select" value={form.urgencia} onChange={set('urgencia')}>
           {URGENCIA_OPTIONS.map((u) => (
@@ -138,9 +243,11 @@ function SolicitacaoForm({ initial = FORM_EMPTY, onSave, onCancel, saving }) {
           </div>
         </div>
 
+        {erro && <Alert tone="error">{erro}</Alert>}
+
         <div className="flex gap-3 pt-2">
           <Button type="submit" loading={saving} icon={CheckCircle}>
-            {initial.titulo ? 'Salvar alterações' : 'Publicar solicitação'}
+            {isEditing ? 'Salvar alterações' : 'Publicar solicitação'}
           </Button>
           <Button type="button" variant="secondary" icon={Cancel} onClick={onCancel}>
             Cancelar
@@ -403,6 +510,7 @@ export default function Solicitacoes() {
         {showForm && (
           <SolicitacaoForm
             initial={editing ?? FORM_EMPTY}
+            isEditing={!!editing}
             onSave={handleSave}
             onCancel={handleFormCancel}
             saving={saving}

@@ -17,7 +17,7 @@ import { PageLoader } from '../../components/Spinner'
 import { Button, Card, Alert, Badge, EmptyState, Field, ConfirmDialog } from '../../components/ui'
 import { STATES } from '../../constants/states'
 import { TURNOS, FREQUENCIAS, turnoLabel, frequenciaLabel } from '../../constants/solicitacaoOptions'
-import { maskCurrencyInput, parseCurrencyInput, formatHourly } from '../../utils/formatters'
+import { maskCurrencyInput, parseCurrencyInput, formatHourly, formatDateOnly } from '../../utils/formatters'
 
 // ── Constantes de apresentação ─────────────────────────────────────────────
 const URGENCIA_OPTIONS = ['BAIXA', 'MEDIA', 'ALTA']
@@ -50,9 +50,13 @@ const FORM_EMPTY = {
   cidade: '', estado: '', dataInicio: '', valorHora: '', turno: '', frequencia: '',
 }
 
-/** Data de hoje em YYYY-MM-DD (comparável lexicograficamente com o input date). */
+/** Data local de hoje em YYYY-MM-DD (sem deslocamento UTC), comparável com o input date. */
 function todayISO() {
-  return new Date().toISOString().slice(0, 10)
+  const now = new Date()
+  const y = now.getFullYear()
+  const m = String(now.getMonth() + 1).padStart(2, '0')
+  const d = String(now.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
 }
 
 /** Normaliza uma solicitação existente para o estado do form (edição). */
@@ -299,7 +303,7 @@ function SolicitacaoCard({ solicitacao, onEditar, onCancelar, onConcluir, onConv
         )}
         {solicitacao.dataInicio && (
           <span className="flex items-center gap-1">
-            <CalendarMonth sx={{ fontSize: 14 }} /> Início {formatDate(solicitacao.dataInicio)}
+            <CalendarMonth sx={{ fontSize: 14 }} /> Início {formatDateOnly(solicitacao.dataInicio)}
           </span>
         )}
         {solicitacao.turno && (

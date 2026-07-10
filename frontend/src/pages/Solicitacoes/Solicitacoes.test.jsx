@@ -71,4 +71,42 @@ describe('Página Minhas Solicitações — form completo', () => {
     expect(api.post).not.toHaveBeenCalled()
     expect(await screen.findByText(/cidade, estado e a data de início/i)).toBeInTheDocument()
   })
+
+  it('exibe dataInicio sem deslocamento de fuso (não perde um dia)', async () => {
+    api.get.mockResolvedValue({
+      data: {
+        solicitacoes: [
+          {
+            id: 's1',
+            titulo: 'Cuidado avó',
+            descricao: 'desc',
+            urgencia: 'BAIXA',
+            tipoCuidado: [],
+            status: 'ABERTA',
+            cidade: 'Fortaleza',
+            estado: 'CE',
+            dataInicio: '2026-12-01',
+            turno: 'MANHA',
+            frequencia: 'SEMANAL',
+            valorHora: 45,
+            createdAt: '2026-07-01T12:00:00.000Z',
+            viewedByIds: [],
+            _count: { interessados: 0 },
+          },
+        ],
+      },
+    })
+
+    renderPage()
+
+    const inicio = await screen.findByText(
+      (_, el) => el?.tagName === 'SPAN' && el.textContent.replace(/\s+/g, ' ').trim() === 'Início 01/12/2026',
+    )
+    expect(inicio).toBeInTheDocument()
+    expect(
+      screen.queryByText(
+        (_, el) => el?.tagName === 'SPAN' && el.textContent.replace(/\s+/g, ' ').trim() === 'Início 30/11/2026',
+      ),
+    ).toBeNull()
+  })
 })

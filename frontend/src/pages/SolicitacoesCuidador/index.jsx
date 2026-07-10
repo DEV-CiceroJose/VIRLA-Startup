@@ -15,7 +15,7 @@ import api from '../../services/api'
 import { PageLoader } from '../../components/Spinner'
 import { Button, Card, Alert, Badge, EmptyState } from '../../components/ui'
 import { turnoLabel, frequenciaLabel } from '../../constants/solicitacaoOptions'
-import { formatHourly } from '../../utils/formatters'
+import { formatHourly, formatDateOnly } from '../../utils/formatters'
 
 const URGENCIA_LABEL = { BAIXA: 'Baixa', MEDIA: 'Média', ALTA: 'Alta' }
 const URGENCIA_TONE = { BAIXA: 'gray', MEDIA: 'amber', ALTA: 'red' }
@@ -76,7 +76,7 @@ function SolicitacaoCard({ solicitacao, mode, onVisualizar, onAssumir, onConvers
         )}
         {solicitacao.dataInicio && (
           <span className="flex items-center gap-1">
-            <CalendarMonth sx={{ fontSize: 14 }} /> Início {formatDate(solicitacao.dataInicio)}
+            <CalendarMonth sx={{ fontSize: 14 }} /> Início {formatDateOnly(solicitacao.dataInicio)}
           </span>
         )}
         {solicitacao.turno && (

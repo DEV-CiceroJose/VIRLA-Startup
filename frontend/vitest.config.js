@@ -15,6 +15,11 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.js'],
     css: false,
+    // O ambiente jsdom é lento nesta base; testes de página com muitas
+    // interações userEvent (Cadastro, Solicitacoes) chegam perto dos 5s padrão
+    // e falham por timeout de forma intermitente. 15s dá folga sem mascarar
+    // travamentos reais (um teste realmente pendurado ainda estoura).
+    testTimeout: 15000,
     include: ['src/**/*.{test,spec}.{js,jsx}'],
     // Execução sequencial entre arquivos: alguns testes mexem em globals do
     // jsdom (ex.: api.test.js redefine window.location) que vazam entre workers

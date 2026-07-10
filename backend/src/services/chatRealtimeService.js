@@ -56,7 +56,10 @@ export async function touchUserChats(chatId, senderId, receiverId, lastMessage, 
 }
 
 /** Cria uma mensagem (texto ou áudio) e retorna o objeto salvo, já com `id`. */
-export async function createMessage({ senderId, receiverId, content, audioUrl = null }) {
+export async function createMessage({
+  senderId, receiverId, content, audioUrl = null,
+  attachmentUrl = null, attachmentType = null, attachmentName = null,
+}) {
   const chatId = chatIdFor(senderId, receiverId)
   const ref = rtdb.ref(`chats/${chatId}/messages`).push()
   const createdAt = Date.now()
@@ -67,6 +70,9 @@ export async function createMessage({ senderId, receiverId, content, audioUrl = 
     receiverId,
     content,
     audioUrl,
+    attachmentUrl,
+    attachmentType,
+    attachmentName,
     read: false,
     createdAt,
   }

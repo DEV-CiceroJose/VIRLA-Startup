@@ -1,5 +1,6 @@
 import { getUserById, listByIds } from '../repositories/userRepository.js'
 import { messageLogger } from '../lib/logger.js'
+import { attachmentTypeFor } from '../utils/attachment.js'
 import {
   createMessage,
   getHistory,
@@ -67,6 +68,39 @@ export const sendAudioMessage = async (req, res) => {
     } catch (e) {
         messageLogger.error('message:audio_upload_failed', { error: e.message, stack: e.stack, userId: req.userId, endpoint: req.originalUrl })
         res.status(500).json({ msg: "Erro ao enviar mensagem de áudio" })
+    }
+}
+
+/** POST /messages/attachment — envia imagem/PDF (multer intercepta o campo "file"). */
+export const sendAttachmentMessage = async (req, res) => {
+    try {
+        const { receiverId } = req.body
+        const senderId = req.userId
+        const file = req.file
+
+        if (!file) return res.status(400).json({ msg: "Nenhum arquivo enviado" })
+        if (!receiverId) return res.status(422).json({ msg: "Destinatário é obrigatório" })
+
+        const attachmentType = attachmentTypeFor(file.mimetype)
+        if (!attachmentType) return res.status(422).json({ msg: "Tipo de arquivo não permitido." })
+
+        // Rótulo textual pro preview da lista de conversas (userChats.lastMessage).
+        // Não aparece na bolha: o render prioriza o ramo de imagem/PDF sobre o texto.
+        const label = attachmentType === 'pdf' ? '📎 Documento' : '📷 Imagem'
+
+        const message = await createMessage({
+            senderId,
+            receiverId,
+            content: label,
+            attachmentUrl: `/uploads/${file.filename}`,
+            attachmentType,
+            attachmentName: String(file.originalname || "").slice(0, 120),
+        })
+
+        res.status(201).json({ message })
+    } catch (e) {
+        messageLogger.error('message:attachment_upload_failed', { error: e.message, stack: e.stack, userId: req.userId, endpoint: req.originalUrl })
+        res.status(500).json({ msg: "Erro ao enviar anexo" })
     }
 }
 

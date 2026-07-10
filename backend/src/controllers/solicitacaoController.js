@@ -15,7 +15,7 @@ function pickFamiliar(user) {
 export const createSolicitacao = async (req, res) => {
   try {
     const familiarId = req.userId
-    const { titulo, descricao, tipoCuidado, cidade, estado, urgencia } = req.body
+    const { titulo, descricao, tipoCuidado, cidade, estado, urgencia, valorHora, turno, frequencia, dataInicio } = req.body
 
     const solicitacao = await solicitacaoRepo.create({
       familiarId,
@@ -25,6 +25,10 @@ export const createSolicitacao = async (req, res) => {
       cidade: cidade?.trim() || null,
       estado: estado?.trim().toUpperCase() || null,
       urgencia,
+      valorHora: valorHora === '' || valorHora == null ? null : Number(valorHora),
+      turno: turno || null,
+      frequencia: frequencia || null,
+      dataInicio: dataInicio || null,
     })
 
     return res.status(201).json({ solicitacao })
@@ -59,7 +63,7 @@ export const updateSolicitacao = async (req, res) => {
       return res.status(422).json({ msg: 'Esta solicitação não pode mais ser editada.' })
     }
 
-    const { titulo, descricao, tipoCuidado, cidade, estado, urgencia } = req.body
+    const { titulo, descricao, tipoCuidado, cidade, estado, urgencia, valorHora, turno, frequencia, dataInicio } = req.body
 
     const updated = await solicitacaoRepo.update(id, {
       titulo: titulo.trim(),
@@ -68,6 +72,10 @@ export const updateSolicitacao = async (req, res) => {
       cidade: cidade?.trim() || null,
       estado: estado?.trim().toUpperCase() || null,
       urgencia,
+      valorHora: valorHora === '' || valorHora == null ? null : Number(valorHora),
+      turno: turno || null,
+      frequencia: frequencia || null,
+      dataInicio: dataInicio || null,
     })
 
     return res.status(200).json({ solicitacao: updated })

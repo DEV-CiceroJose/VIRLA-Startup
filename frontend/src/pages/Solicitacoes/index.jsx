@@ -8,12 +8,16 @@ import Chat from '@mui/icons-material/Chat'
 import Edit from '@mui/icons-material/Edit'
 import CheckCircle from '@mui/icons-material/CheckCircle'
 import Cancel from '@mui/icons-material/Cancel'
+import CalendarMonth from '@mui/icons-material/CalendarMonth'
+import Schedule from '@mui/icons-material/Schedule'
+import Repeat from '@mui/icons-material/Repeat'
+import Payments from '@mui/icons-material/Payments'
 import api from '../../services/api'
 import { PageLoader } from '../../components/Spinner'
 import { Button, Card, Alert, Badge, EmptyState, Field, ConfirmDialog } from '../../components/ui'
 import { STATES } from '../../constants/states'
-import { TURNOS, FREQUENCIAS } from '../../constants/solicitacaoOptions'
-import { maskCurrencyInput, parseCurrencyInput } from '../../utils/formatters'
+import { TURNOS, FREQUENCIAS, turnoLabel, frequenciaLabel } from '../../constants/solicitacaoOptions'
+import { maskCurrencyInput, parseCurrencyInput, formatHourly } from '../../utils/formatters'
 
 // ── Constantes de apresentação ─────────────────────────────────────────────
 const URGENCIA_OPTIONS = ['BAIXA', 'MEDIA', 'ALTA']
@@ -291,6 +295,26 @@ function SolicitacaoCard({ solicitacao, onEditar, onCancelar, onConcluir, onConv
         {local && (
           <span className="flex items-center gap-1">
             <LocationOn sx={{ fontSize: 14 }} /> {local}
+          </span>
+        )}
+        {solicitacao.dataInicio && (
+          <span className="flex items-center gap-1">
+            <CalendarMonth sx={{ fontSize: 14 }} /> Início {formatDate(solicitacao.dataInicio)}
+          </span>
+        )}
+        {solicitacao.turno && (
+          <span className="flex items-center gap-1">
+            <Schedule sx={{ fontSize: 14 }} /> {turnoLabel(solicitacao.turno)}
+          </span>
+        )}
+        {solicitacao.frequencia && (
+          <span className="flex items-center gap-1">
+            <Repeat sx={{ fontSize: 14 }} /> {frequenciaLabel(solicitacao.frequencia)}
+          </span>
+        )}
+        {solicitacao.valorHora != null && (
+          <span className="flex items-center gap-1 text-virla-roxo font-semibold">
+            <Payments sx={{ fontSize: 14 }} /> {formatHourly(solicitacao.valorHora)}
           </span>
         )}
         <span>Publicada em {formatDate(solicitacao.createdAt)}</span>

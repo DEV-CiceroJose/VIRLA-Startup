@@ -11,8 +11,12 @@ import StopCircle from '@mui/icons-material/StopCircle'
 import Delete from '@mui/icons-material/Delete'
 import DeleteOutlined from '@mui/icons-material/DeleteOutlined'
 import ExitToApp from '@mui/icons-material/ExitToApp'
+import AttachFile from '@mui/icons-material/AttachFile'
+import PictureAsPdf from '@mui/icons-material/PictureAsPdf'
+import InsertDriveFile from '@mui/icons-material/InsertDriveFile'
 
 import api from '../../services/api'
+import EmojiPicker from '../../components/EmojiPicker'
 import { PageLoader, ButtonSpinner } from '../../components/Spinner'
 import GenerateChargeModal from '../../components/GenerateChargeModal'
 import { ConfirmDialog } from '../../components/ui'
@@ -26,6 +30,8 @@ import { usePeerPresence } from '../../hooks/usePresence'
 import { formatLastSeen } from '../../utils/lastSeen'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3002'
+const ATTACHMENT_MIMES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf']
+const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024
 
 function normalizeVirlaRole(role) {
   if (role == null) return ''
@@ -53,8 +59,10 @@ export default function Chat() {
   const [activeMsgId, setActiveMsgId] = useState(null) // bolha "aberta" que mostra a lixeira
   const [confirmLeave, setConfirmLeave] = useState(false)
   const [leaving, setLeaving] = useState(false)
+  const [pendingFile, setPendingFile] = useState(null)
 
   const listRef = useRef(null)
+  const fileInputRef = useRef(null)
 
   const { isRecording, startRecording, stopRecording, audioBlob, clearAudio } = useAudioRecorder()
 
@@ -277,6 +285,41 @@ export default function Chat() {
     }
   }, [input, sending, meId, peerId, sendFirebaseMessage, fetchHistory, audioBlob, clearAudio, socket])
 
+  const handlePickFile = useCallback((e) => {
+    const file = e.target.files?.[0]
+    e.target.value = '' // permite reescolher o mesmo arquivo depois
+    if (!file) return
+    if (!ATTACHMENT_MIMES.includes(file.type)) {
+      toast.warning('Envie imagem (JPG/PNG/WEBP/GIF) ou PDF.')
+      return
+    }
+    if (file.size > MAX_ATTACHMENT_BYTES) {
+      toast.warning('Arquivo muito grande (máx. 5MB).')
+      return
+    }
+    setPendingFile(file)
+  }, [])
+
+  const handleSendAttachment = useCallback(async () => {
+    if (!pendingFile || sending) return
+    setSending(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', pendingFile)
+      formData.append('receiverId', peerId)
+      const res = await api.post('/messages/attachment', formData)
+      const novaMensagem = res.data.message
+      setMessages((prev) => [...prev, novaMensagem])
+      socket.emit('notify_message', { receiverId: peerId, preview: '📎 Anexo', messageId: novaMensagem.id })
+      setPendingFile(null)
+    } catch (err) {
+      console.error(err)
+      toast.error('Não foi possível enviar o anexo.')
+    } finally {
+      setSending(false)
+    }
+  }, [pendingFile, sending, peerId, socket])
+
   const handleInputChange = useCallback((e) => {
     setInput(e.target.value)
     emitTyping(peerId)
@@ -437,6 +480,24 @@ export default function Chat() {
               >
                 {m.deleted ? (
                   <p className="italic opacity-70 flex items-center gap-1">🚫 Esta mensagem foi apagada</p>
+                ) : m.attachmentType === 'image' ? (
+                  <a href={`${API_URL}${m.attachmentUrl}`} target="_blank" rel="noreferrer">
+                    <img
+                      src={`${API_URL}${m.attachmentUrl}`}
+                      alt={m.attachmentName || 'imagem'}
+                      className="max-w-full max-h-64 rounded-lg"
+                    />
+                  </a>
+                ) : m.attachmentType === 'pdf' ? (
+                  <a
+                    href={`${API_URL}${m.attachmentUrl}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center gap-2 underline"
+                  >
+                    <InsertDriveFile sx={{ fontSize: 20 }} />
+                    {m.attachmentName || 'documento.pdf'}
+                  </a>
                 ) : m.audioUrl ? (
                   <audio src={`${API_URL}${m.audioUrl}`} controls className="max-w-full h-10 mt-1 rounded" />
                 ) : (
@@ -482,7 +543,30 @@ export default function Chat() {
 
       <form onSubmit={handleSend} className="flex-shrink-0 bg-white/95 backdrop-blur border-t border-virla-roxo/15 px-4 py-3 shadow-[0_-4px_20px_rgba(128,0,128,0.08)]">
         <div className="max-w-3xl mx-auto flex gap-2 items-end">
-          
+          {!isRecording && !audioBlob && (
+            <EmojiPicker onSelect={(emoji) => setInput((v) => v + emoji)} />
+          )}
+
+          {!isRecording && !audioBlob && !pendingFile && (
+            <>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*,application/pdf"
+                onChange={handlePickFile}
+                className="hidden"
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="h-11 w-11 sm:h-12 sm:w-12 flex-shrink-0 rounded-xl bg-gray-100 text-virla-roxo flex items-center justify-center hover:bg-gray-200 transition-all"
+                aria-label="Anexar arquivo"
+              >
+                <AttachFile sx={{ fontSize: 24 }} />
+              </button>
+            </>
+          )}
+
           {isRecording ? (
             <div className="flex-1 flex items-center justify-between bg-red-50 rounded-xl px-4 min-h-[44px] border border-red-200">
               <div className="flex items-center gap-2 text-red-600 font-medium animate-pulse">
@@ -500,6 +584,21 @@ export default function Chat() {
               </button>
               <audio src={URL.createObjectURL(audioBlob)} controls className="flex-1 h-10" />
             </div>
+          ) : pendingFile ? (
+            <div className="flex-1 flex items-center gap-2 bg-gray-50 rounded-xl px-3 min-h-[44px] border border-gray-200">
+              <button type="button" onClick={() => setPendingFile(null)} className="text-gray-500 hover:text-red-500 p-1" aria-label="Cancelar anexo">
+                <Delete sx={{ fontSize: 20 }} />
+              </button>
+              {pendingFile.type === 'application/pdf' ? (
+                <span className="flex items-center gap-2 text-sm text-virla-texto truncate">
+                  <PictureAsPdf sx={{ fontSize: 20 }} className="text-red-600" />
+                  {pendingFile.name}
+                </span>
+              ) : (
+                <img src={URL.createObjectURL(pendingFile)} alt={pendingFile.name} className="h-9 w-9 object-cover rounded" />
+              )}
+              <span className="text-xs text-virla-muted truncate flex-1">{pendingFile.name}</span>
+            </div>
           ) : (
             <textarea
               rows={1}
@@ -516,7 +615,17 @@ export default function Chat() {
             />
           )}
 
-          {(!input.trim() && !audioBlob && !isRecording) ? (
+          {pendingFile ? (
+            <button
+              type="button"
+              onClick={handleSendAttachment}
+              disabled={sending}
+              className="h-11 w-11 sm:h-12 sm:w-12 flex-shrink-0 rounded-xl bg-virla-roxo text-white flex items-center justify-center hover:bg-virla-roxohighlight shadow-md disabled:opacity-50 transition-all"
+              aria-label="Enviar anexo"
+            >
+              {sending ? <ButtonSpinner size={22} /> : <Send sx={{ fontSize: 22 }} />}
+            </button>
+          ) : (!input.trim() && !audioBlob && !isRecording) ? (
             <button
               type="button"
               onClick={startRecording}

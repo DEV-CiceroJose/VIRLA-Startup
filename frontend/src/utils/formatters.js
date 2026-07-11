@@ -28,3 +28,11 @@ export function parseCurrencyInput(masked) {
   if (!digits) return ''
   return (parseInt(digits, 10) / 100).toFixed(2)
 }
+
+/** Formata uma data date-only ('YYYY-MM-DD') em dd/mm/aaaa, sem sofrer deslocamento de fuso (não passa por Date UTC). */
+export function formatDateOnly(iso) {
+  if (!iso) return ''
+  const [y, m, d] = String(iso).slice(0, 10).split('-')
+  if (!y || !m || !d) return ''
+  return `${d}/${m}/${y}`
+}

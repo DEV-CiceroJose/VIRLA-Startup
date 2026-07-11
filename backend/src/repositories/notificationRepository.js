@@ -47,6 +47,14 @@ export async function create(data) {
  * Colapsa mensagens: se já existe uma notificação MESSAGE não-lida de
  * (userId, senderId), incrementa `count` e atualiza preview/updatedAt; senão
  * cria uma nova com count 1.
+ *
+ * DÉBITO CONHECIDO (MVP): o padrão leitura-depois-escrita não é transacional.
+ * Duas mensagens quase simultâneas do mesmo remetente (rajada, double-click,
+ * retry) podem ambas ler "não existe não-lida" e criar duas linhas em vez de
+ * colapsar numa só. Não corrompe dados nem quebra o envio (a notificação é
+ * best-effort); só pode exibir duas entradas do mesmo remetente no sino.
+ * Se virar incômodo real, migrar para db.runTransaction (mesmo trade-off de
+ * concorrência já assumido em outros pontos do MVP).
  */
 export async function upsertMessage({ userId, senderId, senderName, preview }) {
   const snap = await col().where('userId', '==', userId).get()

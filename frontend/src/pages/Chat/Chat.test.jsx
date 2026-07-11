@@ -22,6 +22,8 @@ vi.mock('../../hooks/useAudioRecorder', () => ({
   useAudioRecorder: () => ({ isRecording: false, startRecording: vi.fn(), stopRecording: vi.fn(), audioBlob: null, clearAudio: vi.fn() }),
 }))
 vi.mock('sonner', () => ({ toast: { error: vi.fn(), success: vi.fn(), warning: vi.fn() } }))
+const markConversationReadMock = vi.fn()
+vi.mock('../../context/NotificationContext', () => ({ useNotifications: () => ({ markConversationRead: markConversationReadMock }) }))
 
 import Chat from './index'
 import api from '../../services/api'

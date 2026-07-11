@@ -24,6 +24,8 @@ vi.mock('../../hooks/useAudioRecorder', () => ({
   useAudioRecorder: () => ({ isRecording: false, startRecording: vi.fn(), stopRecording: vi.fn(), audioBlob: null, clearAudio: vi.fn() }),
 }))
 vi.mock('sonner', () => ({ toast: { error: vi.fn(), success: vi.fn(), warning: vi.fn() } }))
+const markConversationReadMock = vi.fn()
+vi.mock('../../context/NotificationContext', () => ({ useNotifications: () => ({ markConversationRead: markConversationReadMock }) }))
 
 // Controla o retorno de usePeerPresence por teste.
 const presenceMock = vi.fn()

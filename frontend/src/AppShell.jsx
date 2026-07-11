@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react'
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { Toaster } from 'sonner'
 import { SocketProvider } from './context/SocketContext'
+import { NotificationProvider } from './context/NotificationContext'
 import { PageLoader } from './components/Spinner'
 import { PAYMENT_ENABLED } from './utils/featureFlags'
 import { useAuth } from './context/AuthContext'
@@ -159,6 +160,7 @@ export default function AppShell() {
 
   return (
     <SocketProvider>
+      <NotificationProvider>
       <Toaster position="top-right" richColors />
       <PresenceManager />
       {showMenu && <Menu />}
@@ -210,6 +212,7 @@ export default function AppShell() {
         </Routes>
         </RouteErrorBoundary>
       </Suspense>
+      </NotificationProvider>
     </SocketProvider>
   )
 }

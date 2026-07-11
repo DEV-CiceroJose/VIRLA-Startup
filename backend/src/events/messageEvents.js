@@ -1,3 +1,7 @@
+import * as notificationService from '../services/notificationService.js'
+import { getUserById } from '../repositories/userRepository.js'
+import { logger } from '../lib/logger.js'
+
 /**
  * Sprint 0: o envio/recebimento de mensagens deixou de depender do Socket.io
  * (que sofria com reconexões/falhas de upgrade WebSocket em produção).
@@ -18,13 +22,26 @@ export function registerMessageEvents(socket, io) {
 
   // --- notify_message: aviso leve (sem conteúdo sensível) para notificação global ---
   // Disparado pelo frontend logo após escrever a mensagem no Firebase RTDB.
-  socket.on('notify_message', ({ receiverId, preview, messageId }) => {
+  socket.on('notify_message', async ({ receiverId, preview, messageId }) => {
     if (!receiverId) return
     io.to(`user:${receiverId}`).emit('receive_message_notify', {
       senderId: userId,
       preview,
       messageId,
     })
+    // Persiste a notificação de mensagem (colapsada) sem bloquear o "toque":
+    // se falhar, a mensagem (RTDB) e o toast já aconteceram mesmo assim.
+    try {
+      const sender = await getUserById(userId)
+      await notificationService.notifyMessage(io, {
+        userId: receiverId,
+        senderId: userId,
+        senderName: sender?.name ?? null,
+        preview,
+      })
+    } catch (err) {
+      logger.error('notification:message_failed', { error: err.message, senderId: userId, receiverId })
+    }
   })
 
   // --- user:typing ---

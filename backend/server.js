@@ -12,6 +12,7 @@ import authRoutes from './src/routes/authRoutes.js'
 import messageRoutes from './src/routes/messageRoutes.js'
 import PaymentRoutes from './src/routes/paymentRoutes.js'
 import solicitacaoRoutes from './src/routes/solicitacaoRoutes.js'
+import notificationRoutes from './src/routes/notificationRoutes.js'
 
 import { logger, securityLogger } from './src/lib/logger.js'
 import { requestLogger } from './src/middlewares/requestLogger.js'
@@ -118,6 +119,7 @@ app.use(authRoutes)
 app.use(messageRoutes)
 app.use(PaymentRoutes)
 app.use(solicitacaoRoutes)
+app.use(notificationRoutes)
 
 // ─── Global error handler ─────────────────────────────────────────
 // CORREÇÃO 5: Não retornar stack trace em produção (vaza informação interna).
@@ -193,6 +195,9 @@ const io = new SocketServer(server, {
   // allowEIO3: false — só aceita clientes Socket.io v4+ (nosso frontend usa v4)
   allowEIO3: false,
 })
+
+// Expõe o io para os controllers HTTP emitirem notificações (req.app.get('io')).
+app.set('io', io)
 
 // Auth middleware — executa antes de cada conexão
 io.use(socketAuthMiddleware)

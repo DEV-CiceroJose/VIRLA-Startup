@@ -6,6 +6,7 @@ import Close from '@mui/icons-material/Close'
 import StarRate from '@mui/icons-material/StarRate'
 import api from '../../services/api'
 import { logout } from '../../services/auth'
+import NotificationBell from '../NotificationBell'
 
 // ─── Navigation link definitions ──────────────────────────────────────────────
 
@@ -205,6 +206,7 @@ export default function Menu() {
 
           {/* ── Desktop action buttons ────────────────────────────────────── */}
           <div className="hidden md:flex items-center gap-2">
+            <NotificationBell />
             <a
               href={FEEDBACK_FORM_URL}
               target="_blank"
@@ -231,20 +233,23 @@ export default function Menu() {
             </button>
           </div>
 
-          {/* ── Hamburger toggle (mobile only) ───────────────────────────── */}
-          <button
-            ref={hamburgerRef}
-            type="button"
-            onClick={() => setOpen((v) => !v)}
-            aria-label={open ? 'Fechar menu' : 'Abrir menu'}
-            aria-expanded={open}
-            aria-controls="mobile-menu-drawer"
-            className="md:hidden p-2 rounded-lg text-virla-roxo
-                       hover:bg-virla-roxo/10 transition-colors duration-150
-                       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-virla-roxo/40"
-          >
-            {open ? <Close sx={{ fontSize: 24 }} /> : <MenuIcon sx={{ fontSize: 24 }} />}
-          </button>
+          {/* ── Ações mobile: sino sempre visível + hambúrguer ────────────── */}
+          <div className="flex md:hidden items-center gap-1">
+            <NotificationBell />
+            <button
+              ref={hamburgerRef}
+              type="button"
+              onClick={() => setOpen((v) => !v)}
+              aria-label={open ? 'Fechar menu' : 'Abrir menu'}
+              aria-expanded={open}
+              aria-controls="mobile-menu-drawer"
+              className="p-2 rounded-lg text-virla-roxo
+                         hover:bg-virla-roxo/10 transition-colors duration-150
+                         focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-virla-roxo/40"
+            >
+              {open ? <Close sx={{ fontSize: 24 }} /> : <MenuIcon sx={{ fontSize: 24 }} />}
+            </button>
+          </div>
         </nav>
 
         {/* ── Mobile drawer ─────────────────────────────────────────────────

@@ -28,6 +28,7 @@ import { useFirebaseChat } from '../../hooks/useFirebaseChat'
 import { useAudioRecorder } from '../../hooks/useAudioRecorder'
 import { usePeerPresence } from '../../hooks/usePresence'
 import { formatLastSeen } from '../../utils/lastSeen'
+import { useNotifications } from '../../context/NotificationContext'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3002'
 const ATTACHMENT_MIMES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf']
@@ -43,6 +44,7 @@ export default function Chat() {
   const navigate = useNavigate()
   const meId = localStorage.getItem('meuId')
   const peerPresence = usePeerPresence(peerId)
+  const { markConversationRead } = useNotifications()
 
   const [peer, setPeer] = useState(null)
   const [myRole, setMyRole] = useState(localStorage.getItem('meuRole') ?? '')
@@ -69,8 +71,9 @@ export default function Chat() {
   useEffect(() => {
     if (peerId) {
       api.patch(`/messages/read/${peerId}`).catch(err => console.error("Erro ao marcar lidas", err))
+      markConversationRead(peerId)
     }
-  }, [peerId])
+  }, [peerId, markConversationRead])
 
   const scrollToBottom = useCallback(() => {
     const el = listRef.current

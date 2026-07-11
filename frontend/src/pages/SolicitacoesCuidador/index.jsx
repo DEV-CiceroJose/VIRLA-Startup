@@ -7,9 +7,15 @@ import PriorityHigh from '@mui/icons-material/PriorityHigh'
 import Chat from '@mui/icons-material/Chat'
 import Person from '@mui/icons-material/Person'
 import AssignmentTurnedIn from '@mui/icons-material/AssignmentTurnedIn'
+import CalendarMonth from '@mui/icons-material/CalendarMonth'
+import Schedule from '@mui/icons-material/Schedule'
+import Repeat from '@mui/icons-material/Repeat'
+import Payments from '@mui/icons-material/Payments'
 import api from '../../services/api'
 import { PageLoader } from '../../components/Spinner'
 import { Button, Card, Alert, Badge, EmptyState } from '../../components/ui'
+import { turnoLabel, frequenciaLabel } from '../../constants/solicitacaoOptions'
+import { formatHourly, formatDateOnly } from '../../utils/formatters'
 
 const URGENCIA_LABEL = { BAIXA: 'Baixa', MEDIA: 'Média', ALTA: 'Alta' }
 const URGENCIA_TONE = { BAIXA: 'gray', MEDIA: 'amber', ALTA: 'red' }
@@ -66,6 +72,26 @@ function SolicitacaoCard({ solicitacao, mode, onVisualizar, onAssumir, onConvers
         {local && (
           <span className="flex items-center gap-1">
             <LocationOn sx={{ fontSize: 14 }} /> {local}
+          </span>
+        )}
+        {solicitacao.dataInicio && (
+          <span className="flex items-center gap-1">
+            <CalendarMonth sx={{ fontSize: 14 }} /> Início {formatDateOnly(solicitacao.dataInicio)}
+          </span>
+        )}
+        {solicitacao.turno && (
+          <span className="flex items-center gap-1">
+            <Schedule sx={{ fontSize: 14 }} /> {turnoLabel(solicitacao.turno)}
+          </span>
+        )}
+        {solicitacao.frequencia && (
+          <span className="flex items-center gap-1">
+            <Repeat sx={{ fontSize: 14 }} /> {frequenciaLabel(solicitacao.frequencia)}
+          </span>
+        )}
+        {solicitacao.valorHora != null && (
+          <span className="flex items-center gap-1 text-virla-roxo font-semibold">
+            <Payments sx={{ fontSize: 14 }} /> {formatHourly(solicitacao.valorHora)}
           </span>
         )}
         <span>Publicada em {formatDate(solicitacao.createdAt)}</span>

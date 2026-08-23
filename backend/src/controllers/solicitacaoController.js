@@ -2,6 +2,7 @@ import * as solicitacaoRepo from '../repositories/solicitacaoRepository.js'
 import { getUserById, listByIds } from '../repositories/userRepository.js'
 import { logger } from '../lib/logger.js'
 import * as notificationService from '../services/notificationService.js'
+import { getBySolicitacaoId as getServiceReportBySolicitacaoId } from '../repositories/serviceReportRepository.js'
 
 /** Projeção do familiar embutido (substitui o join `familiar` do Prisma). */
 function pickFamiliar(user) {
@@ -149,6 +150,14 @@ export const concluirSolicitacao = async (req, res) => {
     }
     if (solicitacao.status !== 'EM_ANDAMENTO') {
       return res.status(422).json({ msg: 'Só é possível concluir uma solicitação que está em andamento.' })
+    }
+
+    const report = await getServiceReportBySolicitacaoId(id)
+    if (!report?.signature?.signedAt || !report?.reportHash) {
+      return res.status(409).json({
+        msg: 'Para concluir o serviço, revise e assine o relatório diário enviado pelo cuidador.',
+        code: 'SERVICE_REPORT_SIGNATURE_REQUIRED',
+      })
     }
 
     const updated = await solicitacaoRepo.update(id, { status: 'CONCLUIDA' })

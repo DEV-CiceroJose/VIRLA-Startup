@@ -13,3 +13,8 @@
 //   (qualquer outro valor ou ausência) -> build sem vestígio visual de pagamento
 
 export const PAYMENT_ENABLED = import.meta.env.VITE_ENABLE_PAYMENT === 'true'
+
+// O fluxo antigo do chat permitia criar uma cobrança sem relatório assinado.
+// Ele permanece no código apenas para leitura/histórico durante a migração,
+// mas nunca volta a ser exibido. Novos pagamentos nascem nas Solicitações.
+export const LEGACY_CHAT_PAYMENT_ENABLED = false

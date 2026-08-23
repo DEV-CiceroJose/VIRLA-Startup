@@ -11,11 +11,14 @@ import CalendarMonth from '@mui/icons-material/CalendarMonth'
 import Schedule from '@mui/icons-material/Schedule'
 import Repeat from '@mui/icons-material/Repeat'
 import Payments from '@mui/icons-material/Payments'
+import Assignment from '@mui/icons-material/Assignment'
 import api from '../../services/api'
 import { PageLoader } from '../../components/Spinner'
 import { Button, Card, Alert, Badge, EmptyState } from '../../components/ui'
 import { turnoLabel, frequenciaLabel } from '../../constants/solicitacaoOptions'
 import { formatHourly, formatDateOnly } from '../../utils/formatters'
+import ServiceReportModal from '../../components/ServiceReportModal'
+import StripeConnectCard from '../../components/StripeConnectCard'
 
 const URGENCIA_LABEL = { BAIXA: 'Baixa', MEDIA: 'Média', ALTA: 'Alta' }
 const URGENCIA_TONE = { BAIXA: 'gray', MEDIA: 'amber', ALTA: 'red' }
@@ -40,7 +43,7 @@ function formatDate(iso) {
   return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
-function SolicitacaoCard({ solicitacao, mode, onVisualizar, onAssumir, onConversar, busy }) {
+function SolicitacaoCard({ solicitacao, mode, onVisualizar, onAssumir, onConversar, onReport, busy }) {
   const local = [solicitacao.familiar?.city, solicitacao.familiar?.state].filter(Boolean).join(' - ')
   const showFamiliar = mode === 'visualizada' || mode === 'andamento'
 
@@ -121,9 +124,14 @@ function SolicitacaoCard({ solicitacao, mode, onVisualizar, onAssumir, onConvers
           </>
         )}
         {mode === 'andamento' && (
-          <Button size="sm" variant="secondary" icon={Chat} onClick={() => onConversar(solicitacao.familiarId)}>
-            Conversar com a família
-          </Button>
+          <>
+            <Button size="sm" variant="secondary" icon={Chat} onClick={() => onConversar(solicitacao.familiarId)}>
+              Conversar com a família
+            </Button>
+            <Button size="sm" icon={Assignment} onClick={() => onReport(solicitacao)}>
+              Enviar relatório do dia
+            </Button>
+          </>
         )}
       </div>
     </Card>
@@ -155,6 +163,7 @@ export default function SolicitacoesCuidador() {
   const [tab, setTab] = useState('disponiveis')
   const [message, setMessage] = useState({ type: '', text: '' })
   const [busyId, setBusyId] = useState(null)
+  const [reporting, setReporting] = useState(null)
 
   const meuId = localStorage.getItem('meuId')
 
@@ -258,6 +267,8 @@ export default function SolicitacoesCuidador() {
           </p>
         </div>
 
+        <StripeConnectCard />
+
         {message.text && (
           <Alert tone={message.type === 'success' ? 'success' : 'error'}>{message.text}</Alert>
         )}
@@ -305,12 +316,20 @@ export default function SolicitacoesCuidador() {
                 onVisualizar={handleVisualizar}
                 onAssumir={handleAssumir}
                 onConversar={handleConversar}
+                onReport={setReporting}
                 busy={busyId === s.id}
               />
             ))}
           </div>
         )}
       </div>
+      {reporting && (
+        <ServiceReportModal
+          solicitacao={reporting}
+          onClose={() => setReporting(null)}
+          onCreated={() => setMessage({ type: 'success', text: 'Relatório enviado. O familiar precisa revisar e assinar antes do pagamento.' })}
+        />
+      )}
     </div>
   )
 }

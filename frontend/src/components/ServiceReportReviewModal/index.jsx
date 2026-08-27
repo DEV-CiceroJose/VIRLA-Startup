@@ -18,6 +18,13 @@ const STATUS = {
   DISPUTED: ['Em disputa', 'red'],
 }
 
+function formatSignedAt(value) {
+  if (!value) return ''
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+  return date.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
+}
+
 export default function ServiceReportReviewModal({ solicitacao, onClose, onUpdated }) {
   const [report, setReport] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -98,6 +105,14 @@ export default function ServiceReportReviewModal({ solicitacao, onClose, onUpdat
               <div><h3 className="font-bold text-virla-texto">Intercorrências</h3><p className="whitespace-pre-wrap text-virla-muted">{report.incidents || 'Nenhuma intercorrência registrada.'}</p></div>
             </section>
 
+            {report.signature?.signedAt && report.reportHash && (
+              <section aria-label="Comprovante da assinatura" className="rounded-xl border border-green-200 bg-green-50 p-4 text-sm space-y-1">
+                <h3 className="font-bold text-green-900">Assinatura eletrônica confirmada</h3>
+                <p className="text-green-800">Assinado por <strong>{report.signature.signedByName}</strong> em {formatSignedAt(report.signature.signedAt)}.</p>
+                <p className="break-all font-mono text-xs text-green-700">Integridade: {report.reportHash}</p>
+              </section>
+            )}
+
             {report.status === 'PENDING_SIGNATURE' && (
               <div className="border-t border-virla-roxo/10 pt-4 space-y-3">
                 <Alert tone="warning">Ao assinar, você confirma que revisou o relatório e que o serviço descrito foi prestado. Essa ação é auditável e não pode ser desfeita.</Alert>
@@ -125,4 +140,3 @@ export default function ServiceReportReviewModal({ solicitacao, onClose, onUpdat
     document.body,
   )
 }
-

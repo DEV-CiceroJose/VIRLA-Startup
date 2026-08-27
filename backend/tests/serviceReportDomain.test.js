@@ -9,7 +9,7 @@ import {
   signatureNameMatches,
 } from '../src/services/serviceReportDomain.js'
 
-const signedReport = {
+const signedReportData = {
   id: 'report_abcdefghijklmnop',
   solicitacaoId: 'sol_abcdefghijklmnop',
   caregiverId: 'care_abcdefghijklmnop',
@@ -25,9 +25,9 @@ const signedReport = {
   fixedFeeCents: 80,
   totalAmount: 16130,
   status: 'SIGNED',
-  reportHash: 'abc123',
   signature: { signedAt: new Date('2026-08-23T20:00:00Z') },
 }
+const signedReport = { ...signedReportData, reportHash: createReportHash(signedReportData) }
 
 test('hash do relatório é determinístico e muda quando o conteúdo muda', () => {
   assert.equal(createReportHash(signedReport), createReportHash({ ...signedReport }))
@@ -52,6 +52,13 @@ test('assinatura incompleta bloqueia o checkout', () => {
   assert.throws(
     () => assertCheckoutEligible({ ...signedReport, reportHash: null }, signedReport.familiarId),
     (err) => err.code === 'SIGNATURE_INVALID',
+  )
+})
+
+test('alteração no conteúdo depois da assinatura bloqueia o checkout', () => {
+  assert.throws(
+    () => assertCheckoutEligible({ ...signedReport, activities: 'Conteúdo adulterado' }, signedReport.familiarId),
+    (err) => err.code === 'REPORT_INTEGRITY_INVALID' && err.statusCode === 409,
   )
 })
 

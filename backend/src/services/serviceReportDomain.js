@@ -64,4 +64,15 @@ export function assertCheckoutEligible(report, familiarId) {
   if (!report.signature?.signedAt || !report.reportHash) {
     throw new ServiceReportError('SIGNATURE_INVALID', 'A assinatura auditável do relatório está incompleta.', 409)
   }
+  const expectedHash = createReportHash(report)
+  const storedHash = String(report.reportHash)
+  const validHash = /^[a-f0-9]{64}$/.test(storedHash)
+    && crypto.timingSafeEqual(Buffer.from(storedHash, 'hex'), Buffer.from(expectedHash, 'hex'))
+  if (!validHash) {
+    throw new ServiceReportError(
+      'REPORT_INTEGRITY_INVALID',
+      'O conteúdo do relatório não corresponde ao documento assinado.',
+      409,
+    )
+  }
 }

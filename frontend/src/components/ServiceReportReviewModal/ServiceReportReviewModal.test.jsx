@@ -56,4 +56,25 @@ describe('Revisão e assinatura do relatório', () => {
     ))
     expect(await screen.findByRole('button', { name: /pagar com stripe/i })).toBeInTheDocument()
   })
+
+  it('exibe o comprovante auditável depois da assinatura', async () => {
+    api.get.mockResolvedValue({
+      data: {
+        report: {
+          ...pendingReport,
+          status: 'SIGNED',
+          reportHash: 'a'.repeat(64),
+          signature: {
+            signedByName: 'Maria da Silva',
+            signedAt: '2026-08-23T20:00:00.000Z',
+          },
+        },
+      },
+    })
+
+    render(<ServiceReportReviewModal solicitacao={solicitacao} onClose={() => {}} />)
+
+    expect(await screen.findByRole('region', { name: /comprovante da assinatura/i })).toHaveTextContent('Maria da Silva')
+    expect(screen.getByText(/integridade:/i)).toHaveTextContent('a'.repeat(64))
+  })
 })

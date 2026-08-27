@@ -12,6 +12,11 @@ export const SPECIALTIES = [
   { value: 'CRIANCAS_NECESSIDADES_ESPECIAIS', label: 'Crianças com necessidades especiais' },
   { value: 'ACAMADOS', label: 'Acamados' },
   { value: 'HOME_CARE_24H', label: 'Home care 24h' },
+  { value: 'PARKINSON', label: 'Parkinson' },
+  { value: 'HIPERTENSAO', label: 'Hipertensão' },
+  { value: 'REABILITACAO', label: 'Reabilitação' },
+  { value: 'ACOMPANHAMENTO_DIURNO', label: 'Acompanhamento diurno' },
+  { value: 'PERNOITE', label: 'Pernoite' },
 ]
 
 export const SPECIALTY_VALUES = SPECIALTIES.map((s) => s.value)

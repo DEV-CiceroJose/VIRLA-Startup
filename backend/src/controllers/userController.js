@@ -12,6 +12,9 @@ import { firebaseAdmin } from '../lib/firebase.js'
 import { project } from '../repositories/_helpers.js'
 import { authLogger, logger } from '../lib/logger.js'
 import { USER_PUBLIC_SELECT, USER_SELF_SELECT } from '../lib/userSelects.js'
+import * as solicitacaoRepo from '../repositories/solicitacaoRepository.js'
+import { objectIdSchema } from '../schemas/paymentSchemas.js'
+import { rankCaregiversForSolicitacao } from '../services/matchingService.js'
 
 function parseBirthDate(value) {
   if (value == null || value === '') return null
@@ -62,7 +65,7 @@ const createUsers = async (req, res) => {
   const {
     name, birthDate: birthDateRaw, role, bio, cpf,
     profileImage, council, hourlyRate: hourlyRateRaw, registerNumber,
-    approach, specialties, description, city, state, zipCode,
+    approach, specialties, availableShifts, serviceFrequencies, description, city, state, zipCode,
   } = req.body
 
   const birthDate = parseBirthDate(birthDateRaw)
@@ -100,6 +103,8 @@ const createUsers = async (req, res) => {
       registerNumber: emptyToNull(registerNumber),
       hourlyRate,
       specialties: parseSpecialties(specialties),
+      availableShifts: parseSpecialties(availableShifts),
+      serviceFrequencies: parseSpecialties(serviceFrequencies),
       approach: emptyToNull(approach),
       description: emptyToNull(description),
       city: emptyToNull(city),
@@ -137,15 +142,32 @@ const getFeedUsers = async (req, res) => {
     }
 
     const oppositeRole = loggedUser.role === 'CUIDADOR' ? 'FAMILIAR' : 'CUIDADOR'
+    let matchSolicitacao = null
+    if (req.query.solicitacaoId) {
+      const parsedId = objectIdSchema.safeParse(req.query.solicitacaoId)
+      if (!parsedId.success) {
+        return res.status(422).json({ msg: 'Solicitação inválida para o match.' })
+      }
+      matchSolicitacao = await solicitacaoRepo.getById(parsedId.data)
+      if (!matchSolicitacao || matchSolicitacao.familiarId !== loggedUserId) {
+        return res.status(404).json({ msg: 'Solicitação não encontrada para o match.' })
+      }
+    }
 
     // Paginação por offset emulada: o Firestore não tem offset eficiente, mas
     // o feed tem volume baixo no MVP — buscamos os usuários do papel oposto e
     // recortamos a página em memória. Mantém o contrato `?page=N` do frontend.
     const allOfRole = await listByRole(oppositeRole)
-    const total = allOfRole.length
-    const feedUsers = allOfRole
+    const ranked = matchSolicitacao
+      ? rankCaregiversForSolicitacao(allOfRole, matchSolicitacao)
+      : allOfRole.map((caregiver) => ({ caregiver, match: null }))
+    const total = ranked.length
+    const feedUsers = ranked
       .slice(skip, skip + limit)
-      .map((u) => project(u, USER_PUBLIC_SELECT))
+      .map(({ caregiver, match }) => ({
+        ...project(caregiver, USER_PUBLIC_SELECT),
+        ...(match && { match }),
+      }))
 
     const totalPages = Math.max(1, Math.ceil(total / limit))
 
@@ -155,6 +177,9 @@ const getFeedUsers = async (req, res) => {
       totalPages,
       page,
       limit,
+      matchContext: matchSolicitacao
+        ? { id: matchSolicitacao.id, titulo: matchSolicitacao.titulo }
+        : null,
     })
   } catch (error) {
     logger.error('user:feed_failed', {
@@ -202,6 +227,8 @@ const updateUsers = async (req, res) => {
     ...(req.body.registerNumber !== undefined && { registerNumber: req.body.registerNumber || null }),
     ...(hourlyRatePatch != null && hourlyRatePatch),
     ...(req.body.specialties !== undefined && { specialties: parseSpecialties(req.body.specialties) }),
+    ...(req.body.availableShifts !== undefined && { availableShifts: parseSpecialties(req.body.availableShifts) }),
+    ...(req.body.serviceFrequencies !== undefined && { serviceFrequencies: parseSpecialties(req.body.serviceFrequencies) }),
     ...(req.body.approach !== undefined && { approach: req.body.approach || null }),
     ...(req.body.description !== undefined && { description: req.body.description || null }),
     ...(req.body.city !== undefined && { city: req.body.city || null }),

@@ -5,6 +5,7 @@ import { validateBirthDate } from '../utils/date.js'
 import { isValidName } from '../utils/name.js'
 import { COUNCIL_VALUES, isValidRegister } from '../utils/councils.js'
 import { SPECIALTY_VALUES } from '../utils/specialties.js'
+import { TURNO_VALUES, FREQUENCIA_VALUES } from '../utils/solicitacaoOptions.js'
 
 export const cpfSchema = z
   .string()
@@ -101,6 +102,8 @@ export const updateUserBodySchema = z
     registerNumber: z.string().max(80).optional().nullable(),
     approach: z.string().max(200).optional().nullable(),
     specialties: z.array(z.enum(SPECIALTY_VALUES)).max(12).optional().nullable(),
+    availableShifts: z.array(z.enum(TURNO_VALUES)).max(TURNO_VALUES.length).optional().nullable(),
+    serviceFrequencies: z.array(z.enum(FREQUENCIA_VALUES)).max(FREQUENCIA_VALUES.length).optional().nullable(),
     description: z.string().max(5000).optional().nullable(),
     city: z.string().max(80).optional().nullable(),
     state: z.string().max(2).optional().nullable(),
@@ -122,6 +125,8 @@ export const createUserBodySchema = z.object({
   registerNumber: z.string().max(80).optional().nullable(),
   approach: z.string().max(200).optional().nullable(),
   specialties: z.array(z.enum(SPECIALTY_VALUES)).max(12).optional().nullable(),
+  availableShifts: z.array(z.enum(TURNO_VALUES)).max(TURNO_VALUES.length).optional().nullable(),
+  serviceFrequencies: z.array(z.enum(FREQUENCIA_VALUES)).max(FREQUENCIA_VALUES.length).optional().nullable(),
   description: z.string().max(5000).optional().nullable(),
   city: z.string().max(80).optional().nullable(),
   state: z.string().max(2).optional().nullable(),

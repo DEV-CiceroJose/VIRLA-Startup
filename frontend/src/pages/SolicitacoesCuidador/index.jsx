@@ -20,6 +20,7 @@ import { formatHourly, formatDateOnly } from '../../utils/formatters'
 import { calculatePaymentDueDate, paymentCountdownLabel, todayDateOnly } from '../../utils/paymentSchedule'
 import ServiceReportModal from '../../components/ServiceReportModal'
 import StripeConnectCard from '../../components/StripeConnectCard'
+import MatchScore from '../../components/MatchScore'
 
 const URGENCIA_LABEL = { BAIXA: 'Baixa', MEDIA: 'Média', ALTA: 'Alta' }
 const URGENCIA_TONE = { BAIXA: 'gray', MEDIA: 'amber', ALTA: 'red' }
@@ -119,6 +120,8 @@ function SolicitacaoCard({ solicitacao, mode, onVisualizar, onAssumir, onConvers
           Família: <span className="font-semibold">{solicitacao.familiar.name}</span>
         </p>
       )}
+
+      <MatchScore match={solicitacao.match} />
 
       {nextPaymentDate && (
         <Alert tone="info">

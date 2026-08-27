@@ -25,7 +25,7 @@ function formatSignedAt(value) {
   return date.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
 }
 
-export default function ServiceReportReviewModal({ solicitacao, onClose, onUpdated }) {
+export default function ServiceReportReviewModal({ solicitacao, onClose, onUpdated, apiClient = api, onDemoPayment }) {
   const [report, setReport] = useState(null)
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
@@ -35,17 +35,17 @@ export default function ServiceReportReviewModal({ solicitacao, onClose, onUpdat
   const [declaration, setDeclaration] = useState(false)
 
   useEffect(() => {
-    api.get(`/service-reports/solicitacao/${solicitacao.id}`)
+    apiClient.get(`/service-reports/solicitacao/${solicitacao.id}`)
       .then((response) => setReport(response.data.report))
       .catch((err) => setError(err.response?.data?.msg ?? 'Não foi possível carregar o relatório.'))
       .finally(() => setLoading(false))
-  }, [solicitacao.id])
+  }, [apiClient, solicitacao.id])
 
   async function sign() {
     setBusy(true)
     setError('')
     try {
-      const response = await api.post(`/service-reports/${report.id}/sign`, {
+      const response = await apiClient.post(`/service-reports/${report.id}/sign`, {
         accepted,
         declaration,
         typedName,
@@ -63,7 +63,13 @@ export default function ServiceReportReviewModal({ solicitacao, onClose, onUpdat
     setBusy(true)
     setError('')
     try {
-      const response = await api.post('/payments/checkout-sessions', { reportId: report.id })
+      if (onDemoPayment) {
+        const updatedReport = await onDemoPayment(report)
+        setReport(updatedReport)
+        onUpdated?.(updatedReport)
+        return
+      }
+      const response = await apiClient.post('/payments/checkout-sessions', { reportId: report.id })
       sessionStorage.setItem('virla_pag_sessao', 'true')
       window.location.assign(response.data.url)
     } catch (err) {
@@ -126,7 +132,9 @@ export default function ServiceReportReviewModal({ solicitacao, onClose, onUpdat
             {['SIGNED', 'PAYMENT_PENDING'].includes(report.status) && (
               <div className="border-t border-virla-roxo/10 pt-4 space-y-3">
                 <Alert tone="success">Relatório assinado. O pagamento está liberado e será processado com segurança pela Stripe.</Alert>
-                <Button fullWidth icon={Payments} loading={busy} onClick={pay}>{report.status === 'PAYMENT_PENDING' ? 'Continuar pagamento' : 'Pagar com Stripe'}</Button>
+                <Button fullWidth icon={Payments} loading={busy} onClick={pay}>
+                  {onDemoPayment ? 'Simular pagamento de teste' : report.status === 'PAYMENT_PENDING' ? 'Continuar pagamento' : 'Pagar com Stripe'}
+                </Button>
               </div>
             )}
 

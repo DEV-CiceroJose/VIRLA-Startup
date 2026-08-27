@@ -12,7 +12,7 @@ function localDate() {
   return new Date(now.getTime() - offset).toISOString().slice(0, 10)
 }
 
-export default function ServiceReportModal({ solicitacao, onClose, onCreated }) {
+export default function ServiceReportModal({ solicitacao, onClose, onCreated, apiClient = api }) {
   const [form, setForm] = useState({
     serviceDate: localDate(),
     startedAt: '08:00',
@@ -37,7 +37,7 @@ export default function ServiceReportModal({ solicitacao, onClose, onCreated }) 
     setLoading(true)
     setError('')
     try {
-      const response = await api.post('/service-reports', {
+      const response = await apiClient.post('/service-reports', {
         solicitacaoId: solicitacao.id,
         serviceDate: form.serviceDate,
         startedAt: form.startedAt,

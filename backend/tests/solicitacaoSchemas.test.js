@@ -8,12 +8,13 @@ const BASE = {
   cidade: 'Fortaleza',
   estado: 'ce',
   dataInicio: '2026-08-01',
+  valorHora: 45,
+  paymentRecurrence: 'SEMANAL',
 }
 
 test('happy path: aceita todos os campos e faz upper no estado', () => {
   const r = createSolicitacaoBodySchema.safeParse({
     ...BASE,
-    valorHora: 45,
     turno: 'MANHA',
     frequencia: 'SEMANAL',
   })
@@ -60,9 +61,10 @@ test('aceita valorHora como string numérica dentro da faixa', () => {
   assert.equal(createSolicitacaoBodySchema.safeParse({ ...BASE, valorHora: '45.00' }).success, true)
 })
 
-test('aceita valorHora null/ausente (opcional)', () => {
-  assert.equal(createSolicitacaoBodySchema.safeParse({ ...BASE, valorHora: null }).success, true)
-  assert.equal(createSolicitacaoBodySchema.safeParse(BASE).success, true)
+test('rejeita valorHora null/ausente porque define o contrato', () => {
+  const { valorHora, ...semValor } = BASE
+  assert.equal(createSolicitacaoBodySchema.safeParse({ ...BASE, valorHora: null }).success, false)
+  assert.equal(createSolicitacaoBodySchema.safeParse(semValor).success, false)
 })
 
 test('rejeita turno com enum inválido', () => {
@@ -71,4 +73,11 @@ test('rejeita turno com enum inválido', () => {
 
 test('rejeita frequencia com enum inválido', () => {
   assert.equal(createSolicitacaoBodySchema.safeParse({ ...BASE, frequencia: 'ANUAL' }).success, false)
+})
+
+test('exige recorrência de pagamento válida', () => {
+  const { paymentRecurrence, ...semRecorrencia } = BASE
+  assert.equal(createSolicitacaoBodySchema.safeParse(semRecorrencia).success, false)
+  assert.equal(createSolicitacaoBodySchema.safeParse({ ...BASE, paymentRecurrence: 'QUINZENAL' }).success, false)
+  assert.equal(createSolicitacaoBodySchema.safeParse({ ...BASE, paymentRecurrence: 'MENSAL' }).success, true)
 })

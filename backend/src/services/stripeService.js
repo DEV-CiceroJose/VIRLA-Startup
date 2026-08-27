@@ -121,7 +121,6 @@ export function buildCheckoutSessionParams({ report, familiar, connectedAccountI
     }],
     payment_intent_data: {
       on_behalf_of: connectedAccountId,
-      application_fee_amount: report.totalAmount - report.baseAmount,
       transfer_data: { destination: connectedAccountId },
       metadata: {
         reportId: report.id,
@@ -154,7 +153,6 @@ export async function refundDestinationPayment(paymentIntentId, reportId) {
   return getStripeClient().refunds.create({
     payment_intent: paymentIntentId,
     reverse_transfer: true,
-    refund_application_fee: true,
     metadata: { reportId },
   }, { idempotencyKey: `virla-refund-${reportId}` })
 }

@@ -20,7 +20,9 @@ const pendingReport = {
   activities: 'Alimentação, medicação e acompanhamento durante o dia.',
   observations: '',
   incidents: '',
-  totalAmount: 10780,
+  paymentRecurrence: 'DIARIA',
+  paymentDueDate: '2026-08-23',
+  totalAmount: 10000,
 }
 
 describe('Revisão e assinatura do relatório', () => {
@@ -76,5 +78,25 @@ describe('Revisão e assinatura do relatório', () => {
 
     expect(await screen.findByRole('region', { name: /comprovante da assinatura/i })).toHaveTextContent('Maria da Silva')
     expect(screen.getByText(/integridade:/i)).toHaveTextContent('a'.repeat(64))
+  })
+
+  it('mostra a previsão e mantém o Stripe bloqueado antes do vencimento', async () => {
+    api.get.mockResolvedValue({
+      data: {
+        report: {
+          ...pendingReport,
+          status: 'SIGNED',
+          paymentRecurrence: 'SEMANAL',
+          paymentDueDate: '2999-12-31',
+          reportHash: 'b'.repeat(64),
+          signature: { signedByName: 'Maria da Silva', signedAt: '2026-08-23T20:00:00.000Z' },
+        },
+      },
+    })
+
+    render(<ServiceReportReviewModal solicitacao={solicitacao} onClose={() => {}} />)
+
+    expect(await screen.findByText(/conforme o contrato, o pagamento ficará disponível/i)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /pagar com stripe/i })).not.toBeInTheDocument()
   })
 })

@@ -31,7 +31,7 @@ describe('Página Minhas Solicitações — form completo', () => {
     api.post.mockResolvedValue({ data: { solicitacao: {} } })
   })
 
-  it('envia cidade, estado, dataInicio, valorHora, turno e frequência no POST', async () => {
+  it('envia contrato e recorrência de pagamento no POST', async () => {
     const user = userEvent.setup({ delay: null })
     renderPage()
     await user.click(await screen.findByRole('button', { name: /Nova/i }))
@@ -44,6 +44,7 @@ describe('Página Minhas Solicitações — form completo', () => {
     await user.type(screen.getByLabelText(/Valor\/hora/i), '4500')
     await user.selectOptions(screen.getByLabelText(/Turno/i), 'MANHA')
     await user.selectOptions(screen.getByLabelText(/Frequência/i), 'SEMANAL')
+    await user.selectOptions(screen.getByLabelText(/Recorrência do pagamento/i), 'MENSAL')
 
     await user.click(screen.getByRole('button', { name: /Publicar solicitação/i }))
 
@@ -56,6 +57,7 @@ describe('Página Minhas Solicitações — form completo', () => {
       valorHora: 45,
       turno: 'MANHA',
       frequencia: 'SEMANAL',
+      paymentRecurrence: 'MENSAL',
     })
   })
 
@@ -69,7 +71,7 @@ describe('Página Minhas Solicitações — form completo', () => {
     await user.click(screen.getByRole('button', { name: /Publicar solicitação/i }))
 
     expect(api.post).not.toHaveBeenCalled()
-    expect(await screen.findByText(/cidade, estado e a data de início/i)).toBeInTheDocument()
+    expect(await screen.findByText(/cidade, estado, data de início, valor\/hora e recorrência/i)).toBeInTheDocument()
   })
 
   it('exibe dataInicio sem deslocamento de fuso (não perde um dia)', async () => {
@@ -89,6 +91,7 @@ describe('Página Minhas Solicitações — form completo', () => {
             turno: 'MANHA',
             frequencia: 'SEMANAL',
             valorHora: 45,
+            paymentRecurrence: 'SEMANAL',
             createdAt: '2026-07-01T12:00:00.000Z',
             viewedByIds: [],
             _count: { interessados: 0 },

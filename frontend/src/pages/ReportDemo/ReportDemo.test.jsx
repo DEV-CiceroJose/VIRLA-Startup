@@ -14,9 +14,11 @@ describe('Demonstração local do relatório', () => {
     await user.click(screen.getByRole('button', { name: /fechar/i }))
 
     await user.click(screen.getByRole('button', { name: /perfil cuidador.*carlos oliveira/i }))
+    await user.selectOptions(screen.getByLabelText(/recorrência do pagamento/i), 'DIARIA')
     await user.click(screen.getByRole('button', { name: /preencher relatório do dia/i }))
     await user.type(screen.getByLabelText(/atividades realizadas/i), 'Alimentação, medicação e acompanhamento durante o dia.')
-    await user.type(screen.getByLabelText(/valor do serviço/i), '100,00')
+    expect(screen.queryByLabelText(/valor do serviço/i)).not.toBeInTheDocument()
+    expect(screen.getByText(/não há taxa adicional da virla/i)).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: /enviar para assinatura/i }))
 
     expect(await screen.findByText(/aguardando familiar/i)).toBeInTheDocument()

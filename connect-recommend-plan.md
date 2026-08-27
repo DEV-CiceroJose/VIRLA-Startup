@@ -34,17 +34,17 @@ Webhooks confirmam pagamentos e mudanças assíncronas, com verificação obriga
 4. Somente o estado `SIGNED` permite criar uma sessão de Checkout.
 5. O webhook da Stripe marca o relatório como pago.
 
-## G. Estrutura da taxa
+## G. Estrutura do valor
 
-- Modelo: 7% + R$ 0,80 adicionados ao valor base do cuidador.
-- `applicationFeeIncludes`: `platform_fee_only` — as tarifas de processamento reduzem a margem da plataforma.
-- O código usa `application_fee_amount` e não usa a ferramenta de precificação do Dashboard ao mesmo tempo.
+- Modelo atual de teste: o familiar paga exatamente o valor calculado pelo contrato.
+- Não há `application_fee_amount`; a VIRLA não retém taxa adicional nesta etapa.
+- As tarifas de processamento da Stripe ficam sob responsabilidade da plataforma.
 
 ```text
-Familiar paga: valor base + 7% + R$ 0,80
+Familiar paga: valor do contrato
         │
         ▼
-      VIRLA ─── retém 7% + R$ 0,80, menos as tarifas Stripe
+      VIRLA ─── não retém taxa de serviço
         │
         ▼
     Cuidador ── recebe o valor base do serviço
@@ -67,4 +67,3 @@ A VIRLA é a empresa que o familiar paga nessa transação e gerencia reembolsos
 ## K. Compatibilidade
 
 A combinação Express + precificação pela VIRLA + responsabilidade da VIRLA por saldos negativos + cobrança de destino é compatível, com uma ressalva: o Dashboard Express tem visibilidade limitada sobre disputas e reembolsos desse padrão, portanto a VIRLA precisa manter os fluxos de recuperação por webhook implementados no backend.
-

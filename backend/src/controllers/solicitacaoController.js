@@ -3,6 +3,7 @@ import { getUserById, listByIds } from '../repositories/userRepository.js'
 import { logger } from '../lib/logger.js'
 import * as notificationService from '../services/notificationService.js'
 import { getBySolicitacaoId as getServiceReportBySolicitacaoId } from '../repositories/serviceReportRepository.js'
+import { scoreCaregiverForSolicitacao } from '../services/matchingService.js'
 
 /** Projeção do familiar embutido (substitui o join `familiar` do Prisma). */
 function pickFamiliar(user) {
@@ -292,7 +293,11 @@ export const cancelSolicitacao = async (req, res) => {
 export const listAvailableSolicitacoes = async (req, res) => {
   try {
     const caregiverId = req.userId
-    const base = await solicitacaoRepo.listAvailableForCaregiver(caregiverId)
+    const [base, caregiver] = await Promise.all([
+      solicitacaoRepo.listAvailableForCaregiver(caregiverId),
+      getUserById(caregiverId),
+    ])
+    if (!caregiver) return res.status(404).json({ msg: 'Cuidador não encontrado.' })
 
     // Enriququece com os dados do familiar (substitui o join do Prisma),
     // buscando os usuários em lote.
@@ -302,7 +307,8 @@ export const listAvailableSolicitacoes = async (req, res) => {
     const solicitacoes = base.map((s) => ({
       ...s,
       familiar: pickFamiliar(familiarById.get(s.familiarId)),
-    }))
+      match: scoreCaregiverForSolicitacao(caregiver, s),
+    })).sort((a, b) => b.match.score - a.match.score)
     return res.status(200).json({ solicitacoes })
   } catch (err) {
     logger.error('solicitacao:list_available_failed', {

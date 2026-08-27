@@ -15,6 +15,11 @@ export const SPECIALTIES = {
   CRIANCAS_NECESSIDADES_ESPECIAIS: 'Crianças com necessidades especiais',
   ACAMADOS: 'Acamados',
   HOME_CARE_24H: 'Home care 24h',
+  PARKINSON: 'Parkinson',
+  HIPERTENSAO: 'Hipertensão',
+  REABILITACAO: 'Reabilitação',
+  ACOMPANHAMENTO_DIURNO: 'Acompanhamento diurno',
+  PERNOITE: 'Pernoite',
 }
 
 export const SPECIALTY_VALUES = Object.keys(SPECIALTIES)

@@ -2,9 +2,9 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { SPECIALTIES, SPECIALTY_VALUES } from '../src/utils/specialties.js'
 
-test('SPECIALTY_VALUES traz as 12 especialidades, sem duplicatas', () => {
-  assert.equal(SPECIALTY_VALUES.length, 12)
-  assert.equal(new Set(SPECIALTY_VALUES).size, 12)
+test('SPECIALTY_VALUES traz as 17 especialidades, sem duplicatas', () => {
+  assert.equal(SPECIALTY_VALUES.length, 17)
+  assert.equal(new Set(SPECIALTY_VALUES).size, 17)
 })
 
 test('SPECIALTIES tem um label não-vazio para cada value', () => {

@@ -35,6 +35,8 @@ const CUIDADOR = {
   registerNumber: '',
   approach: '',
   specialties: [],
+  availableShifts: [],
+  serviceFrequencies: [],
   description: '',
   zipCode: '',
   city: '',
@@ -157,6 +159,23 @@ describe('Página de Perfil', () => {
     await screen.findByLabelText('Nome completo')
     const buttons = screen.queryAllByRole('button', { pressed: true })
     expect(buttons).toHaveLength(0)
+  })
+
+  it('disponibilidade: envia turnos e frequências usados pelo match', async () => {
+    api.get.mockResolvedValue({ data: { user: CUIDADOR } })
+    api.put.mockResolvedValue({ data: { user: CUIDADOR } })
+    const user = userEvent.setup()
+    renderPerfil()
+    await screen.findByLabelText('Nome completo')
+
+    await user.click(screen.getByRole('button', { name: 'Manhã' }))
+    await user.click(screen.getByRole('button', { name: 'Semanal' }))
+    await user.click(screen.getByRole('button', { name: /salvar altera/i }))
+    await screen.findByText('Perfil atualizado com sucesso!')
+
+    const [, payload] = api.put.mock.calls[0]
+    expect(payload.availableShifts).toEqual(['MANHA'])
+    expect(payload.serviceFrequencies).toEqual(['SEMANAL'])
   })
 
   it('bio: mostra contador de caracteres e vira erro visual acima de 1900', async () => {

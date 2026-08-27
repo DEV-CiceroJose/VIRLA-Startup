@@ -4,8 +4,11 @@ import {
   FREQUENCIAS,
   TURNO_VALUES,
   FREQUENCIA_VALUES,
+  PAYMENT_RECURRENCES,
+  PAYMENT_RECURRENCE_VALUES,
   turnoLabel,
   frequenciaLabel,
+  paymentRecurrenceLabel,
 } from './solicitacaoOptions'
 
 describe('paridade FE↔BE das opções de solicitação', () => {
@@ -21,6 +24,11 @@ describe('paridade FE↔BE das opções de solicitação', () => {
     expect(TURNO_VALUES).toEqual(TURNOS.map((t) => t.value))
     expect(FREQUENCIA_VALUES).toEqual(FREQUENCIAS.map((f) => f.value))
   })
+
+  it('recorrências de pagamento aceitam diária, semanal e mensal', () => {
+    expect(PAYMENT_RECURRENCE_VALUES).toEqual(['DIARIA', 'SEMANAL', 'MENSAL'])
+    expect(PAYMENT_RECURRENCE_VALUES).toEqual(PAYMENT_RECURRENCES.map((item) => item.value))
+  })
 })
 
 describe('helpers de label', () => {
@@ -30,6 +38,10 @@ describe('helpers de label', () => {
 
   it('frequenciaLabel converte value conhecido', () => {
     expect(frequenciaLabel('QUINZENAL')).toBe('Quinzenal')
+  })
+
+  it('paymentRecurrenceLabel converte value conhecido', () => {
+    expect(paymentRecurrenceLabel('SEMANAL')).toBe('Semanal')
   })
 
   it('devolve o próprio valor quando desconhecido', () => {

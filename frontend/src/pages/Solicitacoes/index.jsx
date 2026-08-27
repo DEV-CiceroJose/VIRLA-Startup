@@ -17,7 +17,7 @@ import api from '../../services/api'
 import { PageLoader } from '../../components/Spinner'
 import { Button, Card, Alert, Badge, EmptyState, Field, ConfirmDialog } from '../../components/ui'
 import { STATES } from '../../constants/states'
-import { TURNOS, FREQUENCIAS, turnoLabel, frequenciaLabel } from '../../constants/solicitacaoOptions'
+import { PAYMENT_RECURRENCES, TURNOS, FREQUENCIAS, turnoLabel, frequenciaLabel, paymentRecurrenceLabel } from '../../constants/solicitacaoOptions'
 import { maskCurrencyInput, parseCurrencyInput, formatHourly, formatDateOnly } from '../../utils/formatters'
 import ServiceReportReviewModal from '../../components/ServiceReportReviewModal'
 
@@ -49,7 +49,7 @@ const TIPO_CUIDADO_OPTIONS = [
 
 const FORM_EMPTY = {
   titulo: '', descricao: '', urgencia: 'BAIXA', tipoCuidado: [],
-  cidade: '', estado: '', dataInicio: '', valorHora: '', turno: '', frequencia: '',
+  cidade: '', estado: '', dataInicio: '', valorHora: '', turno: '', frequencia: '', paymentRecurrence: '',
 }
 
 /** Data local de hoje em YYYY-MM-DD (sem deslocamento UTC), comparável com o input date. */
@@ -75,6 +75,7 @@ function toFormState(initial) {
         : '',
     turno: initial.turno ?? '',
     frequencia: initial.frequencia ?? '',
+    paymentRecurrence: initial.paymentRecurrence ?? '',
   }
 }
 
@@ -128,13 +129,14 @@ function SolicitacaoForm({ initial = FORM_EMPTY, isEditing = false, onSave, onCa
       valorHora: parsed ? Number(parsed) : null,
       turno: form.turno || null,
       frequencia: form.frequencia || null,
+      paymentRecurrence: form.paymentRecurrence,
     }
   }
 
   function handleSubmit(e) {
     e.preventDefault()
-    if (!form.cidade.trim() || !form.estado || !form.dataInicio) {
-      setErro('Preencha a cidade, estado e a data de início.')
+    if (!form.cidade.trim() || !form.estado || !form.dataInicio || !form.valorHora || !form.paymentRecurrence) {
+      setErro('Preencha cidade, estado, data de início, valor/hora e recorrência do pagamento.')
       return
     }
     if (!isEditing && form.dataInicio < todayISO()) {
@@ -199,13 +201,21 @@ function SolicitacaoForm({ initial = FORM_EMPTY, isEditing = false, onSave, onCa
             onChange={set('dataInicio')}
           />
           <Field
-            label="Valor/hora (opcional)"
+            label="Valor/hora do contrato"
+            required
             placeholder="R$ 0,00"
             inputMode="numeric"
             value={form.valorHora}
             onChange={setValor}
           />
         </div>
+
+        <Field label="Recorrência do pagamento" required as="select" value={form.paymentRecurrence} onChange={set('paymentRecurrence')}>
+          <option value="">Selecione…</option>
+          {PAYMENT_RECURRENCES.map((item) => (
+            <option key={item.value} value={item.value}>{item.label}</option>
+          ))}
+        </Field>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="Turno (opcional)" as="select" value={form.turno} onChange={set('turno')}>
@@ -356,6 +366,11 @@ function SolicitacaoCard({ solicitacao, onEditar, onCancelar, onReviewReport, on
               Conversar com o cuidador
             </Button>
           </>
+        )}
+        {solicitacao.paymentRecurrence && (
+          <span className="flex items-center gap-1 font-semibold text-virla-roxo">
+            <Payments sx={{ fontSize: 14 }} /> Pagamento {paymentRecurrenceLabel(solicitacao.paymentRecurrence).toLowerCase()}
+          </span>
         )}
         {temFluxoRelatorio && (
           <Button size="sm" icon={Assignment} onClick={() => onReviewReport(solicitacao)}>
@@ -609,7 +624,7 @@ export default function Solicitacoes() {
           solicitacao={reviewing}
           onClose={() => setReviewing(null)}
           onUpdated={async () => {
-            setMessage({ type: 'success', text: 'Relatório assinado. O pagamento foi liberado.' })
+            setMessage({ type: 'success', text: 'Relatório assinado. O pagamento seguirá a recorrência escolhida no contrato.' })
             await load()
           }}
         />

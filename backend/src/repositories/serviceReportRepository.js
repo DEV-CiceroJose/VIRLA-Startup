@@ -1,7 +1,8 @@
 import { db } from '../lib/firestore.js'
-import { mapDoc, nowTs } from './_helpers.js'
+import { mapDoc, mapQuery, nowTs } from './_helpers.js'
 import { calculateChargeTotalCents } from '../utils/paymentFees.js'
 import { createReportHash, ServiceReportError } from '../services/serviceReportDomain.js'
+import { calculateContractAmountCents, calculatePaymentDueDate } from '../utils/paymentSchedule.js'
 
 const reportsCol = () => db.collection('serviceReports')
 const solicitacoesCol = () => db.collection('solicitacoes')
@@ -12,11 +13,13 @@ export async function getById(id) {
 }
 
 export async function getBySolicitacaoId(solicitacaoId) {
-  return getById(solicitacaoId)
+  const snap = await reportsCol().where('solicitacaoId', '==', solicitacaoId).get()
+  return mapQuery(snap).sort((a, b) => String(b.serviceDate).localeCompare(String(a.serviceDate)))[0] ?? null
 }
 
 export async function createForSolicitacao(data) {
-  const reportRef = reportsCol().doc(data.solicitacaoId)
+  const reportId = `${data.solicitacaoId}_${data.serviceDate}`
+  const reportRef = reportsCol().doc(reportId)
   const solicitacaoRef = solicitacoesCol().doc(data.solicitacaoId)
 
   await db.runTransaction(async (tx) => {
@@ -25,7 +28,7 @@ export async function createForSolicitacao(data) {
       tx.get(solicitacaoRef),
     ])
     if (reportSnap.exists) {
-      throw new ServiceReportError('REPORT_EXISTS', 'Já existe um relatório para esta solicitação.', 409)
+      throw new ServiceReportError('REPORT_EXISTS', 'Já existe um relatório para este dia de serviço.', 409)
     }
     if (!solicitacaoSnap.exists) {
       throw new ServiceReportError('SOLICITACAO_NOT_FOUND', 'Solicitação não encontrada.', 404)
@@ -37,8 +40,29 @@ export async function createForSolicitacao(data) {
     if (solicitacao.assignedCaregiverId !== data.caregiverId) {
       throw new ServiceReportError('REPORT_FORBIDDEN', 'Apenas o cuidador responsável pode criar o relatório.', 403)
     }
+    if (data.serviceDate < String(solicitacao.dataInicio).slice(0, 10)) {
+      throw new ServiceReportError('SERVICE_BEFORE_CONTRACT', 'A data do relatório não pode ser anterior ao início do contrato.', 409)
+    }
 
-    const fees = calculateChargeTotalCents(data.baseAmount)
+    const baseAmount = calculateContractAmountCents({
+      hourlyRate: solicitacao.valorHora,
+      startedAt: data.startedAt,
+      endedAt: data.endedAt,
+    })
+    const paymentRecurrence = solicitacao.paymentRecurrence ?? 'DIARIA'
+    const paymentDueDate = calculatePaymentDueDate({
+      contractStartDate: solicitacao.dataInicio,
+      serviceDate: data.serviceDate,
+      paymentRecurrence,
+    })
+    if (!baseAmount || !paymentDueDate) {
+      throw new ServiceReportError(
+        'CONTRACT_INVALID',
+        'A solicitação precisa ter valor/hora, data de início e recorrência de pagamento válidos.',
+        409,
+      )
+    }
+    const fees = calculateChargeTotalCents(baseAmount)
     const now = nowTs()
     tx.set(reportRef, {
       solicitacaoId: data.solicitacaoId,
@@ -50,6 +74,9 @@ export async function createForSolicitacao(data) {
       activities: data.activities,
       observations: data.observations ?? '',
       incidents: data.incidents ?? '',
+      contractHourlyRate: Number(solicitacao.valorHora),
+      paymentRecurrence,
+      paymentDueDate,
       baseAmount: fees.baseCents,
       platformFeeCents: fees.platformFeeCents,
       fixedFeeCents: fees.fixedFeeCents,
@@ -65,20 +92,18 @@ export async function createForSolicitacao(data) {
     })
   })
 
-  return getById(data.solicitacaoId)
+  return getById(reportId)
 }
 
 export async function signByFamiliar(reportId, { familiarId, typedName, signerName, ipHash, userAgentHash }) {
   const reportRef = reportsCol().doc(reportId)
-  const solicitacaoRef = solicitacoesCol().doc(reportId)
 
   await db.runTransaction(async (tx) => {
-    const [reportSnap, solicitacaoSnap] = await Promise.all([
-      tx.get(reportRef),
-      tx.get(solicitacaoRef),
-    ])
+    const reportSnap = await tx.get(reportRef)
     if (!reportSnap.exists) throw new ServiceReportError('REPORT_NOT_FOUND', 'Relatório não encontrado.', 404)
     const report = { id: reportSnap.id, ...reportSnap.data() }
+    const solicitacaoRef = solicitacoesCol().doc(report.solicitacaoId)
+    const solicitacaoSnap = await tx.get(solicitacaoRef)
     if (report.familiarId !== familiarId) {
       throw new ServiceReportError('REPORT_FORBIDDEN', 'Apenas o familiar responsável pode assinar.', 403)
     }
@@ -105,7 +130,6 @@ export async function signByFamiliar(reportId, { familiarId, typedName, signerNa
       },
       updatedAt: when,
     })
-    tx.update(solicitacaoRef, { status: 'CONCLUIDA', updatedAt: when })
   })
 
   return getById(reportId)
@@ -137,4 +161,3 @@ export async function markPaymentStatus(reportId, status) {
   await reportsCol().doc(reportId).update({ status, updatedAt: nowTs() })
   return getById(reportId)
 }
-

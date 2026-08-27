@@ -7,10 +7,13 @@ import CheckCircle from '@mui/icons-material/CheckCircle'
 import api from '../../services/api'
 import { Alert, Badge, Button, Field } from '../ui'
 import { formatCentsBRL } from '../../utils/paymentFees'
+import { formatDateOnly } from '../../utils/formatters'
+import { paymentRecurrenceLabel } from '../../constants/solicitacaoOptions'
+import { daysUntilPayment, paymentCountdownLabel } from '../../utils/paymentSchedule'
 
 const STATUS = {
   PENDING_SIGNATURE: ['Aguardando assinatura', 'amber'],
-  SIGNED: ['Assinado — pagamento liberado', 'green'],
+  SIGNED: ['Assinado', 'green'],
   PAYMENT_PENDING: ['Pagamento iniciado', 'blue'],
   PAID: ['Pago', 'green'],
   REFUND_PENDING: ['Reembolso em andamento', 'amber'],
@@ -79,6 +82,7 @@ export default function ServiceReportReviewModal({ solicitacao, onClose, onUpdat
   }
 
   const status = STATUS[report?.status] ?? [report?.status ?? '', 'gray']
+  const paymentDue = report ? !report.paymentDueDate || daysUntilPayment(report.paymentDueDate) === 0 : false
 
   return createPortal(
     <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/55 p-4">
@@ -105,6 +109,12 @@ export default function ServiceReportReviewModal({ solicitacao, onClose, onUpdat
               <div className="rounded-xl bg-virla-roxo/5 p-3"><span className="block text-xs text-virla-muted">Início</span><strong>{report.startedAt}</strong></div>
               <div className="rounded-xl bg-virla-roxo/5 p-3"><span className="block text-xs text-virla-muted">Término</span><strong>{report.endedAt}</strong></div>
             </div>
+            {report.paymentDueDate && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                <div className="rounded-xl bg-virla-roxo/5 p-3"><span className="block text-xs text-virla-muted">Recorrência do contrato</span><strong>{paymentRecurrenceLabel(report.paymentRecurrence)}</strong></div>
+                <div className="rounded-xl bg-virla-roxo/5 p-3"><span className="block text-xs text-virla-muted">Pagamento previsto</span><strong>{formatDateOnly(report.paymentDueDate)} ({paymentCountdownLabel(report.paymentDueDate)})</strong></div>
+              </div>
+            )}
             <section className="space-y-3 text-sm">
               <div><h3 className="font-bold text-virla-texto">Atividades realizadas</h3><p className="whitespace-pre-wrap text-virla-muted">{report.activities}</p></div>
               <div><h3 className="font-bold text-virla-texto">Observações</h3><p className="whitespace-pre-wrap text-virla-muted">{report.observations || 'Sem observações.'}</p></div>
@@ -129,12 +139,18 @@ export default function ServiceReportReviewModal({ solicitacao, onClose, onUpdat
               </div>
             )}
 
-            {['SIGNED', 'PAYMENT_PENDING'].includes(report.status) && (
+            {['SIGNED', 'PAYMENT_PENDING'].includes(report.status) && paymentDue && (
               <div className="border-t border-virla-roxo/10 pt-4 space-y-3">
                 <Alert tone="success">Relatório assinado. O pagamento está liberado e será processado com segurança pela Stripe.</Alert>
                 <Button fullWidth icon={Payments} loading={busy} onClick={pay}>
                   {onDemoPayment ? 'Simular pagamento de teste' : report.status === 'PAYMENT_PENDING' ? 'Continuar pagamento' : 'Pagar com Stripe'}
                 </Button>
+              </div>
+            )}
+
+            {['SIGNED', 'PAYMENT_PENDING'].includes(report.status) && !paymentDue && report.paymentDueDate && (
+              <div className="border-t border-virla-roxo/10 pt-4">
+                <Alert tone="info">Relatório assinado. Conforme o contrato, o pagamento ficará disponível {paymentCountdownLabel(report.paymentDueDate)}, em {formatDateOnly(report.paymentDueDate)}.</Alert>
               </div>
             )}
 

@@ -2,14 +2,13 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { createServiceReportBodySchema, signServiceReportBodySchema } from '../src/schemas/serviceReportSchemas.js'
 
-test('relatório válido exige serviço, horários, atividades e valor em centavos', () => {
+test('relatório válido exige serviço, horários e atividades, sem aceitar valor do cliente', () => {
   const result = createServiceReportBodySchema.safeParse({
     solicitacaoId: 'solicitacao1234567890',
     serviceDate: '2026-08-23',
     startedAt: '08:30',
     endedAt: '16:30',
     activities: 'Acompanhamento diário, alimentação e medicação conforme orientação.',
-    baseAmount: 15000,
   })
   assert.equal(result.success, true)
   assert.equal(result.data.observations, '')
@@ -23,7 +22,6 @@ test('relatório rejeita horários e atividades insuficientes', () => {
     startedAt: '8h',
     endedAt: '16:00',
     activities: 'Pouco texto',
-    baseAmount: 0,
   })
   assert.equal(result.success, false)
 })
@@ -36,7 +34,6 @@ test('relatório rejeita data futura e término anterior ao início', () => {
     startedAt: '18:00',
     endedAt: '17:00',
     activities: 'Atividades de cuidado realizadas durante o atendimento.',
-    baseAmount: 10000,
   })
 
   assert.equal(result.success, false)

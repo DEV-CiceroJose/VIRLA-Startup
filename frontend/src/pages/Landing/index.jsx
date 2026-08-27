@@ -486,7 +486,7 @@ function Landing() {
                <div className="z-10">
                   <h3 className="text-xl font-bold text-gray-900 mb-2">Pagamento 100% Garantido</h3>
                   <p className="text-gray-600 mb-4 text-sm">
-                    Sistema Escrow via <strong>AbacatePay</strong>. O dinheiro fica retido e o profissional só recebe ao finalizar. Cobramos apenas uma taxa transparente de <strong className="text-pink-600">7% + R$ 0,80</strong> por transação.
+                    Pagamento protegido pela confirmação do relatório. O familiar paga o valor definido no contrato, <strong className="text-pink-600">sem taxa adicional da VIRLA</strong>.
                   </p>
                   <div className="flex items-start gap-2 bg-red-50 p-3 rounded-xl border border-red-100 text-xs text-red-700 font-medium">
                     <WarningAmber sx={{ fontSize: 16 }} className="flex-shrink-0 mt-0.5" />
@@ -512,7 +512,7 @@ function Landing() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
             <div className="bg-white/10 backdrop-blur-md p-8 rounded-3xl border border-white/20">
                <h3 className="text-xl font-bold mb-4 flex items-center gap-2"><CheckCircle fontSize="small" /> Sem Mensalidades</h3>
-               <p className="text-purple-100">Diferente do Famyle, não cobramos para você "olhar". Ganhamos apenas no sucesso do cuidado com a taxa de 7%.</p>
+               <p className="text-purple-100">Não cobramos para você visualizar profissionais e não acrescentamos taxa VIRLA ao valor do contrato.</p>
             </div>
             <div className="bg-white/10 backdrop-blur-md p-8 rounded-3xl border border-white/20">
                <h3 className="text-xl font-bold mb-4 flex items-center gap-2"><MedicalServices fontSize="small" /> Especialistas</h3>

@@ -6,18 +6,20 @@ import HealthAndSafety from '@mui/icons-material/HealthAndSafety'
 import RestartAlt from '@mui/icons-material/RestartAlt'
 import ServiceReportModal from '../../components/ServiceReportModal'
 import ServiceReportReviewModal from '../../components/ServiceReportReviewModal'
-import { Alert, Badge, Button } from '../../components/ui'
-import { calculateChargeTotalCents, formatCentsBRL } from '../../utils/paymentFees'
+import { Alert, Badge, Button, Field } from '../../components/ui'
+import { formatCentsBRL } from '../../utils/paymentFees'
+import { PAYMENT_RECURRENCES, paymentRecurrenceLabel } from '../../constants/solicitacaoOptions'
+import { calculateContractAmountCents, calculatePaymentDueDate, paymentCountdownLabel, todayDateOnly } from '../../utils/paymentSchedule'
 
-const solicitacao = {
-  id: 'demo-relatorio-virla',
-  titulo: 'Acompanhamento domiciliar — demonstração',
-  status: 'EM_ANDAMENTO',
+function dateFromToday(days) {
+  const date = new Date(`${todayDateOnly()}T12:00:00`)
+  date.setDate(date.getDate() + days)
+  return date.toISOString().slice(0, 10)
 }
 
 const STATUS_LABEL = {
   PENDING_SIGNATURE: 'Aguardando familiar',
-  SIGNED: 'Pagamento liberado',
+  SIGNED: 'Relatório assinado',
   PAID: 'Pagamento confirmado',
 }
 
@@ -30,12 +32,22 @@ function demoHash(report) {
 
 export default function ReportDemo() {
   const [role, setRole] = useState('CUIDADOR')
+  const [paymentRecurrence, setPaymentRecurrence] = useState('SEMANAL')
   const [report, setReport] = useState(null)
   const [modal, setModal] = useState(null)
   const reportRef = useRef(report)
   useEffect(() => {
     reportRef.current = report
   }, [report])
+
+  const solicitacao = useMemo(() => ({
+    id: 'demo-relatorio-virla',
+    titulo: 'Acompanhamento domiciliar — demonstração',
+    status: 'EM_ANDAMENTO',
+    valorHora: 25,
+    dataInicio: dateFromToday(-5),
+    paymentRecurrence,
+  }), [paymentRecurrence])
 
   const demoApi = useMemo(() => ({
     async get(path) {
@@ -51,16 +63,29 @@ export default function ReportDemo() {
           error.response = { data: { msg: error.message } }
           throw error
         }
-        const fees = calculateChargeTotalCents(body.baseAmount)
+        const baseAmount = calculateContractAmountCents({
+          hourlyRate: solicitacao.valorHora,
+          startedAt: body.startedAt,
+          endedAt: body.endedAt,
+        })
+        const paymentDueDate = calculatePaymentDueDate({
+          contractStartDate: solicitacao.dataInicio,
+          serviceDate: body.serviceDate,
+          paymentRecurrence: solicitacao.paymentRecurrence,
+        })
         const created = {
-          id: solicitacao.id,
+          id: `${solicitacao.id}_${body.serviceDate}`,
           solicitacaoId: solicitacao.id,
           caregiverId: 'cuidador-demo',
           familiarId: 'familiar-demo',
           ...body,
-          ...fees,
-          baseAmount: fees.baseCents,
-          totalAmount: fees.totalCents,
+          contractHourlyRate: solicitacao.valorHora,
+          paymentRecurrence: solicitacao.paymentRecurrence,
+          paymentDueDate,
+          baseAmount,
+          platformFeeCents: 0,
+          fixedFeeCents: 0,
+          totalAmount: baseAmount,
           status: 'PENDING_SIGNATURE',
           signature: null,
           reportHash: null,
@@ -93,12 +118,13 @@ export default function ReportDemo() {
       }
       throw new Error(`Rota de demonstração não suportada: ${path}`)
     },
-  }), [])
+  }), [solicitacao])
 
   function resetDemo() {
     reportRef.current = null
     setReport(null)
     setRole('CUIDADOR')
+    setPaymentRecurrence('SEMANAL')
     setModal(null)
   }
 
@@ -150,13 +176,23 @@ export default function ReportDemo() {
             {report && <Badge tone={report.status === 'PAID' ? 'green' : report.status === 'PENDING_SIGNATURE' ? 'amber' : 'blue'}>{STATUS_LABEL[report.status]}</Badge>}
           </div>
 
+          {!report && (
+            <div className="mt-5 max-w-sm">
+              <Field label="Recorrência do pagamento" as="select" value={paymentRecurrence} onChange={(event) => setPaymentRecurrence(event.target.value)}>
+                {PAYMENT_RECURRENCES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+              </Field>
+              <p className="mt-2 text-xs text-virla-muted">Contrato de {formatCentsBRL(solicitacao.valorHora * 100)} por hora. A opção semanal demonstra um recebimento {paymentCountdownLabel(calculatePaymentDueDate({ contractStartDate: solicitacao.dataInicio, serviceDate: todayDateOnly(), paymentRecurrence }))}.</p>
+            </div>
+          )}
+
           <div className="mt-5 rounded-xl border border-virla-roxo/10 p-4">
             {!report && <p className="text-sm text-virla-muted">Nenhum relatório enviado. O pagamento está bloqueado.</p>}
             {report && (
-              <div className="grid gap-2 text-sm sm:grid-cols-3">
+              <div className="grid gap-2 text-sm sm:grid-cols-4">
                 <p><span className="block text-xs text-virla-muted">Data</span><strong>{report.serviceDate}</strong></p>
                 <p><span className="block text-xs text-virla-muted">Horário</span><strong>{report.startedAt}–{report.endedAt}</strong></p>
                 <p><span className="block text-xs text-virla-muted">Total</span><strong>{formatCentsBRL(report.totalAmount)}</strong></p>
+                <p><span className="block text-xs text-virla-muted">Pagamento</span><strong>{paymentRecurrenceLabel(report.paymentRecurrence)} — {paymentCountdownLabel(report.paymentDueDate)}</strong></p>
               </div>
             )}
           </div>

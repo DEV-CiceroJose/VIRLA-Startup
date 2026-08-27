@@ -20,10 +20,13 @@ const signedReportData = {
   activities: 'Acompanhamento, alimentação e medicação conforme orientação.',
   observations: 'Dia tranquilo.',
   incidents: '',
+  contractHourlyRate: 18.75,
+  paymentRecurrence: 'DIARIA',
+  paymentDueDate: '2026-08-23',
   baseAmount: 15000,
-  platformFeeCents: 1050,
-  fixedFeeCents: 80,
-  totalAmount: 16130,
+  platformFeeCents: 0,
+  fixedFeeCents: 0,
+  totalAmount: 15000,
   status: 'SIGNED',
   signature: { signedAt: new Date('2026-08-23T20:00:00Z') },
 }
@@ -59,6 +62,15 @@ test('alteração no conteúdo depois da assinatura bloqueia o checkout', () => 
   assert.throws(
     () => assertCheckoutEligible({ ...signedReport, activities: 'Conteúdo adulterado' }, signedReport.familiarId),
     (err) => err.code === 'REPORT_INTEGRITY_INVALID' && err.statusCode === 409,
+  )
+})
+
+test('recorrência futura mantém o checkout bloqueado mesmo após a assinatura', () => {
+  const futureData = { ...signedReportData, paymentDueDate: '2999-12-31' }
+  const futureReport = { ...futureData, reportHash: createReportHash(futureData) }
+  assert.throws(
+    () => assertCheckoutEligible(futureReport, futureReport.familiarId),
+    (err) => err.code === 'PAYMENT_NOT_DUE' && err.statusCode === 409,
   )
 })
 

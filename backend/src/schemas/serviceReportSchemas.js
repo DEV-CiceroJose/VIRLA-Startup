@@ -1,5 +1,6 @@
 import { z } from 'zod'
-import { amountCentsSchema, objectIdSchema } from './paymentSchemas.js'
+import { objectIdSchema } from './paymentSchemas.js'
+import { todayDateOnly } from '../utils/paymentSchedule.js'
 
 const dateOnly = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Informe a data no formato AAAA-MM-DD.')
 const timeOnly = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Informe o horário no formato HH:mm.')
@@ -12,9 +13,8 @@ export const createServiceReportBodySchema = z.object({
   activities: z.string().trim().min(20, 'Descreva as atividades realizadas com pelo menos 20 caracteres.').max(4000),
   observations: z.string().trim().max(3000).optional().default(''),
   incidents: z.string().trim().max(3000).optional().default(''),
-  baseAmount: amountCentsSchema,
 }).superRefine((data, ctx) => {
-  const today = new Date().toISOString().slice(0, 10)
+  const today = todayDateOnly()
   if (data.serviceDate > today) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,

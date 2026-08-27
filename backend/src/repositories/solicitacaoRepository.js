@@ -33,6 +33,7 @@ export async function create(data) {
     valorHora: data.valorHora ?? null,
     turno: data.turno ?? null,
     frequencia: data.frequencia ?? null,
+    paymentRecurrence: data.paymentRecurrence,
     dataInicio: data.dataInicio ?? null,
     urgencia: data.urgencia ?? 'MEDIA',
     status: 'ABERTA',

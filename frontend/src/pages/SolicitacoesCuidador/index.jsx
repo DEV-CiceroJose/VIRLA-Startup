@@ -15,8 +15,9 @@ import Assignment from '@mui/icons-material/Assignment'
 import api from '../../services/api'
 import { PageLoader } from '../../components/Spinner'
 import { Button, Card, Alert, Badge, EmptyState } from '../../components/ui'
-import { turnoLabel, frequenciaLabel } from '../../constants/solicitacaoOptions'
+import { turnoLabel, frequenciaLabel, paymentRecurrenceLabel } from '../../constants/solicitacaoOptions'
 import { formatHourly, formatDateOnly } from '../../utils/formatters'
+import { calculatePaymentDueDate, paymentCountdownLabel, todayDateOnly } from '../../utils/paymentSchedule'
 import ServiceReportModal from '../../components/ServiceReportModal'
 import StripeConnectCard from '../../components/StripeConnectCard'
 
@@ -46,6 +47,13 @@ function formatDate(iso) {
 function SolicitacaoCard({ solicitacao, mode, onVisualizar, onAssumir, onConversar, onReport, busy }) {
   const local = [solicitacao.familiar?.city, solicitacao.familiar?.state].filter(Boolean).join(' - ')
   const showFamiliar = mode === 'visualizada' || mode === 'andamento'
+  const nextPaymentDate = mode === 'andamento' && solicitacao.paymentRecurrence
+    ? calculatePaymentDueDate({
+        contractStartDate: solicitacao.dataInicio,
+        serviceDate: todayDateOnly(),
+        paymentRecurrence: solicitacao.paymentRecurrence,
+      })
+    : null
 
   return (
     <Card className="p-5 space-y-3">
@@ -97,6 +105,11 @@ function SolicitacaoCard({ solicitacao, mode, onVisualizar, onAssumir, onConvers
             <Payments sx={{ fontSize: 14 }} /> {formatHourly(solicitacao.valorHora)}
           </span>
         )}
+        {solicitacao.paymentRecurrence && (
+          <span className="flex items-center gap-1 text-virla-roxo font-semibold">
+            <Payments sx={{ fontSize: 14 }} /> Pagamento {paymentRecurrenceLabel(solicitacao.paymentRecurrence).toLowerCase()}
+          </span>
+        )}
         <span>Publicada em {formatDate(solicitacao.createdAt)}</span>
       </div>
 
@@ -105,6 +118,12 @@ function SolicitacaoCard({ solicitacao, mode, onVisualizar, onAssumir, onConvers
           <Person sx={{ fontSize: 14 }} className="text-virla-roxo/60" />
           Família: <span className="font-semibold">{solicitacao.familiar.name}</span>
         </p>
+      )}
+
+      {nextPaymentDate && (
+        <Alert tone="info">
+          Próximo recebimento previsto para {formatDateOnly(nextPaymentDate)} ({paymentCountdownLabel(nextPaymentDate)}), após o familiar assinar o relatório.
+        </Alert>
       )}
 
       <div className="pt-2 border-t border-virla-roxo/10 flex flex-wrap gap-2">
@@ -330,6 +349,7 @@ export default function SolicitacoesCuidador() {
           onCreated={() => setMessage({ type: 'success', text: 'Relatório enviado. O familiar precisa revisar e assinar antes do pagamento.' })}
         />
       )}
+
     </div>
   )
 }

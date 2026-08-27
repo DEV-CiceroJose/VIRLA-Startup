@@ -198,7 +198,7 @@ export default function Pagamento() {
             <h1 className="text-2xl font-display font-black text-virla-roxo">
               Pagamento via PIX
             </h1>
-            <p className="text-virla-texto/50 text-sm">Valor com taxas da plataforma (7% + R$ 0,80)</p>
+            <p className="text-virla-texto/50 text-sm">Valor do serviço, sem taxa adicional da VIRLA</p>
           </div>
         </div>
 

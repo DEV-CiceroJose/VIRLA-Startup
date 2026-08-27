@@ -4,7 +4,10 @@ import Close from '@mui/icons-material/Close'
 import Assignment from '@mui/icons-material/Assignment'
 import api from '../../services/api'
 import { Alert, Button, Field } from '../ui'
-import { calculateChargeTotalCents, formatCentsBRL, reaisToCents } from '../../utils/paymentFees'
+import { formatCentsBRL } from '../../utils/paymentFees'
+import { formatDateOnly, formatHourly } from '../../utils/formatters'
+import { paymentRecurrenceLabel } from '../../constants/solicitacaoOptions'
+import { calculateContractAmountCents, calculatePaymentDueDate, paymentCountdownLabel } from '../../utils/paymentSchedule'
 
 function localDate() {
   const now = new Date()
@@ -20,18 +23,25 @@ export default function ServiceReportModal({ solicitacao, onClose, onCreated, ap
     activities: '',
     observations: '',
     incidents: '',
-    baseReais: '',
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const set = (key) => (event) => setForm((current) => ({ ...current, [key]: event.target.value }))
-  const baseAmount = useMemo(() => reaisToCents(form.baseReais), [form.baseReais])
-  const fees = baseAmount ? calculateChargeTotalCents(baseAmount) : null
+  const contractAmount = useMemo(() => calculateContractAmountCents({
+    hourlyRate: solicitacao.valorHora,
+    startedAt: form.startedAt,
+    endedAt: form.endedAt,
+  }), [form.endedAt, form.startedAt, solicitacao.valorHora])
+  const paymentDueDate = useMemo(() => calculatePaymentDueDate({
+    contractStartDate: solicitacao.dataInicio,
+    serviceDate: form.serviceDate,
+    paymentRecurrence: solicitacao.paymentRecurrence,
+  }), [form.serviceDate, solicitacao.dataInicio, solicitacao.paymentRecurrence])
 
   async function handleSubmit(event) {
     event.preventDefault()
-    if (!baseAmount) {
-      setError('Informe o valor do serviço.')
+    if (!contractAmount || !paymentDueDate) {
+      setError('Confira os horários e os dados de pagamento definidos na solicitação.')
       return
     }
     setLoading(true)
@@ -45,7 +55,6 @@ export default function ServiceReportModal({ solicitacao, onClose, onCreated, ap
         activities: form.activities,
         observations: form.observations,
         incidents: form.incidents,
-        baseAmount,
       })
       onCreated?.(response.data.report)
       onClose()
@@ -73,20 +82,21 @@ export default function ServiceReportModal({ solicitacao, onClose, onCreated, ap
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <Field label="Data do serviço" required type="date" max={localDate()} value={form.serviceDate} onChange={set('serviceDate')} />
+            <Field label="Data do serviço" required type="date" min={String(solicitacao.dataInicio ?? '').slice(0, 10) || undefined} max={localDate()} value={form.serviceDate} onChange={set('serviceDate')} />
             <Field label="Início" required type="time" value={form.startedAt} onChange={set('startedAt')} />
             <Field label="Término" required type="time" value={form.endedAt} onChange={set('endedAt')} />
           </div>
           <Field label="Atividades realizadas" required as="textarea" rows={5} maxLength={4000} value={form.activities} onChange={set('activities')} placeholder="Descreva alimentação, medicação, higiene, acompanhamento e demais atividades..." />
           <Field label="Observações" as="textarea" rows={3} maxLength={3000} value={form.observations} onChange={set('observations')} placeholder="Como a pessoa assistida passou o dia?" />
           <Field label="Intercorrências" as="textarea" rows={3} maxLength={3000} value={form.incidents} onChange={set('incidents')} placeholder="Registre qualquer ocorrência relevante ou informe que não houve." />
-          <Field label="Valor do serviço" required inputMode="decimal" value={form.baseReais} onChange={set('baseReais')} placeholder="Ex.: 150,00" />
-
-          {fees && (
+          {contractAmount && paymentDueDate && (
             <div className="rounded-xl border border-virla-roxo/10 bg-virla-roxo/5 p-4 text-sm space-y-1">
-              <p className="flex justify-between"><span>Cuidador recebe</span><strong>{formatCentsBRL(fees.baseCents)}</strong></p>
-              <p className="flex justify-between"><span>Taxa VIRLA (7% + R$ 0,80)</span><span>{formatCentsBRL(fees.platformFeeCents + fees.fixedFeeCents)}</span></p>
-              <p className="flex justify-between border-t border-virla-roxo/10 pt-2 text-virla-roxo"><strong>Total do familiar</strong><strong>{formatCentsBRL(fees.totalCents)}</strong></p>
+              <p className="flex justify-between"><span>Valor do contrato</span><strong>{formatHourly(solicitacao.valorHora)}</strong></p>
+              <p className="flex justify-between"><span>Período informado</span><strong>{form.startedAt}–{form.endedAt}</strong></p>
+              <p className="flex justify-between"><span>Recorrência</span><strong>{paymentRecurrenceLabel(solicitacao.paymentRecurrence)}</strong></p>
+              <p className="flex justify-between"><span>Previsão do recebimento</span><strong>{formatDateOnly(paymentDueDate)} ({paymentCountdownLabel(paymentDueDate)})</strong></p>
+              <p className="flex justify-between border-t border-virla-roxo/10 pt-2 text-virla-roxo"><strong>Valor deste relatório</strong><strong>{formatCentsBRL(contractAmount)}</strong></p>
+              <p className="text-xs text-virla-muted">Calculado automaticamente pelo contrato. Não há taxa adicional da VIRLA.</p>
             </div>
           )}
 

@@ -1,4 +1,5 @@
 import crypto from 'crypto'
+import { paymentIsDue } from '../utils/paymentSchedule.js'
 
 export class ServiceReportError extends Error {
   constructor(code, message, statusCode = 422) {
@@ -21,6 +22,9 @@ export function canonicalReportSnapshot(report) {
     activities: report.activities,
     observations: report.observations ?? '',
     incidents: report.incidents ?? '',
+    contractHourlyRate: report.contractHourlyRate,
+    paymentRecurrence: report.paymentRecurrence,
+    paymentDueDate: report.paymentDueDate,
     baseAmount: report.baseAmount,
     platformFeeCents: report.platformFeeCents,
     fixedFeeCents: report.fixedFeeCents,
@@ -72,6 +76,14 @@ export function assertCheckoutEligible(report, familiarId) {
     throw new ServiceReportError(
       'REPORT_INTEGRITY_INVALID',
       'O conteúdo do relatório não corresponde ao documento assinado.',
+      409,
+    )
+  }
+  if (!paymentIsDue(report.paymentDueDate)) {
+    const dueDate = new Date(`${report.paymentDueDate}T12:00:00`).toLocaleDateString('pt-BR')
+    throw new ServiceReportError(
+      'PAYMENT_NOT_DUE',
+      `O relatório está assinado, mas o pagamento deste contrato só estará disponível em ${dueDate}.`,
       409,
     )
   }

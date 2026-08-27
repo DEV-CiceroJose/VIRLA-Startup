@@ -47,6 +47,11 @@ export function buildRecipientAccountParams(user) {
       },
     },
     configuration: {
+      merchant: {
+        capabilities: {
+          card_payments: { requested: true },
+        },
+      },
       recipient: {
         capabilities: {
           stripe_balance: { stripe_transfers: { requested: true } },
@@ -54,7 +59,7 @@ export function buildRecipientAccountParams(user) {
       },
     },
     metadata: { virlaUserId: user.id, virlaRole: 'CUIDADOR' },
-    include: ['configuration.recipient', 'defaults', 'requirements'],
+    include: ['configuration.merchant', 'configuration.recipient', 'defaults', 'requirements'],
   }
 }
 
@@ -69,7 +74,7 @@ export async function createRecipientOnboardingLink(accountId) {
     use_case: {
       type: 'account_onboarding',
       account_onboarding: {
-        configurations: ['recipient'],
+        configurations: ['merchant', 'recipient'],
         collection_options: { fields: 'eventually_due', future_requirements: 'include' },
         refresh_url: frontendUrl('/perfil?stripe=refresh'),
         return_url: frontendUrl('/perfil?stripe=return'),
@@ -80,14 +85,16 @@ export async function createRecipientOnboardingLink(accountId) {
 
 export async function getRecipientAccountStatus(accountId) {
   const account = await getStripeClient().v2.core.accounts.retrieve(accountId, {
-    include: ['configuration.recipient', 'requirements', 'future_requirements', 'defaults'],
+    include: ['configuration.merchant', 'configuration.recipient', 'requirements', 'future_requirements', 'defaults'],
   })
+  const cardPaymentsStatus = account.configuration?.merchant?.capabilities?.card_payments?.status ?? 'pending'
   const balance = account.configuration?.recipient?.capabilities?.stripe_balance
   const transferStatus = balance?.stripe_transfers?.status ?? 'pending'
   const payoutStatus = balance?.payouts?.status ?? 'pending'
   return {
     account,
-    ready: transferStatus === 'active' && payoutStatus === 'active',
+    ready: cardPaymentsStatus === 'active' && transferStatus === 'active' && payoutStatus === 'active',
+    cardPaymentsStatus,
     transferStatus,
     payoutStatus,
   }
@@ -113,6 +120,7 @@ export function buildCheckoutSessionParams({ report, familiar, connectedAccountI
       },
     }],
     payment_intent_data: {
+      on_behalf_of: connectedAccountId,
       application_fee_amount: report.totalAmount - report.baseAmount,
       transfer_data: { destination: connectedAccountId },
       metadata: {

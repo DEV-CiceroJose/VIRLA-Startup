@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { buildCheckoutSessionParams, buildRecipientAccountParams, STRIPE_API_VERSION } from '../src/services/stripeService.js'
 
-test('conta Connect usa Accounts v2 explícito para destinatário de marketplace', () => {
+test('conta Connect usa Accounts v2 com capacidades exigidas para destination charges', () => {
   const params = buildRecipientAccountParams({
     id: 'caregiver_1234567890',
     name: 'Cuidadora Teste',
@@ -12,8 +12,9 @@ test('conta Connect usa Accounts v2 explícito para destinatário de marketplace
   assert.equal(params.dashboard, 'express')
   assert.equal(params.defaults.responsibilities.fees_collector, 'application')
   assert.equal(params.defaults.responsibilities.losses_collector, 'application')
+  assert.equal(params.configuration.merchant.capabilities.card_payments.requested, true)
   assert.equal(params.configuration.recipient.capabilities.stripe_balance.stripe_transfers.requested, true)
-  assert.equal('merchant' in params.configuration, false)
+  assert.deepEqual(params.include, ['configuration.merchant', 'configuration.recipient', 'defaults', 'requirements'])
   assert.equal('type' in params, false)
 })
 
@@ -37,9 +38,9 @@ test('Checkout só descreve cobrança de destino e preserva o valor base do cuid
   assert.equal(params.line_items[0].price_data.currency, 'brl')
   assert.equal(params.line_items[0].price_data.unit_amount, 10780)
   assert.equal(params.payment_intent_data.application_fee_amount, 780)
+  assert.equal(params.payment_intent_data.on_behalf_of, 'acct_cuidador_teste')
   assert.equal(params.payment_intent_data.transfer_data.destination, 'acct_cuidador_teste')
   assert.equal(params.metadata.reportHash, report.reportHash)
   assert.equal('payment_method_types' in params, false)
   assert.match(params.integration_identifier, /^virla_service_[A-Za-z]{8}$/)
 })
-

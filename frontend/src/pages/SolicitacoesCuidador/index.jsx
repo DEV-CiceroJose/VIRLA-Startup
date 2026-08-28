@@ -186,6 +186,7 @@ export default function SolicitacoesCuidador() {
   const [message, setMessage] = useState({ type: '', text: '' })
   const [busyId, setBusyId] = useState(null)
   const [reporting, setReporting] = useState(null)
+  const [matchPolicy, setMatchPolicy] = useState(null)
 
   const meuId = localStorage.getItem('meuId')
 
@@ -193,9 +194,11 @@ export default function SolicitacoesCuidador() {
     try {
       const res = await api.get('/solicitacoes/disponiveis')
       setSolicitacoes(res.data.solicitacoes ?? [])
+      setMatchPolicy(res.data.matchPolicy ?? null)
     } catch (err) {
       const msg = err?.response?.data?.msg || 'Erro ao carregar solicitações.'
       setMessage({ type: 'error', text: msg })
+      setMatchPolicy(null)
     } finally {
       setLoading(false)
     }
@@ -309,6 +312,12 @@ export default function SolicitacoesCuidador() {
             </button>
           ))}
         </div>
+
+        {tab === 'disponiveis' && matchPolicy?.fallbackCount > 0 && (
+          <Alert tone="warning" title="Poucas solicitações com 60% ou mais">
+            Mostramos também {matchPolicy.fallbackCount} {matchPolicy.fallbackCount === 1 ? 'alternativa' : 'alternativas'} abaixo de 60%, priorizando as mais próximas do seu perfil.
+          </Alert>
+        )}
 
         {lista.length === 0 ? (
           <EmptyState

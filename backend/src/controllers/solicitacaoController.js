@@ -3,7 +3,10 @@ import { getUserById, listByIds } from '../repositories/userRepository.js'
 import { logger } from '../lib/logger.js'
 import * as notificationService from '../services/notificationService.js'
 import { getBySolicitacaoId as getServiceReportBySolicitacaoId } from '../repositories/serviceReportRepository.js'
-import { scoreCaregiverForSolicitacao } from '../services/matchingService.js'
+import {
+  scoreCaregiverForSolicitacao,
+  selectSolicitacoesForCaregiver,
+} from '../services/matchingService.js'
 
 /** Projeção do familiar embutido (substitui o join `familiar` do Prisma). */
 function pickFamiliar(user) {
@@ -304,12 +307,13 @@ export const listAvailableSolicitacoes = async (req, res) => {
     const familiarById = new Map(
       (await listByIds([...new Set(base.map((s) => s.familiarId))])).map((u) => [u.id, u])
     )
-    const solicitacoes = base.map((s) => ({
+    const scored = base.map((s) => ({
       ...s,
       familiar: pickFamiliar(familiarById.get(s.familiarId)),
       match: scoreCaregiverForSolicitacao(caregiver, s),
-    })).sort((a, b) => b.match.score - a.match.score)
-    return res.status(200).json({ solicitacoes })
+    }))
+    const { solicitacoes, policy: matchPolicy } = selectSolicitacoesForCaregiver(scored, caregiverId)
+    return res.status(200).json({ solicitacoes, matchPolicy })
   } catch (err) {
     logger.error('solicitacao:list_available_failed', {
       error: err.message,

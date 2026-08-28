@@ -14,6 +14,14 @@ O match é uma pontuação determinística e explicável entre um perfil de cuid
 
 O resultado final fica entre 0 e 100. A resposta da API inclui o percentual, o nível, as razões positivas, pontos que precisam ser confirmados e a versão do cálculo.
 
+## Regra de visibilidade para cuidadores
+
+- Oportunidades novas com 60% ou mais aparecem normalmente.
+- Oportunidades novas abaixo de 60% ficam ocultas quando já existem pelo menos 5 opções com boa compatibilidade.
+- Se houver menos de 5 opções com 60% ou mais, a lista é completada até 5 com as melhores alternativas abaixo do limiar.
+- Alternativas liberadas por baixa oferta recebem um aviso explícito na interface.
+- Solicitações já visualizadas ou assumidas permanecem acessíveis independentemente da pontuação.
+
 ## Proteções
 
 - Idade, CPF, e-mail e outros dados pessoais não participam da pontuação.

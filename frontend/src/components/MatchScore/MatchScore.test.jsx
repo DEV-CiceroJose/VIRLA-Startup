@@ -29,4 +29,10 @@ describe('MatchScore', () => {
     const { container } = render(<MatchScore match={null} />)
     expect(container).toBeEmptyDOMElement()
   })
+
+  it('identifica uma alternativa liberada por haver pouca oferta', () => {
+    render(<MatchScore match={{ ...match, score: 55, level: 'BOA', isFallback: true }} />)
+    expect(screen.getByText('Alternativa por baixa oferta')).toBeInTheDocument()
+    expect(screen.getByText(/poucas solicitações com pelo menos 60%/i)).toBeInTheDocument()
+  })
 })

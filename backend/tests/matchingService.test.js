@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import {
   careTypesToSpecialties,
   rankCaregiversForSolicitacao,
+  selectSolicitacoesForCaregiver,
   scoreCaregiverForSolicitacao,
 } from '../src/services/matchingService.js'
 
@@ -92,4 +93,51 @@ test('solicitação de cuidado geral não perde os pontos de especialidade', () 
 
   assert.equal(match.score, 100)
   assert.ok(match.reasons.some((reason) => reason.code === 'GENERAL_CARE' && reason.points === 35))
+})
+
+test('oculta matches abaixo de 60 quando já existem cinco boas oportunidades', () => {
+  const scored = [90, 82, 75, 68, 60, 55, 40].map((score, index) => ({
+    id: `solicitacao-${index}`,
+    viewedByIds: [],
+    match: { score },
+  }))
+
+  const result = selectSolicitacoesForCaregiver(scored, 'caregiver-completo')
+
+  assert.deepEqual(result.solicitacoes.map((item) => item.match.score), [90, 82, 75, 68, 60])
+  assert.equal(result.policy.fallbackCount, 0)
+  assert.equal(result.policy.hiddenCount, 2)
+})
+
+test('completa até cinco oportunidades com as melhores alternativas abaixo de 60', () => {
+  const scored = [88, 70, 58, 45, 30, 20, 10].map((score, index) => ({
+    id: `solicitacao-${index}`,
+    viewedByIds: [],
+    match: { score },
+  }))
+
+  const result = selectSolicitacoesForCaregiver(scored, 'caregiver-completo')
+
+  assert.deepEqual(result.solicitacoes.map((item) => item.match.score), [88, 70, 58, 45, 30])
+  assert.deepEqual(
+    result.solicitacoes.filter((item) => item.match.isFallback).map((item) => item.match.score),
+    [58, 45, 30],
+  )
+  assert.equal(result.policy.hiddenCount, 2)
+})
+
+test('mantém acessível uma solicitação já visualizada mesmo abaixo do limiar', () => {
+  const caregiverId = 'caregiver-completo'
+  const scored = [90, 85, 80, 75, 70].map((score, index) => ({
+    id: `preferida-${index}`,
+    viewedByIds: [],
+    match: { score },
+  }))
+  scored.push({ id: 'ja-visualizada', viewedByIds: [caregiverId], match: { score: 20 } })
+
+  const result = selectSolicitacoesForCaregiver(scored, caregiverId)
+  const retained = result.solicitacoes.find((item) => item.id === 'ja-visualizada')
+
+  assert.ok(retained)
+  assert.equal(retained.match.isFallback, undefined)
 })

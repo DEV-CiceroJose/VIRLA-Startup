@@ -13,6 +13,11 @@ const CARE_TYPE_TO_SPECIALTY = {
   pernoite: 'PERNOITE',
 }
 
+export const CAREGIVER_MATCH_VISIBILITY = Object.freeze({
+  threshold: 60,
+  minimumVisible: 5,
+})
+
 function normalize(value) {
   return String(value ?? '')
     .normalize('NFD')
@@ -180,4 +185,55 @@ export function rankCaregiversForSolicitacao(caregivers, solicitacao) {
       match: scoreCaregiverForSolicitacao(caregiver, solicitacao),
     }))
     .sort((a, b) => b.match.score - a.match.score || String(a.caregiver.name).localeCompare(String(b.caregiver.name), 'pt-BR'))
+}
+
+/**
+ * Mantém oportunidades novas abaixo do limiar fora da listagem principal.
+ * Quando há pouca oferta compatível, completa a vitrine até o mínimo definido
+ * com as melhores alternativas. Itens já visualizados ou assumidos nunca são
+ * ocultados, pois fazem parte do fluxo ativo do cuidador.
+ */
+export function selectSolicitacoesForCaregiver(
+  scoredSolicitacoes,
+  caregiverId,
+  policy = CAREGIVER_MATCH_VISIBILITY,
+) {
+  const threshold = Number(policy?.threshold ?? CAREGIVER_MATCH_VISIBILITY.threshold)
+  const minimumVisible = Math.max(0, Number(policy?.minimumVisible ?? CAREGIVER_MATCH_VISIBILITY.minimumVisible))
+  const sorted = [...(Array.isArray(scoredSolicitacoes) ? scoredSolicitacoes : [])]
+    .sort((a, b) => Number(b?.match?.score ?? 0) - Number(a?.match?.score ?? 0))
+
+  const interacted = []
+  const discovery = []
+  for (const solicitacao of sorted) {
+    const wasViewed = Array.isArray(solicitacao?.viewedByIds)
+      && solicitacao.viewedByIds.includes(caregiverId)
+    const wasAssigned = solicitacao?.assignedCaregiverId === caregiverId
+    if (wasViewed || wasAssigned) interacted.push(solicitacao)
+    else discovery.push(solicitacao)
+  }
+
+  const preferred = discovery.filter((item) => Number(item?.match?.score ?? 0) >= threshold)
+  const belowThreshold = discovery.filter((item) => Number(item?.match?.score ?? 0) < threshold)
+  const fallbackCount = Math.min(
+    belowThreshold.length,
+    Math.max(0, minimumVisible - preferred.length),
+  )
+  const fallback = belowThreshold.slice(0, fallbackCount).map((item) => ({
+    ...item,
+    match: { ...item.match, isFallback: true },
+  }))
+  const solicitacoes = [...interacted, ...preferred, ...fallback]
+    .sort((a, b) => Number(b?.match?.score ?? 0) - Number(a?.match?.score ?? 0))
+
+  return {
+    solicitacoes,
+    policy: {
+      threshold,
+      minimumVisible,
+      preferredCount: preferred.length,
+      fallbackCount,
+      hiddenCount: belowThreshold.length - fallbackCount,
+    },
+  }
 }

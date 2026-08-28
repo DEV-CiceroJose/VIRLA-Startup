@@ -21,11 +21,12 @@ export default function MatchScore({ match, compact = false }) {
   const score = Math.max(0, Math.min(100, Number(match.score)))
   const reasons = Array.isArray(match.reasons) ? match.reasons : []
   const attention = Array.isArray(match.attention) ? match.attention : []
+  const isFallback = match.isFallback === true
 
   if (compact) {
     return (
       <Badge tone={LEVEL_TONE[match.level] ?? 'gray'} icon={AutoAwesome}>
-        {score}% compatível
+        {score}% compatível{isFallback ? ' · alternativa' : ''}
       </Badge>
     )
   }
@@ -37,9 +38,12 @@ export default function MatchScore({ match, compact = false }) {
           <AutoAwesome sx={{ fontSize: 18 }} />
           <span>{score}% compatível</span>
         </div>
-        <Badge tone={LEVEL_TONE[match.level] ?? 'gray'}>
-          {LEVEL_LABEL[match.level] ?? 'Compatibilidade calculada'}
-        </Badge>
+        <div className="flex flex-wrap justify-end gap-1.5">
+          {isFallback && <Badge tone="amber">Alternativa por baixa oferta</Badge>}
+          <Badge tone={LEVEL_TONE[match.level] ?? 'gray'}>
+            {LEVEL_LABEL[match.level] ?? 'Compatibilidade calculada'}
+          </Badge>
+        </div>
       </div>
       {reasons.length > 0 && (
         <ul className="space-y-1 text-xs text-virla-texto/75">
@@ -55,6 +59,11 @@ export default function MatchScore({ match, compact = false }) {
         <p className="flex items-start gap-1.5 text-[11px] text-amber-800">
           <InfoOutlined sx={{ fontSize: 15 }} className="mt-0.5 shrink-0" />
           {attention[0]}
+        </p>
+      )}
+      {isFallback && (
+        <p className="text-[11px] font-semibold text-amber-800">
+          Exibida porque há poucas solicitações com pelo menos 60% de compatibilidade.
         </p>
       )}
       <p className="text-[10px] text-virla-muted">Sugestão baseada no perfil e na solicitação. Confirme os detalhes antes de contratar.</p>

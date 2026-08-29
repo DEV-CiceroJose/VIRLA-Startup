@@ -39,21 +39,30 @@ describe('Página Minhas Solicitações — form completo', () => {
     await user.type(screen.getByLabelText(/Título/i), 'Cuidado para minha avó')
     await user.type(screen.getByLabelText(/Descrição/i), 'Preciso de cuidado durante o dia todo.')
     await user.type(screen.getByLabelText(/Cidade/i), 'Fortaleza')
-    await user.selectOptions(screen.getByLabelText(/Estado/i), 'CE')
-    await user.type(screen.getByLabelText(/Data de início/i), '2026-12-01')
+    await user.click(screen.getByLabelText(/Estado/i))
+    await user.click(screen.getByRole('option', { name: 'Ceará' }))
+    await user.click(screen.getByLabelText(/Data de início/i))
+    await user.click(screen.getByRole('button', { name: 'Em 7 dias' }))
+    await user.click(screen.getByRole('button', { name: /Aplicar data/i }))
     await user.type(screen.getByLabelText(/Valor\/hora/i), '4500')
-    await user.selectOptions(screen.getByLabelText(/Turno/i), 'MANHA')
-    await user.selectOptions(screen.getByLabelText(/Frequência/i), 'SEMANAL')
-    await user.selectOptions(screen.getByLabelText(/Recorrência do pagamento/i), 'MENSAL')
+    await user.click(screen.getByLabelText(/Turno/i))
+    await user.click(screen.getByRole('option', { name: 'Manhã' }))
+    await user.click(screen.getByLabelText(/Frequência/i))
+    await user.click(screen.getByRole('option', { name: 'Semanal' }))
+    await user.click(screen.getByLabelText(/Recorrência do pagamento/i))
+    await user.click(screen.getByRole('option', { name: 'Mensal' }))
 
     await user.click(screen.getByRole('button', { name: /Publicar solicitação/i }))
 
     await waitFor(() => expect(api.post).toHaveBeenCalledTimes(1))
     const [, body] = api.post.mock.calls[0]
+    const start = new Date()
+    start.setDate(start.getDate() + 7)
+    const expectedStart = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}-${String(start.getDate()).padStart(2, '0')}`
     expect(body).toMatchObject({
       cidade: 'Fortaleza',
       estado: 'CE',
-      dataInicio: '2026-12-01',
+      dataInicio: expectedStart,
       valorHora: 45,
       turno: 'MANHA',
       frequencia: 'SEMANAL',

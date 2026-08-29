@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import Close from '@mui/icons-material/Close'
 import Assignment from '@mui/icons-material/Assignment'
 import api from '../../services/api'
-import { Alert, Button, Field } from '../ui'
+import { Alert, Button, DatePickerField, Field, TimePickerField } from '../ui'
 import { formatCentsBRL } from '../../utils/paymentFees'
 import { formatDateOnly, formatHourly } from '../../utils/formatters'
 import { paymentRecurrenceLabel } from '../../constants/solicitacaoOptions'
@@ -16,8 +16,11 @@ function localDate() {
 }
 
 export default function ServiceReportModal({ solicitacao, onClose, onCreated, apiClient = api }) {
+  const contractStartDate = String(solicitacao.dataInicio ?? '').slice(0, 10)
+  const latestServiceDate = localDate()
+  const reportIsAvailable = !contractStartDate || contractStartDate <= latestServiceDate
   const [form, setForm] = useState({
-    serviceDate: localDate(),
+    serviceDate: reportIsAvailable ? latestServiceDate : '',
     startedAt: '08:00',
     endedAt: '16:00',
     activities: '',
@@ -40,6 +43,18 @@ export default function ServiceReportModal({ solicitacao, onClose, onCreated, ap
 
   async function handleSubmit(event) {
     event.preventDefault()
+    if (!reportIsAvailable) {
+      setError(`Este relatório poderá ser preenchido a partir de ${formatDateOnly(contractStartDate)}.`)
+      return
+    }
+    if (!form.serviceDate || (contractStartDate && form.serviceDate < contractStartDate) || form.serviceDate > latestServiceDate) {
+      setError('Escolha uma data dentro do período válido do contrato.')
+      return
+    }
+    if (!form.startedAt || !form.endedAt || form.endedAt <= form.startedAt) {
+      setError('O horário de término precisa ser posterior ao horário de início.')
+      return
+    }
     if (!contractAmount || !paymentDueDate) {
       setError('Confira os horários e os dados de pagamento definidos na solicitação.')
       return
@@ -81,10 +96,31 @@ export default function ServiceReportModal({ solicitacao, onClose, onCreated, ap
         </Alert>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {!reportIsAvailable && (
+            <Alert tone="warning">
+              O contrato começa em {formatDateOnly(contractStartDate)}. O relatório ficará disponível nessa data; assim evitamos registrar um serviço antes do início combinado.
+            </Alert>
+          )}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <Field label="Data do serviço" required type="date" min={String(solicitacao.dataInicio ?? '').slice(0, 10) || undefined} max={localDate()} value={form.serviceDate} onChange={set('serviceDate')} />
-            <Field label="Início" required type="time" value={form.startedAt} onChange={set('startedAt')} />
-            <Field label="Término" required type="time" value={form.endedAt} onChange={set('endedAt')} />
+            <DatePickerField
+              label="Data do serviço"
+              required
+              min={reportIsAvailable ? contractStartDate || undefined : undefined}
+              max={reportIsAvailable ? latestServiceDate : undefined}
+              value={form.serviceDate}
+              onChange={set('serviceDate')}
+              disabled={!reportIsAvailable}
+              placeholder={reportIsAvailable ? 'Escolha a data' : 'Aguarde o contrato'}
+            />
+            <TimePickerField label="Início" required value={form.startedAt} onChange={set('startedAt')} disabled={!reportIsAvailable} />
+            <TimePickerField
+              label="Término"
+              required
+              value={form.endedAt}
+              onChange={set('endedAt')}
+              disabled={!reportIsAvailable}
+              error={form.endedAt && form.startedAt && form.endedAt <= form.startedAt ? 'Deve ser após o início.' : ''}
+            />
           </div>
           <Field label="Atividades realizadas" required as="textarea" rows={5} maxLength={4000} value={form.activities} onChange={set('activities')} placeholder="Descreva alimentação, medicação, higiene, acompanhamento e demais atividades..." />
           <Field label="Observações" as="textarea" rows={3} maxLength={3000} value={form.observations} onChange={set('observations')} placeholder="Como a pessoa assistida passou o dia?" />
@@ -103,7 +139,7 @@ export default function ServiceReportModal({ solicitacao, onClose, onCreated, ap
           {error && <Alert tone="error">{error}</Alert>}
           <div className="flex gap-3 justify-end">
             <Button type="button" variant="secondary" onClick={onClose}>Cancelar</Button>
-            <Button type="submit" icon={Assignment} loading={loading}>Enviar para assinatura</Button>
+            <Button type="submit" icon={Assignment} loading={loading} disabled={!reportIsAvailable}>Enviar para assinatura</Button>
           </div>
         </form>
       </div>

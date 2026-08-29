@@ -64,7 +64,8 @@ describe('Página de Cadastro', () => {
     expect(screen.getByLabelText('Conselho')).toBeInTheDocument()
     expect(screen.getByPlaceholderText('Número do registro')).toBeInTheDocument()
     // troca para FAMILIAR → campos somem
-    await user.selectOptions(screen.getByLabelText('Tipo de conta'), 'FAMILIAR')
+    await user.click(screen.getByLabelText('Tipo de conta'))
+    await user.click(screen.getByRole('option', { name: 'Familiar' }))
     expect(screen.queryByLabelText('Conselho')).not.toBeInTheDocument()
     expect(screen.queryByPlaceholderText('Número do registro')).not.toBeInTheDocument()
   })
@@ -76,7 +77,8 @@ describe('Página de Cadastro', () => {
     await user.type(screen.getByPlaceholderText('Senha (mín. 6 caracteres)'), 'segredo1')
     await user.type(screen.getByPlaceholderText('Repita a senha'), 'segredo1')
     fireEvent.change(document.querySelector('input[type="date"]'), { target: { value: '1994-05-10' } })
-    await user.selectOptions(screen.getByLabelText('Conselho'), 'COREN')
+    await user.click(screen.getByLabelText('Conselho'))
+    await user.click(screen.getByRole('option', { name: /COREN/ }))
     await user.click(screen.getByRole('button', { name: /criar conta/i }))
 
     expect(toast.warning).toHaveBeenCalledWith(

@@ -15,7 +15,7 @@ import Payments from '@mui/icons-material/Payments'
 import Assignment from '@mui/icons-material/Assignment'
 import api from '../../services/api'
 import { PageLoader } from '../../components/Spinner'
-import { Button, Card, Alert, Badge, EmptyState, Field, ConfirmDialog } from '../../components/ui'
+import { Button, Card, Alert, Badge, EmptyState, Field, DatePickerField, ConfirmDialog } from '../../components/ui'
 import { STATES } from '../../constants/states'
 import { PAYMENT_RECURRENCES, TURNOS, FREQUENCIAS, turnoLabel, frequenciaLabel, paymentRecurrenceLabel } from '../../constants/solicitacaoOptions'
 import { maskCurrencyInput, parseCurrencyInput, formatHourly, formatDateOnly } from '../../utils/formatters'
@@ -192,10 +192,9 @@ function SolicitacaoForm({ initial = FORM_EMPTY, isEditing = false, onSave, onCa
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field
+          <DatePickerField
             label="Data de início"
             required
-            type="date"
             min={todayISO()}
             value={form.dataInicio}
             onChange={set('dataInicio')}

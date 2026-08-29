@@ -14,7 +14,7 @@ import { calculateAge } from '../../utils/dateUtils'
 import { formatHourly } from '../../utils/formatters'
 import { PageLoader, LoadingOverlay } from '../../components/Spinner'
 import VerifiedSeal from '../../components/VerifiedSeal'
-import { EmptyState, Alert } from '../../components/ui'
+import { EmptyState, Alert, Field } from '../../components/ui'
 import { specialtyLabel } from '../../constants/specialties'
 import MatchScore from '../../components/MatchScore'
 
@@ -299,20 +299,18 @@ export default function Feed() {
           )}
           {solicitacoes.length > 0 && (
             <div className="mt-5 max-w-xl rounded-2xl border border-violet-200 bg-white/90 p-4 shadow-sm">
-              <label htmlFor="match-solicitacao" className="block text-xs font-bold uppercase tracking-wide text-virla-roxo">
-                Match inteligente para
-              </label>
-              <select
+              <Field
+                label="Match inteligente para"
                 id="match-solicitacao"
                 value={selectedSolicitacaoId}
                 onChange={(event) => {
                   setSelectedSolicitacaoId(event.target.value)
                   setPage(1)
                 }}
-                className="mt-2 w-full rounded-xl border border-virla-roxo/20 bg-white px-3 py-2.5 text-sm font-semibold text-virla-texto focus:outline-none focus:ring-2 focus:ring-virla-roxo/30"
+                as="select"
               >
                 {solicitacoes.map((item) => <option key={item.id} value={item.id}>{item.titulo}</option>)}
-              </select>
+              </Field>
               <p className="mt-2 text-xs text-virla-muted">
                 {matchContext ? 'Profissionais ordenados por especialidade, localização, valor e qualidade do perfil.' : 'Escolha uma solicitação para calcular a compatibilidade.'}
               </p>

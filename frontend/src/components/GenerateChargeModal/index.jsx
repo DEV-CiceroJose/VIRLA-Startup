@@ -95,23 +95,15 @@ export default function GenerateChargeModal({ familiarId, familiarName, onClose,
 
           {fees && (
             <div className="text-sm bg-virla-roxo/5 rounded-xl p-3 space-y-1 border border-virla-roxo/10">
-              {/* Total = x + (x * 0.07) + 0.80 — x = valor base (R$) informado pelo cuidador */}
               <p className="flex justify-between">
-                <span>Valor base</span>
+                <span>Valor do serviço</span>
                 <span>{formatCentsBRL(fees.baseCents)}</span>
-              </p>
-              <p className="flex justify-between text-virla-texto/70">
-                <span>Taxa plataforma (7%)</span>
-                <span>{formatCentsBRL(fees.platformFeeCents)}</span>
-              </p>
-              <p className="flex justify-between text-virla-texto/70">
-                <span>Taxa fixa</span>
-                <span>{formatCentsBRL(fees.fixedFeeCents)}</span>
               </p>
               <p className="flex justify-between font-bold text-virla-roxo pt-1 border-t border-virla-roxo/10">
                 <span>Total a pagar</span>
                 <span>{formatCentsBRL(fees.totalCents)}</span>
               </p>
+              <p className="text-xs text-virla-muted">Sem taxa adicional da VIRLA.</p>
             </div>
           )}
 

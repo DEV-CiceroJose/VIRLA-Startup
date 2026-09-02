@@ -13,6 +13,7 @@ import { useId } from 'react'
  * (useRef) já existentes no projeto.
  */
 import { forwardRef } from 'react'
+import SelectField from './SelectField'
 
 const BASE_INPUT =
   'w-full rounded-xl border bg-white/80 text-virla-texto placeholder-virla-texto/40 text-sm ' +
@@ -37,6 +38,24 @@ const Field = forwardRef(function Field(
 ) {
   const autoId = useId()
   const id = providedId ?? autoId
+
+  if (as === 'select') {
+    return (
+      <SelectField
+        ref={ref}
+        id={id}
+        label={label}
+        icon={Icon}
+        error={error}
+        hint={hint}
+        required={required}
+        className={className}
+        {...props}
+      >
+        {children}
+      </SelectField>
+    )
+  }
   const errorId = `${id}-error`
   const hintId = `${id}-hint`
   const Component = as
@@ -86,7 +105,7 @@ const Field = forwardRef(function Field(
           aria-invalid={error ? true : undefined}
           aria-describedby={describedBy}
           className={`${BASE_INPUT} ${stateRing} ${padding} ${
-            as === 'select' ? 'appearance-none cursor-pointer' : ''
+            ''
           } ${as === 'textarea' ? 'resize-none' : ''} ${className}`}
           {...props}
         >

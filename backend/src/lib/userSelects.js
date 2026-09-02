@@ -20,6 +20,8 @@ export const USER_PUBLIC_SELECT = {
   registerNumber: true,
   hourlyRate: true,
   specialties: true,
+  availableShifts: true,
+  serviceFrequencies: true,
   approach: true,
   description: true,
   city: true,

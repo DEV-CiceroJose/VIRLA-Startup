@@ -27,9 +27,13 @@ const User              = lazy(() => import('./pages/User'))
 const Solicitacoes      = lazy(() => import('./pages/Solicitacoes'))
 const SolicitacoesCuidador = lazy(() => import('./pages/SolicitacoesCuidador'))
 const CompletarCadastro = lazy(() => import('./pages/CompletarCadastro'))
+const ReportDemo        = lazy(() => import('./pages/ReportDemo'))
+const MatchDemo         = lazy(() => import('./pages/MatchDemo'))
+
+const REPORT_DEMO_ENABLED = import.meta.env.DEV && import.meta.env.VITE_ENABLE_REPORT_DEMO === 'true'
 
 // ── Rotas que não exibem o Menu de navegação ─────────────────────────────
-const HIDDEN_MENU_ROUTES = ['/', '/login', '/cadastro', '/completar-cadastro']
+const HIDDEN_MENU_ROUTES = ['/', '/login', '/cadastro', '/completar-cadastro', '/demo-relatorio', '/demo-match']
 
 // ── Fallback exibido enquanto o chunk da página carrega ───────────────────
 function PageFallback() {
@@ -175,6 +179,8 @@ export default function AppShell() {
           <Route path="/"         element={<Landing />} />
           <Route path="/login"    element={<Login />} />
           <Route path="/cadastro" element={<Cadastro />} />
+          {REPORT_DEMO_ENABLED && <Route path="/demo-relatorio" element={<ReportDemo />} />}
+          {REPORT_DEMO_ENABLED && <Route path="/demo-match" element={<MatchDemo />} />}
 
           {/* Rotas autenticadas */}
           <Route path="/home"   element={<ProtectedRoute><Home /></ProtectedRoute>} />

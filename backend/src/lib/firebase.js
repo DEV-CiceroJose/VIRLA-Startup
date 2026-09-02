@@ -22,7 +22,13 @@ import { logger } from './logger.js'
  * Admin SDK.
  */
 
-const requiredEnvVars = ['FIREBASE_PROJECT_ID', 'FIREBASE_CLIENT_EMAIL', 'FIREBASE_PRIVATE_KEY', 'FIREBASE_DATABASE_URL']
+const USING_FIREBASE_EMULATORS = process.env.NODE_ENV !== 'production'
+  && Boolean(process.env.FIREBASE_AUTH_EMULATOR_HOST)
+  && Boolean(process.env.FIRESTORE_EMULATOR_HOST)
+
+const requiredEnvVars = USING_FIREBASE_EMULATORS
+  ? ['FIREBASE_PROJECT_ID']
+  : ['FIREBASE_PROJECT_ID', 'FIREBASE_CLIENT_EMAIL', 'FIREBASE_PRIVATE_KEY', 'FIREBASE_DATABASE_URL']
 const missing = requiredEnvVars.filter((key) => !process.env[key])
 const FIREBASE_CONFIGURED = missing.length === 0
 
@@ -42,24 +48,36 @@ let app = null
 if (FIREBASE_CONFIGURED) {
   try {
     // A private key vem do .env com "\n" literais (escapados) — precisam virar quebras de linha reais.
-    const privateKey = process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n')
+    const privateKey = USING_FIREBASE_EMULATORS
+      ? null
+      : process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n')
+
+    const firebaseOptions = USING_FIREBASE_EMULATORS
+      ? {
+          projectId: process.env.FIREBASE_PROJECT_ID,
+          databaseURL: process.env.FIREBASE_DATABASE_URL,
+        }
+      : {
+          credential: admin.credential.cert({
+            projectId: process.env.FIREBASE_PROJECT_ID,
+            clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+            privateKey,
+          }),
+          databaseURL: process.env.FIREBASE_DATABASE_URL,
+        }
 
     app =
       globalForFirebase.__firebaseAdminApp ??
-      admin.initializeApp({
-        credential: admin.credential.cert({
-          projectId: process.env.FIREBASE_PROJECT_ID,
-          clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-          privateKey,
-        }),
-        databaseURL: process.env.FIREBASE_DATABASE_URL,
-      })
+      admin.initializeApp(firebaseOptions)
 
     if (process.env.NODE_ENV !== 'production') {
       globalForFirebase.__firebaseAdminApp = app
     }
 
-    logger.info('firebase:initialized', { projectId: process.env.FIREBASE_PROJECT_ID })
+    logger.info('firebase:initialized', {
+      projectId: process.env.FIREBASE_PROJECT_ID,
+      emulators: USING_FIREBASE_EMULATORS,
+    })
   } catch (err) {
     // Credenciais presentes mas inválidas (ex.: chave privada corrompida/mal escapada).
     // Mesma filosofia: degrada só o chat, não derruba o processo.
@@ -89,6 +107,6 @@ function createUnavailableProxy(label) {
   )
 }
 
-export { FIREBASE_CONFIGURED }
+export { FIREBASE_CONFIGURED, USING_FIREBASE_EMULATORS }
 export const firebaseAdmin = app ? admin : createUnavailableProxy('Admin SDK')
 export const rtdb = app ? app.database() : createUnavailableProxy('Realtime Database')

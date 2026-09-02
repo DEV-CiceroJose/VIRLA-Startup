@@ -13,6 +13,7 @@ import messageRoutes from './src/routes/messageRoutes.js'
 import PaymentRoutes from './src/routes/paymentRoutes.js'
 import solicitacaoRoutes from './src/routes/solicitacaoRoutes.js'
 import notificationRoutes from './src/routes/notificationRoutes.js'
+import serviceReportRoutes from './src/routes/serviceReportRoutes.js'
 
 import { logger, securityLogger } from './src/lib/logger.js'
 import { requestLogger } from './src/middlewares/requestLogger.js'
@@ -99,7 +100,12 @@ app.use(cors({
   optionsSuccessStatus: 204,
 }))
 
-app.use(express.json({ limit: '4mb' }))
+app.use(express.json({
+  limit: '4mb',
+  verify: (req, _res, buffer) => {
+    if (req.originalUrl === '/webhooks/stripe') req.rawBody = Buffer.from(buffer)
+  },
+}))
 
 // ─── Logging de requisições + métricas (observabilidade) ─────────
 app.use(requestLogger)
@@ -119,6 +125,7 @@ app.use(authRoutes)
 app.use(messageRoutes)
 app.use(PaymentRoutes)
 app.use(solicitacaoRoutes)
+app.use(serviceReportRoutes)
 app.use(notificationRoutes)
 
 // ─── Global error handler ─────────────────────────────────────────

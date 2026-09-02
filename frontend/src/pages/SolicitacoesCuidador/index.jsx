@@ -11,11 +11,16 @@ import CalendarMonth from '@mui/icons-material/CalendarMonth'
 import Schedule from '@mui/icons-material/Schedule'
 import Repeat from '@mui/icons-material/Repeat'
 import Payments from '@mui/icons-material/Payments'
+import Assignment from '@mui/icons-material/Assignment'
 import api from '../../services/api'
 import { PageLoader } from '../../components/Spinner'
 import { Button, Card, Alert, Badge, EmptyState } from '../../components/ui'
-import { turnoLabel, frequenciaLabel } from '../../constants/solicitacaoOptions'
+import { turnoLabel, frequenciaLabel, paymentRecurrenceLabel } from '../../constants/solicitacaoOptions'
 import { formatHourly, formatDateOnly } from '../../utils/formatters'
+import { calculatePaymentDueDate, paymentCountdownLabel, todayDateOnly } from '../../utils/paymentSchedule'
+import ServiceReportModal from '../../components/ServiceReportModal'
+import StripeConnectCard from '../../components/StripeConnectCard'
+import MatchScore from '../../components/MatchScore'
 
 const URGENCIA_LABEL = { BAIXA: 'Baixa', MEDIA: 'Média', ALTA: 'Alta' }
 const URGENCIA_TONE = { BAIXA: 'gray', MEDIA: 'amber', ALTA: 'red' }
@@ -40,9 +45,16 @@ function formatDate(iso) {
   return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
-function SolicitacaoCard({ solicitacao, mode, onVisualizar, onAssumir, onConversar, busy }) {
+function SolicitacaoCard({ solicitacao, mode, onVisualizar, onAssumir, onConversar, onReport, busy }) {
   const local = [solicitacao.familiar?.city, solicitacao.familiar?.state].filter(Boolean).join(' - ')
   const showFamiliar = mode === 'visualizada' || mode === 'andamento'
+  const nextPaymentDate = mode === 'andamento' && solicitacao.paymentRecurrence
+    ? calculatePaymentDueDate({
+        contractStartDate: solicitacao.dataInicio,
+        serviceDate: todayDateOnly(),
+        paymentRecurrence: solicitacao.paymentRecurrence,
+      })
+    : null
 
   return (
     <Card className="p-5 space-y-3">
@@ -94,6 +106,11 @@ function SolicitacaoCard({ solicitacao, mode, onVisualizar, onAssumir, onConvers
             <Payments sx={{ fontSize: 14 }} /> {formatHourly(solicitacao.valorHora)}
           </span>
         )}
+        {solicitacao.paymentRecurrence && (
+          <span className="flex items-center gap-1 text-virla-roxo font-semibold">
+            <Payments sx={{ fontSize: 14 }} /> Pagamento {paymentRecurrenceLabel(solicitacao.paymentRecurrence).toLowerCase()}
+          </span>
+        )}
         <span>Publicada em {formatDate(solicitacao.createdAt)}</span>
       </div>
 
@@ -102,6 +119,14 @@ function SolicitacaoCard({ solicitacao, mode, onVisualizar, onAssumir, onConvers
           <Person sx={{ fontSize: 14 }} className="text-virla-roxo/60" />
           Família: <span className="font-semibold">{solicitacao.familiar.name}</span>
         </p>
+      )}
+
+      <MatchScore match={solicitacao.match} />
+
+      {nextPaymentDate && (
+        <Alert tone="info">
+          Próximo recebimento previsto para {formatDateOnly(nextPaymentDate)} ({paymentCountdownLabel(nextPaymentDate)}), após o familiar assinar o relatório.
+        </Alert>
       )}
 
       <div className="pt-2 border-t border-virla-roxo/10 flex flex-wrap gap-2">
@@ -121,9 +146,14 @@ function SolicitacaoCard({ solicitacao, mode, onVisualizar, onAssumir, onConvers
           </>
         )}
         {mode === 'andamento' && (
-          <Button size="sm" variant="secondary" icon={Chat} onClick={() => onConversar(solicitacao.familiarId)}>
-            Conversar com a família
-          </Button>
+          <>
+            <Button size="sm" variant="secondary" icon={Chat} onClick={() => onConversar(solicitacao.familiarId)}>
+              Conversar com a família
+            </Button>
+            <Button size="sm" icon={Assignment} onClick={() => onReport(solicitacao)}>
+              Enviar relatório do dia
+            </Button>
+          </>
         )}
       </div>
     </Card>
@@ -155,6 +185,8 @@ export default function SolicitacoesCuidador() {
   const [tab, setTab] = useState('disponiveis')
   const [message, setMessage] = useState({ type: '', text: '' })
   const [busyId, setBusyId] = useState(null)
+  const [reporting, setReporting] = useState(null)
+  const [matchPolicy, setMatchPolicy] = useState(null)
 
   const meuId = localStorage.getItem('meuId')
 
@@ -162,9 +194,11 @@ export default function SolicitacoesCuidador() {
     try {
       const res = await api.get('/solicitacoes/disponiveis')
       setSolicitacoes(res.data.solicitacoes ?? [])
+      setMatchPolicy(res.data.matchPolicy ?? null)
     } catch (err) {
       const msg = err?.response?.data?.msg || 'Erro ao carregar solicitações.'
       setMessage({ type: 'error', text: msg })
+      setMatchPolicy(null)
     } finally {
       setLoading(false)
     }
@@ -258,6 +292,8 @@ export default function SolicitacoesCuidador() {
           </p>
         </div>
 
+        <StripeConnectCard />
+
         {message.text && (
           <Alert tone={message.type === 'success' ? 'success' : 'error'}>{message.text}</Alert>
         )}
@@ -276,6 +312,12 @@ export default function SolicitacoesCuidador() {
             </button>
           ))}
         </div>
+
+        {tab === 'disponiveis' && matchPolicy?.fallbackCount > 0 && (
+          <Alert tone="warning" title="Poucas solicitações com 60% ou mais">
+            Mostramos também {matchPolicy.fallbackCount} {matchPolicy.fallbackCount === 1 ? 'alternativa' : 'alternativas'} abaixo de 60%, priorizando as mais próximas do seu perfil.
+          </Alert>
+        )}
 
         {lista.length === 0 ? (
           <EmptyState
@@ -305,12 +347,21 @@ export default function SolicitacoesCuidador() {
                 onVisualizar={handleVisualizar}
                 onAssumir={handleAssumir}
                 onConversar={handleConversar}
+                onReport={setReporting}
                 busy={busyId === s.id}
               />
             ))}
           </div>
         )}
       </div>
+      {reporting && (
+        <ServiceReportModal
+          solicitacao={reporting}
+          onClose={() => setReporting(null)}
+          onCreated={() => setMessage({ type: 'success', text: 'Relatório enviado. O familiar precisa revisar e assinar antes do pagamento.' })}
+        />
+      )}
+
     </div>
   )
 }

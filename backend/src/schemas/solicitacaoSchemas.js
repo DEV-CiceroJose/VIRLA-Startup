@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { objectIdSchema } from './paymentSchemas.js'
-import { TURNO_VALUES, FREQUENCIA_VALUES } from '../utils/solicitacaoOptions.js'
+import { TURNO_VALUES, FREQUENCIA_VALUES, PAYMENT_RECURRENCE_VALUES } from '../utils/solicitacaoOptions.js'
 
 const URGENCIAS = ['BAIXA', 'MEDIA', 'ALTA']
 
@@ -22,15 +22,15 @@ export const createSolicitacaoBodySchema = z.object({
     .refine((v) => v != null && v !== '' && !Number.isNaN(Date.parse(v)), 'Informe uma data de início válida.'),
   valorHora: z
     .union([z.number(), z.string()])
-    .optional()
-    .nullable()
     .refine((v) => {
-      if (v === undefined || v === null || v === '') return true
       const n = Number(v)
-      return !Number.isNaN(n) && n >= 10 && n <= 500
+      return v !== '' && Number.isFinite(n) && n >= 10 && n <= 500
     }, 'Valor/hora deve estar entre R$ 10 e R$ 500.'),
   turno: z.enum(TURNO_VALUES).optional().nullable(),
   frequencia: z.enum(FREQUENCIA_VALUES).optional().nullable(),
+  paymentRecurrence: z.enum(PAYMENT_RECURRENCE_VALUES, {
+    required_error: 'Selecione a recorrência do pagamento.',
+  }),
   urgencia: z.enum(URGENCIAS).optional().default('MEDIA'),
 })
 

@@ -35,6 +35,8 @@ const CUIDADOR = {
   registerNumber: '',
   approach: '',
   specialties: [],
+  availableShifts: [],
+  serviceFrequencies: [],
   description: '',
   zipCode: '',
   city: '',
@@ -71,7 +73,8 @@ describe('Página de Perfil', () => {
     const user = userEvent.setup()
     renderPerfil()
     await screen.findByLabelText('Nome completo')
-    await user.selectOptions(screen.getByLabelText('Conselho profissional'), 'COREN')
+    await user.click(screen.getByLabelText('Conselho profissional'))
+    await user.click(screen.getByRole('option', { name: /COREN/ }))
     await user.click(screen.getByRole('button', { name: /salvar altera/i }))
 
     expect(await screen.findByText('Informe o conselho e o número do registro.')).toBeInTheDocument()
@@ -105,12 +108,15 @@ describe('Página de Perfil', () => {
     expect(lookupCep).toHaveBeenCalledWith('50030230')
   })
 
-  it('estado (UF) é um select com as 27 opções', async () => {
+  it('estado (UF) usa o seletor visual com as 27 opções', async () => {
     api.get.mockResolvedValue({ data: { user: CUIDADOR } })
+    const user = userEvent.setup()
     renderPerfil()
     const select = await screen.findByLabelText('Estado (UF)')
-    expect(select.tagName).toBe('SELECT')
+    expect(select).toHaveAttribute('role', 'combobox')
+    await user.click(select)
     expect(screen.getByRole('option', { name: 'Pernambuco' })).toBeInTheDocument()
+    expect(screen.getAllByRole('option')).toHaveLength(28)
   })
 
   it('mostra e envia o valor por hora com máscara de moeda', async () => {
@@ -157,6 +163,23 @@ describe('Página de Perfil', () => {
     await screen.findByLabelText('Nome completo')
     const buttons = screen.queryAllByRole('button', { pressed: true })
     expect(buttons).toHaveLength(0)
+  })
+
+  it('disponibilidade: envia turnos e frequências usados pelo match', async () => {
+    api.get.mockResolvedValue({ data: { user: CUIDADOR } })
+    api.put.mockResolvedValue({ data: { user: CUIDADOR } })
+    const user = userEvent.setup()
+    renderPerfil()
+    await screen.findByLabelText('Nome completo')
+
+    await user.click(screen.getByRole('button', { name: 'Manhã' }))
+    await user.click(screen.getByRole('button', { name: 'Semanal' }))
+    await user.click(screen.getByRole('button', { name: /salvar altera/i }))
+    await screen.findByText('Perfil atualizado com sucesso!')
+
+    const [, payload] = api.put.mock.calls[0]
+    expect(payload.availableShifts).toEqual(['MANHA'])
+    expect(payload.serviceFrequencies).toEqual(['SEMANAL'])
   })
 
   it('bio: mostra contador de caracteres e vira erro visual acima de 1900', async () => {

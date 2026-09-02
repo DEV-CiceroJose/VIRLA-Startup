@@ -1,6 +1,6 @@
 # VIRLA - Conectando Famílias e Cuidadores
 
-Este é o repositório oficial do MVP da **VIRLA**, uma plataforma desenvolvida para conectar famílias que precisam de assistência a cuidadores qualificados, com um fluxo de ponta a ponta: do cadastro ao pagamento integrado via Abacate Pay.
+Este é o repositório oficial do MVP da **VIRLA**, uma plataforma desenvolvida para conectar famílias que precisam de assistência a cuidadores qualificados, com um fluxo de ponta a ponta: do cadastro ao pagamento integrado via Stripe, liberado somente após a confirmação e assinatura do relatório diário.
 
 Projeto desenvolvido para apresentação de conclusão de Bootcamp (Maio/2026).
 
@@ -36,7 +36,7 @@ Este projeto foi construído a muitas mãos, com cada membro do time assumindo f
 * **Back-end:** Node.js, Express
 * **Banco de Dados:** MongoDB via Prisma ORM
 * **Chat em tempo real:** Firebase Realtime Database (mensagens/histórico) + Socket.io (presença, "digitando…", notificações leves) — ver `docs/sprints/Sprint0-Firebase-Chat.md`
-* **Integrações:** Abacate Pay (Pagamentos e Webhooks)
+* **Integrações:** Stripe Checkout + Stripe Connect Accounts v2 (pagamentos, repasses e webhooks)
 
 ---
 

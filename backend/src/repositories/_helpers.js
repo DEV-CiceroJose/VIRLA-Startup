@@ -30,9 +30,12 @@ export function mapDoc(snap) {
 }
 
 function convertTimestamps(obj) {
+  if (obj instanceof Timestamp) return obj.toDate()
+  if (Array.isArray(obj)) return obj.map(convertTimestamps)
+  if (!obj || typeof obj !== 'object') return obj
   const out = {}
   for (const [k, v] of Object.entries(obj)) {
-    out[k] = v instanceof Timestamp ? v.toDate() : v
+    out[k] = convertTimestamps(v)
   }
   return out
 }

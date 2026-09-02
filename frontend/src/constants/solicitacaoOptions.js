@@ -18,8 +18,17 @@ export const FREQUENCIAS = [
 export const TURNO_VALUES = TURNOS.map((t) => t.value)
 export const FREQUENCIA_VALUES = FREQUENCIAS.map((f) => f.value)
 
+export const PAYMENT_RECURRENCES = [
+  { value: 'DIARIA', label: 'Diária' },
+  { value: 'SEMANAL', label: 'Semanal' },
+  { value: 'MENSAL', label: 'Mensal' },
+]
+
+export const PAYMENT_RECURRENCE_VALUES = PAYMENT_RECURRENCES.map((item) => item.value)
+
 const TURNO_LABEL = Object.fromEntries(TURNOS.map((t) => [t.value, t.label]))
 const FREQ_LABEL = Object.fromEntries(FREQUENCIAS.map((f) => [f.value, f.label]))
+const PAYMENT_RECURRENCE_LABEL = Object.fromEntries(PAYMENT_RECURRENCES.map((item) => [item.value, item.label]))
 
 /** Rótulo visível do turno; devolve o próprio valor se desconhecido. */
 export function turnoLabel(value) {
@@ -29,4 +38,8 @@ export function turnoLabel(value) {
 /** Rótulo visível da frequência; devolve o próprio valor se desconhecido. */
 export function frequenciaLabel(value) {
   return FREQ_LABEL[value] ?? value
+}
+
+export function paymentRecurrenceLabel(value) {
+  return PAYMENT_RECURRENCE_LABEL[value] ?? value
 }

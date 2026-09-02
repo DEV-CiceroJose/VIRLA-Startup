@@ -119,6 +119,17 @@ test('specialties: string livre (formato pré-FE-06) não é mais aceita', () =>
   assert.equal(createUserBodySchema.safeParse({ ...base, specialties: 'Idosos, Diabetes' }).success, false)
 })
 
+test('disponibilidade aceita turnos e frequências válidos para o match', () => {
+  const base = { ...baseCreate, name: 'Ana Souza' }
+  assert.equal(createUserBodySchema.safeParse({
+    ...base,
+    availableShifts: ['MANHA', 'A_COMBINAR'],
+    serviceFrequencies: ['DIARIA', 'SEMANAL'],
+  }).success, true)
+  assert.equal(createUserBodySchema.safeParse({ ...base, availableShifts: ['MADRUGADA'] }).success, false)
+  assert.equal(createUserBodySchema.safeParse({ ...base, serviceFrequencies: ['ANUAL'] }).success, false)
+})
+
 test('zipCode: aceita com/sem hífen e normaliza pra 8 dígitos; rejeita formato inválido; ausente ok', () => {
   const base = { ...baseCreate, name: 'Ana Souza' }
 

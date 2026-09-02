@@ -12,12 +12,14 @@ import CalendarMonth from '@mui/icons-material/CalendarMonth'
 import Schedule from '@mui/icons-material/Schedule'
 import Repeat from '@mui/icons-material/Repeat'
 import Payments from '@mui/icons-material/Payments'
+import Assignment from '@mui/icons-material/Assignment'
 import api from '../../services/api'
 import { PageLoader } from '../../components/Spinner'
-import { Button, Card, Alert, Badge, EmptyState, Field, ConfirmDialog } from '../../components/ui'
+import { Button, Card, Alert, Badge, EmptyState, Field, DatePickerField, ConfirmDialog } from '../../components/ui'
 import { STATES } from '../../constants/states'
-import { TURNOS, FREQUENCIAS, turnoLabel, frequenciaLabel } from '../../constants/solicitacaoOptions'
+import { PAYMENT_RECURRENCES, TURNOS, FREQUENCIAS, turnoLabel, frequenciaLabel, paymentRecurrenceLabel } from '../../constants/solicitacaoOptions'
 import { maskCurrencyInput, parseCurrencyInput, formatHourly, formatDateOnly } from '../../utils/formatters'
+import ServiceReportReviewModal from '../../components/ServiceReportReviewModal'
 
 // ── Constantes de apresentação ─────────────────────────────────────────────
 const URGENCIA_OPTIONS = ['BAIXA', 'MEDIA', 'ALTA']
@@ -47,7 +49,7 @@ const TIPO_CUIDADO_OPTIONS = [
 
 const FORM_EMPTY = {
   titulo: '', descricao: '', urgencia: 'BAIXA', tipoCuidado: [],
-  cidade: '', estado: '', dataInicio: '', valorHora: '', turno: '', frequencia: '',
+  cidade: '', estado: '', dataInicio: '', valorHora: '', turno: '', frequencia: '', paymentRecurrence: '',
 }
 
 /** Data local de hoje em YYYY-MM-DD (sem deslocamento UTC), comparável com o input date. */
@@ -73,6 +75,7 @@ function toFormState(initial) {
         : '',
     turno: initial.turno ?? '',
     frequencia: initial.frequencia ?? '',
+    paymentRecurrence: initial.paymentRecurrence ?? '',
   }
 }
 
@@ -126,13 +129,14 @@ function SolicitacaoForm({ initial = FORM_EMPTY, isEditing = false, onSave, onCa
       valorHora: parsed ? Number(parsed) : null,
       turno: form.turno || null,
       frequencia: form.frequencia || null,
+      paymentRecurrence: form.paymentRecurrence,
     }
   }
 
   function handleSubmit(e) {
     e.preventDefault()
-    if (!form.cidade.trim() || !form.estado || !form.dataInicio) {
-      setErro('Preencha a cidade, estado e a data de início.')
+    if (!form.cidade.trim() || !form.estado || !form.dataInicio || !form.valorHora || !form.paymentRecurrence) {
+      setErro('Preencha cidade, estado, data de início, valor/hora e recorrência do pagamento.')
       return
     }
     if (!isEditing && form.dataInicio < todayISO()) {
@@ -188,22 +192,29 @@ function SolicitacaoForm({ initial = FORM_EMPTY, isEditing = false, onSave, onCa
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field
+          <DatePickerField
             label="Data de início"
             required
-            type="date"
             min={todayISO()}
             value={form.dataInicio}
             onChange={set('dataInicio')}
           />
           <Field
-            label="Valor/hora (opcional)"
+            label="Valor/hora do contrato"
+            required
             placeholder="R$ 0,00"
             inputMode="numeric"
             value={form.valorHora}
             onChange={setValor}
           />
         </div>
+
+        <Field label="Recorrência do pagamento" required as="select" value={form.paymentRecurrence} onChange={set('paymentRecurrence')}>
+          <option value="">Selecione…</option>
+          {PAYMENT_RECURRENCES.map((item) => (
+            <option key={item.value} value={item.value}>{item.label}</option>
+          ))}
+        </Field>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="Turno (opcional)" as="select" value={form.turno} onChange={set('turno')}>
@@ -267,11 +278,12 @@ function SolicitacaoForm({ initial = FORM_EMPTY, isEditing = false, onSave, onCa
 }
 
 // ── Card de cada solicitação ───────────────────────────────────────────────
-function SolicitacaoCard({ solicitacao, onEditar, onCancelar, onConcluir, onConversar, canceling, concluding }) {
+function SolicitacaoCard({ solicitacao, onEditar, onCancelar, onReviewReport, onConversar, canceling }) {
   const local = [solicitacao.cidade, solicitacao.estado].filter(Boolean).join(' - ')
   const podeEditar     = ['ABERTA', 'VISUALIZADA'].includes(solicitacao.status)
   const podeCancelar   = !['CANCELADA', 'CONCLUIDA'].includes(solicitacao.status)
   const emAndamento    = solicitacao.status === 'EM_ANDAMENTO'
+  const temFluxoRelatorio = ['EM_ANDAMENTO', 'CONCLUIDA'].includes(solicitacao.status)
 
   return (
     <Card className="p-5 space-y-3">
@@ -352,10 +364,17 @@ function SolicitacaoCard({ solicitacao, onEditar, onCancelar, onConcluir, onConv
             >
               Conversar com o cuidador
             </Button>
-            <Button size="sm" icon={CheckCircle} loading={concluding} onClick={() => onConcluir(solicitacao.id)}>
-              Marcar como concluída
-            </Button>
           </>
+        )}
+        {solicitacao.paymentRecurrence && (
+          <span className="flex items-center gap-1 font-semibold text-virla-roxo">
+            <Payments sx={{ fontSize: 14 }} /> Pagamento {paymentRecurrenceLabel(solicitacao.paymentRecurrence).toLowerCase()}
+          </span>
+        )}
+        {temFluxoRelatorio && (
+          <Button size="sm" icon={Assignment} onClick={() => onReviewReport(solicitacao)}>
+            {emAndamento ? 'Revisar relatório' : 'Relatório e pagamento'}
+          </Button>
         )}
         {podeCancelar && (
           <Button
@@ -384,8 +403,8 @@ export default function Solicitacoes() {
   const [editing, setEditing]         = useState(null)       // objeto sendo editado
   const [saving, setSaving]           = useState(false)
   const [cancelingId, setCancelingId] = useState(null)
-  const [concludingId, setConcludingId] = useState(null)
   const [confirmId, setConfirmId]     = useState(null)       // id aguardando confirmação
+  const [reviewing, setReviewing]     = useState(null)
 
   const meuId = localStorage.getItem('meuId')
 
@@ -466,21 +485,6 @@ export default function Solicitacoes() {
       setMessage({ type: 'error', text: msg })
     } finally {
       setCancelingId(null)
-    }
-  }
-
-  async function handleConcluir(id) {
-    setMessage({ type: '', text: '' })
-    setConcludingId(id)
-    try {
-      await api.patch(`/solicitacoes/${id}/concluir`)
-      setMessage({ type: 'success', text: 'Solicitação marcada como concluída. Esperamos que tenha sido um ótimo cuidado!' })
-      await load()
-    } catch (err) {
-      const msg = err?.response?.data?.msg || 'Erro ao concluir solicitação.'
-      setMessage({ type: 'error', text: msg })
-    } finally {
-      setConcludingId(null)
     }
   }
 
@@ -594,10 +598,9 @@ export default function Solicitacoes() {
                 solicitacao={s}
                 onEditar={handleEditar}
                 onCancelar={handleCancelarClick}
-                onConcluir={handleConcluir}
+                onReviewReport={setReviewing}
                 onConversar={handleConversar}
                 canceling={cancelingId === s.id}
-                concluding={concludingId === s.id}
               />
             ))}
           </div>
@@ -615,6 +618,16 @@ export default function Solicitacoes() {
         onCancel={() => setConfirmId(null)}
         tone="danger"
       />
+      {reviewing && (
+        <ServiceReportReviewModal
+          solicitacao={reviewing}
+          onClose={() => setReviewing(null)}
+          onUpdated={async () => {
+            setMessage({ type: 'success', text: 'Relatório assinado. O pagamento seguirá a recorrência escolhida no contrato.' })
+            await load()
+          }}
+        />
+      )}
     </div>
   )
 }

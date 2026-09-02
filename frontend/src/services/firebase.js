@@ -1,6 +1,6 @@
 import { initializeApp, getApps, getApp } from 'firebase/app'
-import { getDatabase } from 'firebase/database'
-import { getAuth, GoogleAuthProvider } from 'firebase/auth'
+import { connectDatabaseEmulator, getDatabase } from 'firebase/database'
+import { connectAuthEmulator, getAuth, GoogleAuthProvider } from 'firebase/auth'
 
 // ─── Config do Firebase (preencher via .env — ver .env.example) ────────────
 const firebaseConfig = {
@@ -20,6 +20,8 @@ const firebaseConfig = {
 // `isFirebaseReady()` em vez de derrubar a página.
 const REQUIRED_KEYS = ['apiKey', 'databaseURL', 'projectId', 'appId']
 const missingKeys = REQUIRED_KEYS.filter((k) => !firebaseConfig[k])
+const useFirebaseEmulators = import.meta.env.DEV
+  && import.meta.env.VITE_USE_FIREBASE_EMULATORS === 'true'
 
 /** true só quando há configuração suficiente para inicializar o RTDB/Auth. */
 export function isFirebaseReady() {
@@ -36,6 +38,20 @@ if (isFirebaseReady()) {
     firebaseApp = getApps().length ? getApp() : initializeApp(firebaseConfig)
     rtdb = getDatabase(firebaseApp)
     firebaseAuth = getAuth(firebaseApp)
+
+    if (useFirebaseEmulators && !globalThis.__virlaFirebaseEmulatorsConnected) {
+      connectAuthEmulator(
+        firebaseAuth,
+        import.meta.env.VITE_FIREBASE_AUTH_EMULATOR_URL ?? 'http://127.0.0.1:9099',
+        { disableWarnings: true },
+      )
+      connectDatabaseEmulator(
+        rtdb,
+        import.meta.env.VITE_FIREBASE_DATABASE_EMULATOR_HOST ?? '127.0.0.1',
+        Number(import.meta.env.VITE_FIREBASE_DATABASE_EMULATOR_PORT ?? 9000),
+      )
+      globalThis.__virlaFirebaseEmulatorsConnected = true
+    }
   } catch (err) {
     // Config presente mas inválida: degrada para fallback HTTP, nunca crasha.
     console.error('[Firebase] Falha ao inicializar — chat em modo HTTP:', err)

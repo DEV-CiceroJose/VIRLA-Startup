@@ -14,8 +14,9 @@ import { calculateAge } from '../../utils/dateUtils'
 import { formatHourly } from '../../utils/formatters'
 import { PageLoader, LoadingOverlay } from '../../components/Spinner'
 import VerifiedSeal from '../../components/VerifiedSeal'
-import { EmptyState, Alert } from '../../components/ui'
+import { EmptyState, Alert, Field } from '../../components/ui'
 import { specialtyLabel } from '../../constants/specialties'
+import MatchScore from '../../components/MatchScore'
 
 function RoleBadge({ role }) {
   const isCuidador = role === 'CUIDADOR'
@@ -103,6 +104,8 @@ function UserCard({ user, onOpenChat, viewerIsFamiliar, onVerMais }) {
         </p>
       )}
 
+      <MatchScore match={user.match} />
+
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-3 border-t border-virla-roxo/10">
           <div className="min-h-[1.5rem] flex items-center">
             {rateLabel ? (
@@ -151,6 +154,9 @@ export default function Feed() {
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [fetchError, setFetchError] = useState('')
+  const [solicitacoes, setSolicitacoes] = useState([])
+  const [selectedSolicitacaoId, setSelectedSolicitacaoId] = useState('')
+  const [matchContext, setMatchContext] = useState(null)
 
   const [myRole, setMyRole] = useState(null)
 
@@ -174,6 +180,25 @@ export default function Feed() {
   }, [id])
 
   useEffect(() => {
+    if (!id) return undefined
+    let cancelled = false
+    api.get('/solicitacoes/minhas')
+      .then((res) => {
+        if (cancelled) return
+        const active = (res.data.solicitacoes ?? []).filter((item) =>
+          ['ABERTA', 'VISUALIZADA', 'EM_ANDAMENTO'].includes(item.status))
+        setSolicitacoes(active)
+        setSelectedSolicitacaoId((current) => current || active[0]?.id || '')
+      })
+      .catch(() => {
+        if (!cancelled) setSolicitacoes([])
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [id])
+
+  useEffect(() => {
     if (!id) {
       navigate('/login')
       return undefined
@@ -184,12 +209,15 @@ export default function Feed() {
       setLoading(true)
       try {
         setFetchError('')
-        const res = await api.get(`/users/${id}/feed`, { params: { page } })
+        const res = await api.get(`/users/${id}/feed`, {
+          params: { page, ...(selectedSolicitacaoId && { solicitacaoId: selectedSolicitacaoId }) },
+        })
         if (cancelled) return
         const payload = res.data
         const users = Array.isArray(payload) ? payload : payload.users ?? []
         setFeedUsers(users)
         setTotalPages(typeof payload.totalPages === 'number' ? payload.totalPages : 1)
+        setMatchContext(payload.matchContext ?? null)
       } catch (err) {
         console.error(err)
         if (cancelled) return
@@ -201,6 +229,7 @@ export default function Feed() {
         }
         setFeedUsers([])
         setTotalPages(1)
+        setMatchContext(null)
         setFetchError('Não foi possível carregar o feed. Tente novamente em instantes.')
       } finally {
         if (!cancelled) setLoading(false)
@@ -210,7 +239,7 @@ export default function Feed() {
     return () => {
       cancelled = true
     }
-  }, [id, navigate, page])
+  }, [id, navigate, page, selectedSolicitacaoId])
 
   const filtered = feedUsers.filter((u) => {
     const q = search.toLowerCase()
@@ -267,6 +296,28 @@ export default function Feed() {
             <p className="text-virla-muted text-sm">
               Página {page} de {totalPages}
             </p>
+          )}
+          {solicitacoes.length > 0 && (
+            <div className="mt-5 max-w-xl rounded-2xl border border-violet-200 bg-white/90 p-4 shadow-sm">
+              <Field
+                label="Match inteligente para"
+                id="match-solicitacao"
+                value={selectedSolicitacaoId}
+                onChange={(event) => {
+                  setSelectedSolicitacaoId(event.target.value)
+                  setPage(1)
+                }}
+                as="select"
+              >
+                {solicitacoes.map((item) => <option key={item.id} value={item.id}>{item.titulo}</option>)}
+              </Field>
+              <p className="mt-2 text-xs text-virla-muted">
+                {matchContext ? 'Profissionais ordenados por especialidade, localização, valor e qualidade do perfil.' : 'Escolha uma solicitação para calcular a compatibilidade.'}
+              </p>
+            </div>
+          )}
+          {solicitacoes.length === 0 && (
+            <p className="mt-4 text-sm text-virla-muted">Publique uma solicitação para receber recomendações personalizadas.</p>
           )}
         </div>
 

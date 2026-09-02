@@ -23,6 +23,7 @@ import { hasPasswordProvider, linkPassword, mapAuthError } from '../../services/
 import { COUNCILS, isValidRegister } from '../../constants/councils'
 import { STATES } from '../../constants/states'
 import { SPECIALTIES, SPECIALTY_VALUES } from '../../constants/specialties'
+import { TURNOS, FREQUENCIAS, TURNO_VALUES, FREQUENCIA_VALUES } from '../../constants/solicitacaoOptions'
 import { lookupCep } from '../../services/viacep'
 import { maskCep, maskCurrencyInput, parseCurrencyInput } from '../../utils/formatters'
 
@@ -48,6 +49,8 @@ function emptyUserForm() {
     registerNumber: '',
     approach: '',
     specialties: [],
+    availableShifts: [],
+    serviceFrequencies: [],
     description: '',
     zipCode: '',
     city: '',
@@ -76,6 +79,12 @@ function mapUserToForm(user) {
     // pode re-selecioná-las entre as opções atuais.
     specialties: Array.isArray(user.specialties)
       ? user.specialties.filter((s) => SPECIALTY_VALUES.includes(s))
+      : [],
+    availableShifts: Array.isArray(user.availableShifts)
+      ? user.availableShifts.filter((value) => TURNO_VALUES.includes(value))
+      : [],
+    serviceFrequencies: Array.isArray(user.serviceFrequencies)
+      ? user.serviceFrequencies.filter((value) => FREQUENCIA_VALUES.includes(value))
       : [],
     description: user.description ?? '',
     zipCode: user.zipCode ?? '',
@@ -172,6 +181,8 @@ export default function Perfil() {
           approach: userData.approach.trim() || null,
           description: userData.description.trim() || null,
           specialties: userData.specialties,
+          availableShifts: userData.availableShifts,
+          serviceFrequencies: userData.serviceFrequencies,
           hourlyRate: userData.hourlyRate === '' ? null : Number(parseCurrencyInput(userData.hourlyRate)),
         }
       }
@@ -389,6 +400,22 @@ export default function Perfil() {
                   value={userData.specialties}
                   onChange={(specialties) => setUserData({ ...userData, specialties })}
                   max={12}
+                />
+
+                <TagSelect
+                  label="Turnos disponíveis"
+                  options={TURNOS}
+                  value={userData.availableShifts}
+                  onChange={(availableShifts) => setUserData({ ...userData, availableShifts })}
+                  max={TURNOS.length}
+                />
+
+                <TagSelect
+                  label="Frequências de atendimento"
+                  options={FREQUENCIAS}
+                  value={userData.serviceFrequencies}
+                  onChange={(serviceFrequencies) => setUserData({ ...userData, serviceFrequencies })}
+                  max={FREQUENCIAS.length}
                 />
 
                 <Field

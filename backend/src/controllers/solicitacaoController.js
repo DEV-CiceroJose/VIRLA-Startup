@@ -2,6 +2,11 @@ import * as solicitacaoRepo from '../repositories/solicitacaoRepository.js'
 import { getUserById, listByIds } from '../repositories/userRepository.js'
 import { logger } from '../lib/logger.js'
 import * as notificationService from '../services/notificationService.js'
+import { getBySolicitacaoId as getServiceReportBySolicitacaoId } from '../repositories/serviceReportRepository.js'
+import {
+  scoreCaregiverForSolicitacao,
+  selectSolicitacoesForCaregiver,
+} from '../services/matchingService.js'
 
 /** Projeção do familiar embutido (substitui o join `familiar` do Prisma). */
 function pickFamiliar(user) {
@@ -16,7 +21,7 @@ function pickFamiliar(user) {
 export const createSolicitacao = async (req, res) => {
   try {
     const familiarId = req.userId
-    const { titulo, descricao, tipoCuidado, cidade, estado, urgencia, valorHora, turno, frequencia, dataInicio } = req.body
+    const { titulo, descricao, tipoCuidado, cidade, estado, urgencia, valorHora, turno, frequencia, paymentRecurrence, dataInicio } = req.body
 
     const solicitacao = await solicitacaoRepo.create({
       familiarId,
@@ -26,9 +31,10 @@ export const createSolicitacao = async (req, res) => {
       cidade: cidade?.trim() || null,
       estado: estado?.trim().toUpperCase() || null,
       urgencia,
-      valorHora: valorHora === '' || valorHora == null ? null : Number(valorHora),
+      valorHora: Number(valorHora),
       turno: turno || null,
       frequencia: frequencia || null,
+      paymentRecurrence,
       dataInicio: dataInicio || null,
     })
 
@@ -64,7 +70,7 @@ export const updateSolicitacao = async (req, res) => {
       return res.status(422).json({ msg: 'Esta solicitação não pode mais ser editada.' })
     }
 
-    const { titulo, descricao, tipoCuidado, cidade, estado, urgencia, valorHora, turno, frequencia, dataInicio } = req.body
+    const { titulo, descricao, tipoCuidado, cidade, estado, urgencia, valorHora, turno, frequencia, paymentRecurrence, dataInicio } = req.body
 
     const updated = await solicitacaoRepo.update(id, {
       titulo: titulo.trim(),
@@ -73,9 +79,10 @@ export const updateSolicitacao = async (req, res) => {
       cidade: cidade?.trim() || null,
       estado: estado?.trim().toUpperCase() || null,
       urgencia,
-      valorHora: valorHora === '' || valorHora == null ? null : Number(valorHora),
+      valorHora: Number(valorHora),
       turno: turno || null,
       frequencia: frequencia || null,
+      paymentRecurrence,
       dataInicio: dataInicio || null,
     })
 
@@ -149,6 +156,14 @@ export const concluirSolicitacao = async (req, res) => {
     }
     if (solicitacao.status !== 'EM_ANDAMENTO') {
       return res.status(422).json({ msg: 'Só é possível concluir uma solicitação que está em andamento.' })
+    }
+
+    const report = await getServiceReportBySolicitacaoId(id)
+    if (!report?.signature?.signedAt || !report?.reportHash) {
+      return res.status(409).json({
+        msg: 'Para concluir o serviço, revise e assine o relatório diário enviado pelo cuidador.',
+        code: 'SERVICE_REPORT_SIGNATURE_REQUIRED',
+      })
     }
 
     const updated = await solicitacaoRepo.update(id, { status: 'CONCLUIDA' })
@@ -281,18 +296,24 @@ export const cancelSolicitacao = async (req, res) => {
 export const listAvailableSolicitacoes = async (req, res) => {
   try {
     const caregiverId = req.userId
-    const base = await solicitacaoRepo.listAvailableForCaregiver(caregiverId)
+    const [base, caregiver] = await Promise.all([
+      solicitacaoRepo.listAvailableForCaregiver(caregiverId),
+      getUserById(caregiverId),
+    ])
+    if (!caregiver) return res.status(404).json({ msg: 'Cuidador não encontrado.' })
 
     // Enriququece com os dados do familiar (substitui o join do Prisma),
     // buscando os usuários em lote.
     const familiarById = new Map(
       (await listByIds([...new Set(base.map((s) => s.familiarId))])).map((u) => [u.id, u])
     )
-    const solicitacoes = base.map((s) => ({
+    const scored = base.map((s) => ({
       ...s,
       familiar: pickFamiliar(familiarById.get(s.familiarId)),
+      match: scoreCaregiverForSolicitacao(caregiver, s),
     }))
-    return res.status(200).json({ solicitacoes })
+    const { solicitacoes, policy: matchPolicy } = selectSolicitacoesForCaregiver(scored, caregiverId)
+    return res.status(200).json({ solicitacoes, matchPolicy })
   } catch (err) {
     logger.error('solicitacao:list_available_failed', {
       error: err.message,

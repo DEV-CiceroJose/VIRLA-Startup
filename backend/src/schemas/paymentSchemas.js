@@ -53,3 +53,15 @@ export const billingIdParamSchema = z.object({
     .max(128)
     .regex(/^[a-zA-Z0-9_-]+$/, 'billingId com formato inválido.'),
 })
+
+export const checkoutSessionBodySchema = z.object({
+  reportId: objectIdSchema,
+})
+
+export const checkoutSessionIdParamSchema = z.object({
+  sessionId: z.string().regex(/^cs_(test_|live_)?[A-Za-z0-9_]+$/, 'Sessão Stripe inválida.'),
+})
+
+export const reportPaymentParamSchema = z.object({
+  reportId: objectIdSchema,
+})

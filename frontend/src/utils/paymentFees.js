@@ -1,10 +1,10 @@
 /**
- * Total = x + (x * 0.07) + 0.80 — valores em centavos (x = base informada pelo cuidador).
+ * O total corresponde ao valor do contrato, sem taxa adicional da plataforma.
  */
 export function calculateChargeTotalCents(baseCents) {
-  const platformFeeCents = Math.round(baseCents * 0.07)
-  const fixedFeeCents = 80
-  const totalCents = baseCents + platformFeeCents + fixedFeeCents
+  const platformFeeCents = 0
+  const fixedFeeCents = 0
+  const totalCents = baseCents
   return { baseCents, platformFeeCents, fixedFeeCents, totalCents }
 }
 

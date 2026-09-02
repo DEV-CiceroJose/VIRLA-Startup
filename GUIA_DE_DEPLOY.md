@@ -29,6 +29,9 @@ cp backend/.env.example backend/.env
 | `ENCRYPTION_KEY` | ✅ | **Exatos 32 caracteres** (AES-256) |
 | `ABACATEPAY_TOKEN` | ✅ | Token da API AbacatePay |
 | `ABACATEPAY_WEBHOOK_SECRET` | ✅ (prod) | Valida assinatura do webhook |
+| `STRIPE_SECRET_KEY` | ✅ | Chave restrita `rk_test_`/`rk_live_` com permissões mínimas |
+| `STRIPE_WEBHOOK_SECRET` | ✅ | Segredo `whsec_` de `/webhooks/stripe`, separado por ambiente |
+| `SIGNATURE_AUDIT_SECRET` | ✅ | HMAC dos metadados técnicos da assinatura do relatório |
 | `PORT` | — | Porta HTTP (padrão `3002`) |
 | `NODE_ENV` | ✅ (prod) | `production` |
 | `FRONTEND_URL` | ✅ | URL do frontend (para CORS e callbacks) |
@@ -98,12 +101,16 @@ npm run test:coverage   # com cobertura
 
 - Variável: `VITE_API_URL=https://SEU-BACKEND.onrender.com`
 
-### 4.3 Webhook do AbacatePay
-Aponte o webhook para:
+### 4.3 Webhook da Stripe
+
+Crie endpoints separados no Dashboard Stripe para teste e produção, apontando para:
 ```
-https://SEU-BACKEND.onrender.com/webhooks/abacatepay
+https://SEU-BACKEND.onrender.com/webhooks/stripe
 ```
-Configure o `ABACATEPAY_WEBHOOK_SECRET` igual ao painel do AbacatePay — em produção, requisições sem assinatura válida são **rejeitadas (401)**.
+
+Assine os eventos de Checkout concluído/expirado, pagamento assíncrono, reembolso e disputa. Configure o `STRIPE_WEBHOOK_SECRET` com o `whsec_` do ambiente correspondente; requisições sem assinatura válida são rejeitadas.
+
+O endpoint `/webhooks/abacatepay` permanece temporariamente apenas para reconciliar pagamentos antigos durante a migração.
 
 ---
 
@@ -126,16 +133,13 @@ Para gerar uma versão de demonstração/testes sem nenhum botão de cobrança/p
 ```env
 VITE_ENABLE_PAYMENT=false
 ```
-Esconde: botão "Gerar Cobrança", botão "Pagar", banner de cobrança pendente no chat,
-o modal de gerar cobrança e bloqueia o acesso direto a `/pagamento` e `/pagamento/sucesso`.
+Oculta o acesso ao pagamento e bloqueia a tela de retorno. O fluxo antigo do chat fica sempre desativado; novos pagamentos partem exclusivamente de relatórios assinados nas Solicitações.
 
 **Backend** (`backend/.env`) — opcional, defesa em profundidade:
 ```env
 ENABLE_PAYMENT=false
 ```
-Bloqueia (HTTP 403) a criação de novas cobranças/billing mesmo se alguém chamar a API
-diretamente. Leituras, escrow e o webhook do AbacatePay continuam funcionando normalmente
-(necessário para não travar pagamentos já em andamento).
+Bloqueia (HTTP 403) a criação de novas sessões de Checkout. Leituras e webhooks continuam funcionando para não interromper pagamentos em andamento.
 
 Para a versão completa, basta omitir as variáveis (o padrão é `true` nos dois lados) ou
 defini-las explicitamente como `true`.
@@ -144,7 +148,10 @@ defini-las explicitamente como `true`.
 
 - [ ] `.env` de produção preenchido (sem segredos de exemplo)
 - [ ] `NODE_ENV=production`
-- [ ] `ABACATEPAY_WEBHOOK_SECRET` configurado (senão webhooks são rejeitados)
+- [ ] Conta Connect da VIRLA configurada e responsabilidade por saldos negativos reconhecida
+- [ ] `STRIPE_SECRET_KEY` restrita e separada entre teste/produção
+- [ ] `STRIPE_WEBHOOK_SECRET` configurado para o ambiente correto
+- [ ] Stripe Radar ativado e regras revisadas
 - [ ] `METRICS_TOKEN` definido (protege o dashboard)
 - [ ] Segredos rotacionados se já tiverem sido expostos
 - [ ] `Health Check Path = /health` na Render

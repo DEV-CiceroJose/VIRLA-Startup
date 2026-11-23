@@ -1,3 +1,4 @@
+import 'dotenv/config'
 import admin from 'firebase-admin'
 
 const PROJECT_ID = process.env.FIREBASE_PROJECT_ID ?? 'virla-startap'
@@ -171,6 +172,42 @@ requests.forEach(([suffix, titulo, tipoCuidado, cidade, estado, valorHora, turno
     updatedAt: createdAt,
   })
 })
+
+// Histórico financeiro fictício, visível apenas nos emuladores locais.
+const dateOnly = (daysAgo) => new Date(Date.now() - daysAgo * 86_400_000).toISOString().slice(0, 10)
+batch.set(db.collection('solicitacoes').doc('test-solicitacao-history'), {
+  familiarId: 'test-familiar-virla',
+  titulo: 'Acompanhamento domiciliar concluído',
+  descricao: 'Atendimento fictício para validação do resumo financeiro.',
+  tipoCuidado: ['Acompanhamento diurno'],
+  cidade: 'Fortaleza',
+  estado: 'CE',
+  valorHora: 40,
+  turno: 'MANHA',
+  frequencia: 'DIARIA',
+  paymentRecurrence: 'DIARIA',
+  dataInicio: dateOnly(10),
+  urgencia: 'MEDIA',
+  status: 'CONCLUIDA',
+  viewedByIds: ['test-cuidador-virla'],
+  assignedCaregiverId: 'test-cuidador-virla',
+  createdAt: now,
+  updatedAt: now,
+})
+for (const [suffix, daysAgo, status, baseAmount] of [['paid', 3, 'PAID', 16000], ['signed', 1, 'SIGNED', 12000]]) {
+  const serviceDate = dateOnly(daysAgo)
+  batch.set(db.collection('serviceReports').doc(`test-report-${suffix}`), {
+    solicitacaoId: 'test-solicitacao-history',
+    caregiverId: 'test-cuidador-virla',
+    familiarId: 'test-familiar-virla',
+    serviceDate,
+    baseAmount,
+    totalAmount: baseAmount,
+    status,
+    createdAt: now,
+    updatedAt: now,
+  })
+}
 
 await batch.commit()
 

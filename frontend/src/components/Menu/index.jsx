@@ -4,17 +4,23 @@ import Logout from '@mui/icons-material/Logout'
 import MenuIcon from '@mui/icons-material/Menu'
 import Close from '@mui/icons-material/Close'
 import StarRate from '@mui/icons-material/StarRate'
+import HomeOutlined from '@mui/icons-material/HomeOutlined'
+import ChatBubbleOutline from '@mui/icons-material/ChatBubbleOutlined'
+import SearchOutlined from '@mui/icons-material/SearchOutlined'
+import AssignmentOutlined from '@mui/icons-material/AssignmentOutlined'
+import AccountBalanceWalletOutlined from '@mui/icons-material/AccountBalanceWalletOutlined'
+import PersonOutline from '@mui/icons-material/PersonOutlined'
 import api from '../../services/api'
 import { logout } from '../../services/auth'
 import NotificationBell from '../NotificationBell'
 
 // ─── Navigation link definitions ──────────────────────────────────────────────
 
-const BASE_LINKS = [{ to: '/home', label: 'Início' }]
+const BASE_LINKS = [{ to: '/home', label: 'Início' }, { to: '/home?tab=mensagens', label: 'Conversas' }]
 
 /** Familiar: can browse caregiver Feed and manage own Solicitações. */
 const FAMILIAR_LINKS = [
-  { to: '/feed', label: 'Feed' },
+  { to: '/feed', label: 'Encontrar cuidadores' },
   { to: '/perfil', label: 'Perfil' },
   { to: '/solicitacoes', label: 'Solicitações' },
 ]
@@ -22,6 +28,7 @@ const FAMILIAR_LINKS = [
 /** Cuidador: only sees available Solicitações and own Perfil. */
 const CUIDADOR_LINKS = [
   { to: '/solicitacoes-disponiveis', label: 'Solicitações' },
+  { to: '/financas', label: 'Finanças' },
   { to: '/perfil', label: 'Perfil' },
 ]
 
@@ -31,6 +38,15 @@ const FEEDBACK_FORM_URL =
 
 // Desktop breakpoint — must stay in sync with Tailwind's `md` (768 px)
 const DESKTOP_BREAKPOINT = 768
+const NAV_ICONS = {
+  '/home': HomeOutlined,
+  '/home?tab=mensagens': ChatBubbleOutline,
+  '/feed': SearchOutlined,
+  '/perfil': PersonOutline,
+  '/solicitacoes': AssignmentOutlined,
+  '/solicitacoes-disponiveis': AssignmentOutlined,
+  '/financas': AccountBalanceWalletOutlined,
+}
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -74,7 +90,9 @@ export default function Menu() {
         : BASE_LINKS
 
   // ── Helpers ────────────────────────────────────────────────────────────────
-  const isActive = (path) => location.pathname === path
+  const isActive = (path) => path.includes('?')
+    ? `${location.pathname}${location.search}` === path
+    : location.pathname === path && (path !== '/home' || !location.search)
 
   const closeMenu = useCallback(() => setOpen(false), [])
 
@@ -154,6 +172,21 @@ export default function Menu() {
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
     <>
+      <aside className="comfort-sidebar" aria-label="Navegação da VIRLA">
+        <Link to="/home" className="comfort-sidebar-logo"><img src="/favicon.ico" alt="" /><span>VIRLA</span></Link>
+        <p className="comfort-sidebar-caption">Cuidar conecta.</p>
+        <nav aria-label="Áreas da plataforma" className="comfort-sidebar-nav">
+          {LINKS.map(({ to, label }) => {
+            const Icon = NAV_ICONS[to]
+            return <Link key={to} to={to} aria-current={isActive(to) ? 'page' : undefined} className={isActive(to) ? 'active' : ''}><Icon aria-hidden fontSize="small" /><span>{label}</span></Link>
+          })}
+        </nav>
+        <div className="comfort-sidebar-bottom">
+          <Link to="/perfil" className="comfort-sidebar-profile"><PersonOutline aria-hidden fontSize="small" /><span>Meu perfil</span></Link>
+          <a href={FEEDBACK_FORM_URL} target="_blank" rel="noopener noreferrer"><StarRate aria-hidden fontSize="small" /> Avaliar sistema</a>
+          <button type="button" onClick={fazerLogout}><Logout aria-hidden fontSize="small" /> Sair</button>
+        </div>
+      </aside>
       {/* ── Backdrop overlay (mobile only, behind the drawer) ──────────────── */}
       {open && (
         <div
@@ -169,7 +202,7 @@ export default function Menu() {
       )}
 
       {/* ── Header bar ────────────────────────────────────────────────────── */}
-      <header className="fixed top-0 inset-x-0 z-50 bg-white/85 backdrop-blur-md border-b border-virla-roxomid/40 shadow-virla">
+      <header className="comfort-mobile-header fixed top-0 inset-x-0 z-50 bg-white/85 backdrop-blur-md border-b border-virla-roxomid/40 shadow-virla">
         <nav
           className="h-16 max-w-4xl mx-auto px-4 w-full flex items-center justify-between gap-4 font-body"
           aria-label="Navegação principal"

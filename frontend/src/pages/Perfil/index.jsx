@@ -267,13 +267,13 @@ export default function Perfil() {
 
   return (
     <div
-      className="min-h-screen pt-16 bg-virla-neve"
+      className="comfort-page comfort-own-profile min-h-screen pt-16 bg-virla-neve"
       style={{
         backgroundImage:
           'radial-gradient(ellipse 70% 50% at 30% 0%, rgba(128,0,128,0.07), transparent)',
       }}
     >
-      <div className="max-w-2xl mx-auto px-6 py-10 space-y-6">
+      <div className="comfort-content max-w-2xl mx-auto px-6 py-10 space-y-6">
         <div className="animate-fade-up">
           <h1 className="text-3xl font-display font-black text-virla-roxo">Meu Perfil</h1>
           <p className="text-virla-muted text-sm mt-1">Gerencie suas informações pessoais e profissionais</p>

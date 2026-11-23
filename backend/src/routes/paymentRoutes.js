@@ -26,9 +26,12 @@ import {
 } from '../schemas/paymentSchemas.js'
 import { createChargeBodySchema, peerIdParamSchema } from '../schemas/chargeSchemas.js'
 import { requirePaymentEnabled } from '../middlewares/paymentFlag.js'
+import { getCaregiverFinanceSummary } from '../controllers/caregiverFinanceController.js'
 import { rateLimit } from '../middlewares/rateLimit.js'
 
 const PaymentRoutes = express.Router()
+
+PaymentRoutes.get('/payments/caregiver/summary', checkToken, requireRole('CUIDADOR'), getCaregiverFinanceSummary)
 
 // Melhoria #1 — anti-abuso: criação de cobrança/billing não tinha limite,
 // permitindo gerar cobranças/cobrar PIX em massa a partir de uma única conta.

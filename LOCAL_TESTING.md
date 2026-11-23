@@ -5,7 +5,7 @@ Este modo usa Firebase Auth, Firestore e Realtime Database em emuladores locais.
 ## Serviços
 
 - Interface: `http://127.0.0.1:5173`
-- API: `http://127.0.0.1:3002`
+- API: `http://127.0.0.1:3003`
 - Painel dos emuladores: `http://127.0.0.1:4000`
 
 ## Contas locais
@@ -14,15 +14,15 @@ Este modo usa Firebase Auth, Firestore e Realtime Database em emuladores locais.
 - Cuidador: `cuidador.teste@virla.local`
 - Senha comum: `VirlaTeste#2026`
 
-As contas são criadas com e-mail confirmado e dados fictícios. O seed também adiciona perfis auxiliares e sete solicitações com diferentes compatibilidades para validar o match e a regra dos 60%.
+As contas são criadas com e-mail confirmado e dados fictícios. O seed também adiciona perfis auxiliares, sete solicitações abertas com diferentes compatibilidades e dois relatórios de atendimento fictícios para validar o resumo financeiro do cuidador.
 
 ## Como iniciar novamente
 
 O Firebase Emulator requer Java 21 ou superior. Com as variáveis abaixo configuradas:
 
-1. Em `backend`, execute `npm run emulators:test`.
-2. Em outro terminal de `backend`, execute `npm run seed:test` e depois `npm start`.
-3. Em `frontend`, execute `npm run dev -- --host 127.0.0.1`.
+1. Em `backend`, execute `pnpm dlx firebase-tools emulators:start --only auth,firestore,database --project virla-startap`.
+2. Em outro terminal de `backend`, execute `pnpm seed:test` e depois `node server.js`.
+3. Em `frontend`, execute `node node_modules/vite/bin/vite.js --host 127.0.0.1`.
 
 Os dados são locais e temporários. Depois que os emuladores forem encerrados, execute o seed novamente na próxima inicialização.
 
@@ -32,7 +32,7 @@ Backend:
 
 ```text
 NODE_ENV=development
-PORT=3002
+PORT=3003
 FRONTEND_URL=http://127.0.0.1:5173
 FIREBASE_PROJECT_ID=virla-startap
 FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099
@@ -45,7 +45,7 @@ ENCRYPTION_KEY=chave-de-exatos-32-caracteres!!!
 Frontend:
 
 ```text
-VITE_API_URL=http://127.0.0.1:3002
+VITE_API_URL=http://127.0.0.1:3003
 VITE_USE_FIREBASE_EMULATORS=true
 VITE_FIREBASE_AUTH_EMULATOR_URL=http://127.0.0.1:9099
 VITE_FIREBASE_DATABASE_EMULATOR_HOST=127.0.0.1

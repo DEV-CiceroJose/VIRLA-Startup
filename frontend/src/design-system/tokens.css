@@ -1,0 +1,107 @@
+/*
+ * VIRLA — tokens do design system
+ * A paleta roxa existente é a identidade oficial e permanece inalterada.
+ * Os temas alteram superfícies, texto e estados de interface, não a marca.
+ */
+
+:root,
+:root[data-theme='light'] {
+  color-scheme: light;
+
+  /* Marca — valores preservados do Tailwind atual. */
+  --virla-brand: #800080;
+  --virla-brand-highlight: #9932CC;
+  --virla-brand-deep: #5a0a5a;
+  --virla-brand-soft: #d8b4de;
+
+  /* Neutros e superfícies. */
+  --virla-page: #FFFAFA;
+  --virla-surface: #FFFFFF;
+  --virla-surface-raised: #FFFFFF;
+  --virla-surface-muted: #F7F1F7;
+  --virla-text-primary: #333333;
+  --virla-text-secondary: #6b6470;
+  --virla-border: #eaddea;
+
+  /* Feedback sem alterar a cor principal da marca. */
+  --virla-success: #287A52;
+  --virla-warning: #946200;
+  --virla-danger: #B42332;
+  --virla-focus: rgba(128, 0, 128, 0.42);
+
+  /* Forma, profundidade e ritmo. */
+  --virla-radius-sm: 8px;
+  --virla-radius-md: 12px;
+  --virla-radius-lg: 18px;
+  --virla-radius-pill: 999px;
+  --virla-shadow-card: 0 2px 12px rgba(62, 24, 62, 0.06);
+  --virla-shadow-floating: 0 8px 28px rgba(62, 24, 62, 0.16);
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  /* Roxo continua sendo a cor de ação e reconhecimento da marca. */
+  --virla-brand: #800080;
+  --virla-brand-highlight: #B65BD6;
+  --virla-brand-deep: #E4B9EC;
+  --virla-brand-soft: #59345E;
+
+  --virla-page: #17121A;
+  --virla-surface: #211A24;
+  --virla-surface-raised: #2B2230;
+  --virla-surface-muted: #352A3A;
+  --virla-text-primary: #F7F0F8;
+  --virla-text-secondary: #C4B6C8;
+  --virla-border: #49394D;
+
+  --virla-success: #72C99A;
+  --virla-warning: #F0C36A;
+  --virla-danger: #FF8992;
+  --virla-focus: rgba(182, 91, 214, 0.58);
+
+  --virla-shadow-card: 0 2px 14px rgba(0, 0, 0, 0.18);
+  --virla-shadow-floating: 0 8px 28px rgba(0, 0, 0, 0.38);
+}
+
+/* Primitivos visuais opcionais para migração gradual das telas. */
+.virla-page {
+  min-height: 100%;
+  color: var(--virla-text-primary);
+  background: var(--virla-page);
+}
+
+.virla-surface {
+  color: var(--virla-text-primary);
+  background: var(--virla-surface);
+  border: 1px solid var(--virla-border);
+  border-radius: var(--virla-radius-lg);
+  box-shadow: var(--virla-shadow-card);
+}
+
+.virla-surface-muted {
+  color: var(--virla-text-primary);
+  background: var(--virla-surface-muted);
+  border: 1px solid var(--virla-border);
+  border-radius: var(--virla-radius-md);
+}
+
+.virla-text-secondary {
+  color: var(--virla-text-secondary);
+}
+
+.virla-button-primary {
+  color: #FFFFFF;
+  background: var(--virla-brand);
+  border: 1px solid var(--virla-brand);
+  border-radius: var(--virla-radius-md);
+  transition: background-color 160ms ease, transform 160ms ease;
+}
+
+.virla-button-primary:hover {
+  background: var(--virla-brand-highlight);
+}
+
+.virla-button-primary:active {
+  transform: translateY(1px);
+}

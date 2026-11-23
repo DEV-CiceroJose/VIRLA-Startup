@@ -4,6 +4,8 @@
 @tailwind components;
 @tailwind utilities;
 
+@import './design-system/tokens.css';
+
 /* ── Base global ───────────────────────────────────────────── */
 @layer base {
   html {
@@ -54,5 +56,62 @@
   }
   .virla-scroll::-webkit-scrollbar-thumb:hover {
     background: rgba(128, 0, 128, 0.3);
+  }
+}
+
+
+/* Tema semântico global: migração progressiva sem reescrever estilos legados. */
+@layer base {
+  html,
+  body,
+  #root {
+    min-height: 100%;
+  }
+
+  body {
+    background-color: var(--virla-page);
+    color: var(--virla-text-primary);
+    transition: background-color 180ms ease, color 180ms ease;
+  }
+
+  body,
+  #root {
+    color-scheme: light;
+  }
+
+  :root[data-theme='dark'] body,
+  :root[data-theme='dark'] #root {
+    color-scheme: dark;
+  }
+
+  :root[data-theme='dark'] body {
+    background-color: var(--virla-page);
+    color: var(--virla-text-primary);
+  }
+
+  :root[data-theme='dark'] :where(input, textarea, select) {
+    color: var(--virla-text-primary);
+    background-color: var(--virla-surface);
+    border-color: var(--virla-border);
+  }
+
+  :root[data-theme='dark'] :where(input, textarea, select)::placeholder {
+    color: var(--virla-text-secondary);
+    opacity: 1;
+  }
+
+  :root[data-theme='dark'] :where(.MuiPaper-root, .MuiPopover-paper, .MuiMenu-paper) {
+    color: var(--virla-text-primary);
+    background-color: var(--virla-surface);
+    border-color: var(--virla-border);
+  }
+
+  :root[data-theme='dark'] :where(.MuiInputBase-root, .MuiOutlinedInput-notchedOutline) {
+    color: var(--virla-text-primary);
+    border-color: var(--virla-border);
+  }
+
+  :focus-visible {
+    outline-color: var(--virla-focus);
   }
 }

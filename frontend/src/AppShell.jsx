@@ -8,6 +8,7 @@ import { PAYMENT_ENABLED } from './utils/featureFlags'
 import { useAuth } from './context/AuthContext'
 import { usePresence } from './hooks/usePresence'
 import Menu from './components/Menu'
+import ThemeToggle from './design-system/theme/ThemeToggle'
 import RouteErrorBoundary from './components/RouteErrorBoundary'
 
 // ── Lazy imports — cada página vira um chunk separado no build.
@@ -167,6 +168,7 @@ export default function AppShell() {
       <NotificationProvider>
       <Toaster position="top-right" richColors />
       <PresenceManager />
+      <ThemeToggle />
       {showMenu && <Menu />}
 
       {/* Suspense envolve todas as rotas: exibe PageLoader enquanto o chunk

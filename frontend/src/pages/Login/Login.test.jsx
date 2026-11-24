@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
+import { ThemeProvider } from '../../design-system/theme/ThemeProvider'
 
 const navigateMock = vi.fn()
 vi.mock('react-router-dom', async (orig) => {
@@ -24,7 +25,7 @@ import api from '../../services/api'
 import { toast } from 'sonner'
 
 function renderLogin() {
-  return render(<MemoryRouter><LoginPage /></MemoryRouter>)
+  return render(<ThemeProvider><MemoryRouter><LoginPage /></MemoryRouter></ThemeProvider>)
 }
 
 describe('Página de Login (Firebase)', () => {
@@ -37,6 +38,17 @@ describe('Página de Login (Firebase)', () => {
     expect(screen.getByRole('button', { name: /^entrar$/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /google/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /esqueci minha senha/i })).toBeInTheDocument()
+  })
+
+  it('mostra e esconde a senha', async () => {
+    const user = userEvent.setup()
+    renderLogin()
+    const password = screen.getByPlaceholderText('Sua senha')
+    expect(password).toHaveAttribute('type', 'password')
+    await user.click(screen.getByRole('button', { name: 'Mostrar senha' }))
+    expect(password).toHaveAttribute('type', 'text')
+    await user.click(screen.getByRole('button', { name: 'Ocultar senha' }))
+    expect(password).toHaveAttribute('type', 'password')
   })
 
   it('e-mail inválido bloqueia o login', async () => {

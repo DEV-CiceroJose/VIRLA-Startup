@@ -13,6 +13,10 @@ import PersonOutline from '@mui/icons-material/PersonOutlined'
 import api from '../../services/api'
 import { logout } from '../../services/auth'
 import NotificationBell from '../NotificationBell'
+import ArrowForward from '@mui/icons-material/ArrowForward'
+import ThemeToggle from '../../design-system/theme/ThemeToggle'
+import { useAuth } from '../../context/AuthContext'
+import { computeCompleteness } from '../ProfileCompleteness/completeness'
 
 // ─── Navigation link definitions ──────────────────────────────────────────────
 
@@ -88,6 +92,18 @@ export default function Menu() {
       : role === 'CUIDADOR'
         ? [...BASE_LINKS, ...CUIDADOR_LINKS]
         : BASE_LINKS
+
+  // ── Cartão de progresso do perfil (sidebar desktop) ───────────────────────
+  const { profile } = useAuth()
+  const [progressDismissed, setProgressDismissed] = useState(() => {
+    try { return sessionStorage.getItem('virla_hide_progress') === '1' } catch { return false }
+  })
+  const completeness = profile ? computeCompleteness(profile, profile.role) : null
+  const showProgress = Boolean(completeness && completeness.percent < 100 && !progressDismissed)
+  const dismissProgress = useCallback(() => {
+    setProgressDismissed(true)
+    try { sessionStorage.setItem('virla_hide_progress', '1') } catch { /* armazenamento indisponível */ }
+  }, [])
 
   // ── Helpers ────────────────────────────────────────────────────────────────
   const isActive = (path) => path.includes('?')
@@ -172,19 +188,50 @@ export default function Menu() {
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
     <>
-      <aside className="comfort-sidebar" aria-label="Navegação da VIRLA">
-        <Link to="/home" className="comfort-sidebar-logo"><img src="/favicon.ico" alt="" /><span>VIRLA</span></Link>
-        <p className="comfort-sidebar-caption">Cuidar conecta.</p>
-        <nav aria-label="Áreas da plataforma" className="comfort-sidebar-nav">
+      <div className="vd-backdrop" aria-hidden="true" />
+      <aside className="vd-sidebar" aria-label="Navegação da VIRLA">
+        <Link to="/home" className="vd-sidebar-logo"><img src="/favicon.ico" alt="" /><span>VIRLA</span></Link>
+        <p className="vd-sidebar-caption">Cuidar conecta.</p>
+        <nav aria-label="Áreas da plataforma" className="vd-sidebar-nav">
           {LINKS.map(({ to, label }) => {
             const Icon = NAV_ICONS[to]
-            return <Link key={to} to={to} aria-current={isActive(to) ? 'page' : undefined} className={isActive(to) ? 'active' : ''}><Icon aria-hidden fontSize="small" /><span>{label}</span></Link>
+            return (
+              <Link
+                key={to}
+                to={to}
+                aria-current={isActive(to) ? 'page' : undefined}
+                className={`vd-nav-link ${isActive(to) ? 'active' : ''}`}
+              >
+                <Icon aria-hidden />
+                <span>{label}</span>
+              </Link>
+            )
           })}
         </nav>
-        <div className="comfort-sidebar-bottom">
-          <Link to="/perfil" className="comfort-sidebar-profile"><PersonOutline aria-hidden fontSize="small" /><span>Meu perfil</span></Link>
-          <a href={FEEDBACK_FORM_URL} target="_blank" rel="noopener noreferrer"><StarRate aria-hidden fontSize="small" /> Avaliar sistema</a>
-          <button type="button" onClick={fazerLogout}><Logout aria-hidden fontSize="small" /> Sair</button>
+        <div className="vd-sidebar-bottom">
+          {showProgress && (
+            <div className="vd-progress-card">
+              <button type="button" className="vd-progress-close" onClick={dismissProgress} aria-label="Ocultar aviso de perfil">
+                <Close sx={{ fontSize: 18 }} />
+              </button>
+              <div className="vd-progress-ring" role="img" aria-label={`Perfil ${completeness.percent}% completo`}>
+                <svg viewBox="0 0 62 62" aria-hidden>
+                  <circle cx="31" cy="31" r="26" fill="none" stroke="rgba(255,255,255,.12)" strokeWidth="6" />
+                  <circle
+                    cx="31" cy="31" r="26" fill="none" stroke="var(--vd-accent)" strokeWidth="6" strokeLinecap="round"
+                    strokeDasharray={2 * Math.PI * 26}
+                    strokeDashoffset={2 * Math.PI * 26 * (1 - completeness.percent / 100)}
+                  />
+                </svg>
+                <span>{completeness.percent}%</span>
+              </div>
+              <strong>Quase lá</strong>
+              <p>Complete seu perfil para transmitir mais confiança.</p>
+              <Link to="/perfil" className="vd-progress-cta">Completar perfil <ArrowForward sx={{ fontSize: 16 }} /></Link>
+            </div>
+          )}
+          <a className="vd-nav-link" href={FEEDBACK_FORM_URL} target="_blank" rel="noopener noreferrer"><StarRate aria-hidden fontSize="small" /> Avaliar sistema</a>
+          <button className="vd-nav-link" type="button" onClick={fazerLogout}><Logout aria-hidden fontSize="small" /> Sair</button>
         </div>
       </aside>
       {/* ── Backdrop overlay (mobile only, behind the drawer) ──────────────── */}
@@ -268,6 +315,10 @@ export default function Menu() {
 
           {/* ── Ações mobile: sino sempre visível + hambúrguer ────────────── */}
           <div className="flex md:hidden items-center gap-1">
+            <ThemeToggle
+              variant="inline"
+              className="p-2 rounded-lg text-virla-roxo hover:bg-virla-roxo/10 transition-colors duration-150"
+            />
             <NotificationBell />
             <button
               ref={hamburgerRef}

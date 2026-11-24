@@ -38,6 +38,13 @@ No tema escuro, a marca continua roxa. Apenas superfícies, textos, bordas e est
 - `src/design-system/theme/ThemeToggle.jsx`: controle acessível de alternância.
 - `src/index.css`: aplicação dos tokens no estilo global.
 
+## Shell da área logada e painel
+
+- `src/design-system/dashboard.css` (prefixo `vd-`): sidebar roxo-escura, conteúdo em "folha" clara com canto superior esquerdo arredondado, topbar com busca/notificações/usuário e o painel inicial. Tokens `--vd-*` com variantes claro/escuro.
+- `src/components/Topbar`: barra superior (desktop). `src/components/Avatar`: foto ou iniciais.
+- `AppShell` envolve as telas logadas em `.vd-main > .vd-main-panel`; o chat fica fora (layout próprio).
+- Painel (`pages/Home`): saudação, banner de destaque (pedidos/oportunidades), cartão de indicador + ações, agenda agrupada por data, notificações e mensagens. O aviso de perfil incompleto fica no cartão de progresso da sidebar (desktop) e num aviso compacto no celular.
+
 ## Próximas etapas
 
 1. Auditar todas as páginas, componentes e estilos existentes.

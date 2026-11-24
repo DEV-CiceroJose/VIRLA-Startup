@@ -8,6 +8,7 @@ import { PAYMENT_ENABLED } from './utils/featureFlags'
 import { useAuth } from './context/AuthContext'
 import { usePresence } from './hooks/usePresence'
 import Menu from './components/Menu'
+import Topbar from './components/Topbar'
 import ThemeToggle from './design-system/theme/ThemeToggle'
 import RouteErrorBoundary from './components/RouteErrorBoundary'
 
@@ -172,20 +173,44 @@ function PresenceManager() {
 export default function AppShell() {
   const location = useLocation()
   const showMenu = !HIDDEN_MENU_ROUTES.includes(location.pathname)
+  // Todas as telas logadas (inclusive o chat) ficam dentro da "folha" com a topbar.
+  const framed = showMenu
+
+  const routes = (
+    <Suspense fallback={<PageFallback />}>
+      <RouteErrorBoundary resetKey={location.pathname}>
+        <AppRoutes />
+      </RouteErrorBoundary>
+    </Suspense>
+  )
 
   return (
     <SocketProvider>
       <NotificationProvider>
       <Toaster position="top-right" richColors />
       <PresenceManager />
-      <ThemeToggle />
+      {/* Na área logada o botão de tema fica na topbar / cabeçalho mobile */}
+      {!framed && <ThemeToggle />}
       {showMenu && <Menu />}
 
-      {/* Suspense envolve todas as rotas: exibe PageLoader enquanto o chunk
-          da página lazy está sendo baixado. Erros de import ficam isolados
-          por rota graças ao lazy — não travam a aplicação inteira. */}
-      <Suspense fallback={<PageFallback />}>
-        <RouteErrorBoundary resetKey={location.pathname}>
+      {framed ? (
+        <div className="vd-main">
+          <div className="vd-main-panel">
+            <Topbar />
+            {routes}
+          </div>
+        </div>
+      ) : routes}
+      </NotificationProvider>
+    </SocketProvider>
+  )
+}
+
+/* Suspense (no AppShell) envolve todas as rotas: exibe PageLoader enquanto o
+   chunk da página lazy está sendo baixado. Erros de import ficam isolados por
+   rota graças ao lazy — não travam a aplicação inteira. */
+function AppRoutes() {
+  return (
         <Routes>
           {/* Rotas públicas */}
           <Route path="/"         element={<Landing />} />
@@ -229,9 +254,5 @@ export default function AppShell() {
           {/* Fallback 404 */}
           <Route path="*" element={<NotFound />} />
         </Routes>
-        </RouteErrorBoundary>
-      </Suspense>
-      </NotificationProvider>
-    </SocketProvider>
   )
 }

@@ -2,15 +2,29 @@ import { DarkModeOutlined, LightModeOutlined } from '@mui/icons-material'
 import { IconButton, Tooltip } from '@mui/material'
 import { useTheme } from './ThemeProvider'
 
-export default function ThemeToggle() {
+/**
+ * Alternância de tema.
+ * - `floating` (padrão): botão fixo no canto, usado nas páginas públicas.
+ * - `inline`: botão comum para a topbar/cabeçalho da área logada.
+ */
+export default function ThemeToggle({ variant = 'floating', className = '' }) {
   const { isDark, toggleTheme } = useTheme()
   const nextTheme = isDark ? 'claro' : 'escuro'
+  const label = `Ativar tema ${nextTheme}`
+
+  if (variant === 'inline') {
+    return (
+      <button type="button" onClick={toggleTheme} aria-label={label} title={label} className={className}>
+        {isDark ? <LightModeOutlined sx={{ fontSize: 21 }} /> : <DarkModeOutlined sx={{ fontSize: 21 }} />}
+      </button>
+    )
+  }
 
   return (
-    <Tooltip title={`Ativar tema ${nextTheme}`}>
+    <Tooltip title={label}>
       <IconButton
         onClick={toggleTheme}
-        aria-label={`Ativar tema ${nextTheme}`}
+        aria-label={label}
         size="large"
         sx={{
           position: 'fixed',

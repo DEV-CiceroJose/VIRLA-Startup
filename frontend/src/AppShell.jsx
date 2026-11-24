@@ -30,6 +30,7 @@ const SolicitacoesCuidador = lazy(() => import('./pages/SolicitacoesCuidador'))
 const CompletarCadastro = lazy(() => import('./pages/CompletarCadastro'))
 const ReportDemo        = lazy(() => import('./pages/ReportDemo'))
 const MatchDemo         = lazy(() => import('./pages/MatchDemo'))
+const Financas          = lazy(() => import('./pages/Financas'))
 
 const REPORT_DEMO_ENABLED = import.meta.env.DEV && import.meta.env.VITE_ENABLE_REPORT_DEMO === 'true'
 
@@ -83,6 +84,15 @@ function FeedRoute({ children }) {
   if (profile?.role === 'CUIDADOR') {
     return <Navigate to="/solicitacoes-disponiveis" replace />
   }
+  return children
+}
+
+function CaregiverRoute({ children }) {
+  const { firebaseUser, profile, needsProfile, loading } = useAuth()
+  if (loading) return <PageFallback />
+  if (!firebaseUser) return <Navigate to="/login" replace />
+  if (needsProfile) return <Navigate to="/completar-cadastro" replace />
+  if (profile?.role !== 'CUIDADOR') return <Navigate to="/home" replace />
   return children
 }
 
@@ -188,6 +198,7 @@ export default function AppShell() {
           <Route path="/home"   element={<ProtectedRoute><Home /></ProtectedRoute>} />
           <Route path="/feed"   element={<FeedRoute><Feed /></FeedRoute>} />
           <Route path="/perfil" element={<ProtectedRoute><Perfil /></ProtectedRoute>} />
+          <Route path="/financas" element={<CaregiverRoute><Financas /></CaregiverRoute>} />
           <Route path="/completar-cadastro" element={<ProfileSetupRoute><CompletarCadastro /></ProfileSetupRoute>} />
 
           {/* Solicitações — Familiar gerencia as próprias; Cuidador vê as disponíveis */}

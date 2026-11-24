@@ -39,7 +39,7 @@ function UserCard({ user, onOpenChat, viewerIsFamiliar, onVerMais }) {
 
   return (
     <li
-      className="bg-white/90 backdrop-blur-sm rounded-2xl border border-virla-roxo/10 shadow-sm p-5
+      className="comfort-caregiver-card bg-white/90 backdrop-blur-sm rounded-2xl border border-virla-roxo/10 shadow-sm p-5
                  hover:shadow-md hover:border-virla-roxo/20 transition-all duration-200 flex flex-col gap-4"
     >
       <div className="flex gap-4">
@@ -268,13 +268,13 @@ export default function Feed() {
 
   return (
     <div
-      className="min-h-screen pt-16 bg-virla-neve"
+      className="comfort-page comfort-feed min-h-screen pt-16 bg-virla-neve"
       style={{
         backgroundImage:
           'radial-gradient(ellipse 60% 40% at 80% 10%, rgba(128,0,128,0.08), transparent)',
       }}
     >
-      <div className="max-w-5xl mx-auto px-6 py-10 pb-28 relative">
+      <div className="comfort-content max-w-5xl mx-auto px-6 py-10 pb-28 relative">
         {loading && feedUsers.length > 0 && <LoadingOverlay label="Atualizando lista…" />}
 
         {fetchError && (
@@ -289,9 +289,10 @@ export default function Feed() {
             <h1
               className="text-3xl font-display font-black text-virla-roxo"
             >
-              Profissionais
+              Encontre quem cuida
             </h1>
           </div>
+          <p className="comfort-feed-intro">Conheça profissionais com calma, veja suas especialidades e converse antes de escolher.</p>
           {totalPages > 1 && (
             <p className="text-virla-muted text-sm">
               Página {page} de {totalPages}

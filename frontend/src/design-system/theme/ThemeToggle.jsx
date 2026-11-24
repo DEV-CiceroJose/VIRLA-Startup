@@ -11,7 +11,6 @@ export default function ThemeToggle() {
       <IconButton
         onClick={toggleTheme}
         aria-label={`Ativar tema ${nextTheme}`}
-        title={`Ativar tema ${nextTheme}`}
         size="large"
         sx={{
           position: 'fixed',

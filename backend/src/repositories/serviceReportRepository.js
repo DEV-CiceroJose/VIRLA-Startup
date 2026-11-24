@@ -17,6 +17,11 @@ export async function getBySolicitacaoId(solicitacaoId) {
   return mapQuery(snap).sort((a, b) => String(b.serviceDate).localeCompare(String(a.serviceDate)))[0] ?? null
 }
 
+export async function listByCaregiverId(caregiverId) {
+  const snap = await reportsCol().where('caregiverId', '==', caregiverId).get()
+  return mapQuery(snap).sort((a, b) => String(b.serviceDate).localeCompare(String(a.serviceDate)))
+}
+
 export async function createForSolicitacao(data) {
   const reportId = `${data.solicitacaoId}_${data.serviceDate}`
   const reportRef = reportsCol().doc(reportId)

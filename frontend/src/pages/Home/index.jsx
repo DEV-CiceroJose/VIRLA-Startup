@@ -19,6 +19,8 @@ import { formatHourly } from '../../utils/formatters'
 import { PageLoader, Spinner, InlineSpinner } from '../../components/Spinner'
 import VerifiedSeal from '../../components/VerifiedSeal'
 import { specialtyLabel } from '../../constants/specialties'
+import { useNotifications } from '../../context/NotificationContext'
+import { notificationText } from '../../utils/notificationsView'
 
 function InfoRow({ icon: Icon, label, value }) {
   return (
@@ -52,6 +54,8 @@ export default function Home() {
   const [userData, setUserData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [conversations, setConversations] = useState([])
+  const [requests, setRequests] = useState([])
+  const { notifications } = useNotifications()
   const [convLoading, setConvLoading] = useState(false)
   
   const [unreadCount, setUnreadCount] = useState(0)
@@ -114,12 +118,21 @@ export default function Home() {
   }, [])
 
   useEffect(() => {
-    if (activeTab !== 'mensagens') return undefined
     const t = setTimeout(() => {
       loadConversations()
     }, 0)
     return () => clearTimeout(t)
   }, [activeTab, loadConversations])
+
+  useEffect(() => {
+    if (!userData?.role) return
+    let active = true
+    const path = userData.role === 'CUIDADOR' ? '/solicitacoes/disponiveis' : '/solicitacoes/minhas'
+    api.get(path).then(({ data }) => {
+      if (active) setRequests((data.solicitacoes ?? []).filter((item) => !['CONCLUIDA', 'CANCELADA'].includes(item.status)).slice(0, 4))
+    }).catch(() => {})
+    return () => { active = false }
+  }, [userData?.role])
 
   function selectTab(tab) {
     setSearchParams(tab === 'mensagens' ? { tab: 'mensagens' } : {})
@@ -170,13 +183,13 @@ export default function Home() {
 
   return (
     <div
-      className="min-h-screen pt-16 bg-virla-neve"
+      className="comfort-page comfort-home min-h-screen pt-16 bg-virla-neve"
       style={{
         backgroundImage:
           'radial-gradient(ellipse 70% 50% at 70% 0%, rgba(128,0,128,0.08), transparent)',
       }}
     >
-      <div className="max-w-4xl mx-auto px-6 py-10">
+      <div className="comfort-content max-w-4xl mx-auto px-6 py-10">
         
         {/* CABEÇALHO ROXO DO PERFIL */}
         <div className="bg-virla-roxo rounded-3xl p-8 text-white mb-6 shadow-lg relative overflow-hidden">
@@ -234,19 +247,19 @@ export default function Home() {
         {/* BANNER DE GAMIFICAÇÃO / BOAS-VINDAS */}
         {/* ========================================= */}
         {showBanner && userData?.role === 'CUIDADOR' && (
-          <div className="bg-blue-50/80 backdrop-blur-sm border border-blue-100 border-l-4 border-l-blue-500 text-blue-900 p-4 mb-6 rounded-xl shadow-sm flex flex-col sm:flex-row items-start sm:items-center gap-4 transition-all hover:shadow-md">
+          <div className="bg-virla-roxo/5 backdrop-blur-sm border border-virla-roxo/15 border-l-4 border-l-virla-roxo text-virla-texto p-4 mb-6 rounded-xl shadow-sm flex flex-col sm:flex-row items-start sm:items-center gap-4 transition-all hover:shadow-md">
             <div className="flex items-start gap-3 flex-1">
-              <WorkspacePremium sx={{ fontSize: 24 }} className="text-blue-500 flex-shrink-0 mt-0.5" />
+              <WorkspacePremium sx={{ fontSize: 24 }} className="text-virla-roxo flex-shrink-0 mt-0.5" />
               <div>
                 <p className="font-bold text-sm">O seu perfil está incompleto!</p>
-                <p className="text-xs mt-1 text-blue-800/80">
-                  Preencha todas as suas informações (Foto, Bio, CRM/CRF, Valores e Localização) para passar mais confiança aos familiares e receber mais propostas de trabalho.
+                <p className="text-xs mt-1 text-virla-muted">
+                  Complete sua foto, apresentação, registro profissional, valor e localização para ajudar famílias a conhecerem melhor seu trabalho.
                 </p>
               </div>
             </div>
             <button
               onClick={() => navigate('/perfil')}
-              className="w-full sm:w-auto px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold uppercase tracking-wider rounded-xl shadow-sm transition-all hover:-translate-y-0.5 whitespace-nowrap"
+              className="w-full sm:w-auto px-5 py-2.5 bg-virla-roxo hover:bg-virla-roxohighlight text-white text-xs font-bold uppercase tracking-wider rounded-xl shadow-sm transition-all hover:-translate-y-0.5 whitespace-nowrap"
             >
               Completar Perfil
             </button>
@@ -254,19 +267,19 @@ export default function Home() {
         )}
 
         {showBanner && userData?.role === 'FAMILIAR' && (
-          <div className="bg-emerald-50/80 backdrop-blur-sm border border-emerald-100 border-l-4 border-l-emerald-500 text-emerald-900 p-4 mb-6 rounded-xl shadow-sm flex flex-col sm:flex-row items-start sm:items-center gap-4 transition-all hover:shadow-md">
+          <div className="bg-virla-roxo/5 backdrop-blur-sm border border-virla-roxo/15 border-l-4 border-l-virla-roxo text-virla-texto p-4 mb-6 rounded-xl shadow-sm flex flex-col sm:flex-row items-start sm:items-center gap-4 transition-all hover:shadow-md">
             <div className="flex items-start gap-3 flex-1">
-              <VolunteerActivism sx={{ fontSize: 24 }} className="text-emerald-500 flex-shrink-0 mt-0.5" />
+              <VolunteerActivism sx={{ fontSize: 24 }} className="text-virla-roxo flex-shrink-0 mt-0.5" />
               <div>
                 <p className="font-bold text-sm">O seu perfil está incompleto!</p>
-                <p className="text-xs mt-1 text-emerald-800/80">
+                <p className="text-xs mt-1 text-virla-muted">
                   Adicione uma foto, sua data de nascimento e uma apresentação detalhada para que os profissionais saibam exatamente como ajudar.
                 </p>
               </div>
             </div>
             <button
               onClick={() => navigate('/perfil')}
-              className="w-full sm:w-auto px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold uppercase tracking-wider rounded-xl shadow-sm transition-all hover:-translate-y-0.5 whitespace-nowrap"
+              className="w-full sm:w-auto px-5 py-2.5 bg-virla-roxo hover:bg-virla-roxohighlight text-white text-xs font-bold uppercase tracking-wider rounded-xl shadow-sm transition-all hover:-translate-y-0.5 whitespace-nowrap"
             >
               Completar Perfil
             </button>
@@ -310,7 +323,29 @@ export default function Home() {
         </div>
 
         {activeTab === 'dashboard' ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="comfort-dashboard">
+            <div className="comfort-quick-actions">
+              <button type="button" onClick={() => navigate(userData?.role === 'CUIDADOR' ? '/solicitacoes-disponiveis' : '/feed')}><span>01</span><strong>{userData?.role === 'CUIDADOR' ? 'Encontrar oportunidades' : 'Encontrar cuidadores'}</strong><small>{userData?.role === 'CUIDADOR' ? 'Veja solicitações disponíveis para você.' : 'Conheça perfis e converse com profissionais.'}</small><b>Explorar →</b></button>
+              <button type="button" onClick={() => navigate('/home?tab=mensagens')}><span>02</span><strong>Suas conversas</strong><small>Continue falando com as pessoas com quem se conectou.</small><b>Abrir conversas →</b></button>
+              <button type="button" onClick={() => navigate(userData?.role === 'CUIDADOR' ? '/financas' : '/solicitacoes')}><span>03</span><strong>{userData?.role === 'CUIDADOR' ? 'Minhas finanças' : 'Meus pedidos'}</strong><small>{userData?.role === 'CUIDADOR' ? 'Acompanhe atendimentos e valores.' : 'Acompanhe as necessidades que você publicou.'}</small><b>Ver detalhes →</b></button>
+            </div>
+            <div className="comfort-dashboard-activity">
+              <section className="comfort-panel">
+                <div className="comfort-section-heading"><span className="comfort-eyebrow">Sua rotina</span><h2>{userData?.role === 'CUIDADOR' ? 'Oportunidades para você' : 'Seus pedidos de cuidado'}</h2></div>
+                {requests.length === 0 ? <p className="comfort-activity-empty">Nenhuma solicitação por aqui no momento.</p> : requests.map((request) => (
+                  <button type="button" className="comfort-request-row" key={request.id} onClick={() => navigate(userData?.role === 'CUIDADOR' ? '/solicitacoes-disponiveis' : '/solicitacoes')}>
+                    <span className="comfort-request-date">{request.dataInicio ? new Date(`${String(request.dataInicio).slice(0, 10)}T12:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }) : '—'}</span>
+                    <span><strong>{request.titulo}</strong><small>{[request.cidade, request.estado].filter(Boolean).join(', ') || 'Local a combinar'}</small></span>
+                    <b>→</b>
+                  </button>
+                ))}
+              </section>
+              <div className="comfort-dashboard-side">
+                <section className="comfort-panel"><div className="comfort-section-heading"><span className="comfort-eyebrow">Acompanhe</span><h2>Notificações</h2></div>{notifications.length === 0 ? <p className="comfort-activity-empty">Tudo em dia por aqui.</p> : notifications.slice(0, 3).map((item) => <p className="comfort-activity-note" key={item.id}>{notificationText(item)}</p>)}</section>
+                <section className="comfort-panel"><div className="comfort-section-heading"><span className="comfort-eyebrow">Perto de você</span><h2>Conversas</h2></div>{conversations.length === 0 ? <p className="comfort-activity-empty">Suas conversas aparecerão aqui.</p> : conversations.slice(0, 2).map((item) => <button className="comfort-activity-conversation" type="button" key={item.peerId} onClick={() => navigate(`/chat/${item.peerId}`)}><strong>{item.peerName}</strong><small>{item.lastMessage}</small></button>)}</section>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-virla-roxo/10 shadow-sm p-6">
               <h2 className="font-bold text-virla-texto mb-4 flex items-center gap-2">
                 <Person sx={{ fontSize: 20 }} className="text-virla-roxo" />
@@ -364,6 +399,7 @@ export default function Home() {
                   </div>
                 </div>
               )}
+            </div>
             </div>
           </div>
         ) : (

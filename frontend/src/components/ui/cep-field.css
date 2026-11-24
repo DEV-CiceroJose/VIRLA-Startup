@@ -1,0 +1,24 @@
+/* Campo único de CEP com o endereço encontrado logo abaixo */
+.cep-field { display: grid; gap: 8px; }
+.cep-result:empty { display: none; }
+.cep-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--vd-line, #eee3ef);
+  background: var(--vd-tint, #f6eff7);
+  font-size: 14px;
+  color: var(--vd-ink, #2f2233);
+  animation: cep-in 0.2s ease-out;
+}
+.cep-card > div { display: grid; gap: 2px; min-width: 0; }
+.cep-card strong { font-weight: 700; overflow-wrap: anywhere; }
+.cep-card span { color: var(--vd-ink-soft, #6b6470); }
+.cep-card .cep-ok { flex: none; margin-top: 1px; font-size: 19px; color: var(--vd-ok, #1f7a52); }
+.cep-card.is-loading { align-items: center; color: var(--vd-ink-soft, #6b6470); }
+.cep-card.is-missing { align-items: center; background: var(--vd-risk-bg, #fbe6e3); border-color: transparent; color: var(--vd-risk, #b4372b); }
+.cep-card.is-missing svg { font-size: 18px; }
+@keyframes cep-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .cep-card { animation: none; } }

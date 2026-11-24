@@ -20,11 +20,13 @@ vi.mock('../../services/auth', () => ({
 vi.mock('sonner', () => ({ toast: { warning: vi.fn(), error: vi.fn(), success: vi.fn() } }))
 // Upload de imagem usa FileReader/canvas — fora do escopo deste fluxo.
 vi.mock('../../components/ProfileImageUpload', () => ({ default: () => null }))
+vi.mock('../../services/viacep', () => ({ lookupCep: vi.fn() }))
 
 import Cadastro from './index'
 import api from '../../services/api'
 import { registerWithEmail, loginWithGoogle, getIdToken } from '../../services/auth'
 import { toast } from 'sonner'
+import { lookupCep } from '../../services/viacep'
 
 function renderCadastro() {
   return render(
@@ -194,6 +196,26 @@ describe('Página de Cadastro (em etapas)', () => {
     expect(payload).not.toHaveProperty('email')
     expect(getIdToken).toHaveBeenCalledWith(true)
     expect(navigateMock).toHaveBeenCalledWith('/login')
+  })
+
+  it('CEP opcional preenche rua, bairro, cidade e UF no perfil criado', async () => {
+    registerWithEmail.mockResolvedValue({ uid: 'u9' })
+    api.post.mockResolvedValue({ data: { user: { id: 'u9' } } })
+    getIdToken.mockResolvedValue('token')
+    lookupCep.mockResolvedValue({ street: 'Rua da Aurora', neighborhood: 'Boa Vista', city: 'Recife', state: 'PE' })
+    const user = userEvent.setup()
+    renderCadastro()
+    await next(user)
+    await user.type(screen.getByLabelText(/^CEP/), '50030230')
+    expect(await screen.findByText('Recife - PE')).toBeInTheDocument()
+    await fillDados(user)
+    await next(user)
+    await fillAcesso(user)
+
+    await waitFor(() => expect(api.post).toHaveBeenCalledTimes(1))
+    expect(api.post.mock.calls[0][1]).toMatchObject({
+      zipCode: '50030-230', street: 'Rua da Aurora', neighborhood: 'Boa Vista', city: 'Recife', state: 'PE',
+    })
   })
 
   it('cadastro com Google chama loginWithGoogle e navega para completar cadastro', async () => {

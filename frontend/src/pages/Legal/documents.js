@@ -122,6 +122,7 @@ export const PRIVACY = {
       title: '2. Quais dados coletamos',
       list: [
         'Cadastro: nome, e-mail, CPF, data de nascimento, tipo de conta e foto de perfil (opcional).',
+        'Endereço: CEP e, a partir dele, rua, bairro, cidade e estado. O perfil público mostra só a cidade e o estado.',
         'Perfil profissional (cuidadores): conselho e número de registro, especialidades, valor por hora, disponibilidade, cidade, estado e CEP, apresentação.',
         'Verificação (cuidadores): documento oficial com foto, selfie segurando o documento, certidão de antecedentes criminais e seu código de validação, data de emissão e a declaração de veracidade.',
         'Uso da plataforma: solicitações de cuidado, mensagens do chat, relatórios de atendimento, notificações e status de presença.',
@@ -145,7 +146,7 @@ export const PRIVACY = {
       title: '4. Com quem compartilhamos',
       list: [
         'Com outros usuários: o perfil público mostra nome, foto, cidade, especialidades, valor e o status de verificação. CPF, e-mail e documentos nunca aparecem.',
-        'Com prestadores que nos ajudam a operar: Google Firebase (login, banco de dados e chat), Render (hospedagem), Stripe e AbacatePay (pagamentos).',
+        'Com prestadores que nos ajudam a operar: Google Firebase (login, banco de dados e chat), Render (hospedagem), Stripe e AbacatePay (pagamentos) e ViaCEP (consulta pública de endereço, que recebe só o CEP digitado).',
         'Com autoridades públicas, quando houver obrigação legal ou ordem judicial.',
       ],
       note: 'Não vendemos seus dados pessoais.',

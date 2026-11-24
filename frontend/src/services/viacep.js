@@ -1,5 +1,6 @@
 /**
- * Consulta o ViaCEP (https://viacep.com.br) e devolve { city, state } ou
+ * Consulta o ViaCEP (https://viacep.com.br) e devolve { street, neighborhood,
+ * city, state } ou
  * null se o CEP for inválido/não encontrado ou a rede falhar. Nunca lança —
  * quem chama decide se avisa o usuário ou ignora silenciosamente.
  *
@@ -14,7 +15,12 @@ export async function lookupCep(cep) {
     if (!res.ok) return null
     const data = await res.json()
     if (data.erro) return null
-    return { city: data.localidade ?? '', state: data.uf ?? '' }
+    return {
+      street: data.logradouro ?? '',
+      neighborhood: data.bairro ?? '',
+      city: data.localidade ?? '',
+      state: data.uf ?? '',
+    }
   } catch {
     return null
   }

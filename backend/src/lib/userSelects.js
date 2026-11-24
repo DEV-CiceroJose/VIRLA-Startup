@@ -34,6 +34,8 @@ export const USER_SELF_SELECT = {
   email: true,
   cpf: true,
   zipCode: true,
+  street: true, // endereço só para o próprio usuário (perfil público mostra cidade/UF)
+  neighborhood: true,
   termsAcceptedAt: true,
   termsVersion: true,
 }

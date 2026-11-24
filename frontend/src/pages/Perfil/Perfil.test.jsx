@@ -62,8 +62,10 @@ describe('Página de Perfil', () => {
     renderPerfil()
     expect(await screen.findByLabelText('Nome completo')).toHaveValue('Ana Souza')
     expect(screen.getByLabelText('Bio / Apresentação')).toHaveValue('Sobre mim')
-    expect(screen.getByLabelText('Cidade')).toBeInTheDocument()
-    expect(screen.getByLabelText('Estado (UF)')).toBeInTheDocument()
+    expect(screen.getByLabelText('CEP')).toBeInTheDocument()
+    // Cidade e estado não são mais digitados: vêm do CEP.
+    expect(screen.queryByLabelText('Cidade')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Estado (UF)')).not.toBeInTheDocument()
     expect(screen.getByLabelText('Conselho profissional')).toBeInTheDocument()
     expect(screen.getByLabelText('Registro profissional (COREN, CRP, etc.)')).toBeInTheDocument()
   })
@@ -95,30 +97,40 @@ describe('Página de Perfil', () => {
     expect(api.put).toHaveBeenCalledTimes(1)
   })
 
-  it('autopreenche cidade/estado ao digitar um CEP válido', async () => {
+  it('um só campo de CEP: mostra rua, bairro, cidade e UF e envia o endereço', async () => {
     api.get.mockResolvedValue({ data: { user: CUIDADOR } })
-    lookupCep.mockResolvedValue({ city: 'Recife', state: 'PE' })
+    api.put.mockResolvedValue({ data: { user: CUIDADOR } })
+    lookupCep.mockResolvedValue({ street: 'Rua da Aurora', neighborhood: 'Boa Vista', city: 'Recife', state: 'PE' })
     const user = userEvent.setup()
     renderPerfil()
     const cepInput = await screen.findByLabelText('CEP')
     await user.type(cepInput, '50030230')
 
-    expect(await screen.findByDisplayValue('Recife')).toBeInTheDocument()
-    expect(screen.getByLabelText('Estado (UF)')).toHaveValue('PE')
+    expect(cepInput).toHaveValue('50030-230')
+    expect(await screen.findByText('Rua da Aurora, Boa Vista')).toBeInTheDocument()
+    expect(screen.getByText('Recife - PE')).toBeInTheDocument()
     expect(lookupCep).toHaveBeenCalledWith('50030230')
+
+    await user.click(screen.getByRole('button', { name: /salvar altera/i }))
+    await screen.findByText('Perfil atualizado com sucesso!')
+    expect(api.put.mock.calls[0][1]).toMatchObject({
+      zipCode: '50030-230', street: 'Rua da Aurora', neighborhood: 'Boa Vista', city: 'Recife', state: 'PE',
+    })
   })
 
-  it('estado (UF) usa o seletor visual com as 27 opções', async () => {
-    api.get.mockResolvedValue({ data: { user: CUIDADOR } })
+  it('CEP inexistente avisa e limpa o endereço', async () => {
+    api.get.mockResolvedValue({ data: { user: { ...CUIDADOR, zipCode: '50030230', city: 'Recife', state: 'PE' } } })
+    lookupCep.mockResolvedValue(null)
     const user = userEvent.setup()
     renderPerfil()
-    const select = await screen.findByLabelText('Estado (UF)')
-    expect(select).toHaveAttribute('role', 'combobox')
-    await user.click(select)
-    expect(screen.getByRole('option', { name: 'Pernambuco' })).toBeInTheDocument()
-    expect(screen.getAllByRole('option')).toHaveLength(28)
-  })
+    const cepInput = await screen.findByLabelText('CEP')
+    expect(screen.getByText('Recife - PE')).toBeInTheDocument()
+    await user.clear(cepInput)
+    await user.type(cepInput, '00000000')
 
+    expect(await screen.findByText('CEP não encontrado. Confira os números.')).toBeInTheDocument()
+    expect(screen.queryByText('Recife - PE')).not.toBeInTheDocument()
+  })
   it('mostra e envia o valor por hora com máscara de moeda', async () => {
     api.get.mockResolvedValue({ data: { user: CUIDADOR } })
     api.put.mockResolvedValue({ data: { user: CUIDADOR } })

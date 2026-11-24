@@ -154,6 +154,7 @@ Decisão do produto: **documentos + revisão pela equipe**, e o cuidador **fica 
 - **Perfil `/perfil`:** cartão fixo à esquerda (foto/iniciais, papel, % completo, status da verificação, atalhos das seções) e formulário em painéis (Dados pessoais, Foto e valor, Perfil profissional, Onde você atende, Conta e segurança) com barra de salvar sempre visível. Lógica igual. Estilos em `design-system/own-profile.css` (`pf-`).
 - **Pagamento `/pagamento`:** resumo escuro com o valor em Playfair, etapas (dados → PIX → confirmação), QR em cartão, contagem regressiva até expirar, "copia e cola" e estados de espera/expirado/pago com tokens. Labels agora associados aos campos. Lógica do PIX igual. Estilos em `design-system/payment.css` (`pg-`). *Não testado no navegador: a rota exige vir do chat com uma cobrança.*
 - **Completar cadastro:** mesmo cartão com fundo animado do login, cartões de tipo de conta e aceite obrigatório dos termos.
+- **Endereço por CEP (campo único):** `components/ui/CepField.jsx` consulta o ViaCEP ao completar os 8 dígitos e mostra rua, bairro, cidade e UF num cartão (sem campos de cidade/estado). Está no Cadastro (opcional, etapa "Seus dados") e no Perfil para família e cuidador. O backend guarda `street` e `neighborhood` só no perfil próprio; o público continua vendo cidade/UF. A Política de Privacidade passou a citar o endereço e o ViaCEP (versão dos termos `2026-11-24.2`).
 
 ### 📁 Arquivos principais
 
@@ -201,7 +202,7 @@ Convenção de nomes CSS: `vd-` = shell/painel, `vc-` = chat. Para telas novas, 
    npm test
    npm run build
    ```
-   Estado atual: **168/168 testes no frontend, 145/145 no backend** e build ok.
+   Estado atual: **169/169 testes no frontend, 146/146 no backend** e build ok.
 4. **Ver no navegador:** `npm run dev` (precisa do backend + Firebase para logar).
    *Sem backend?* Dá para montar um "harness" temporário (não commitado): um `vite.config` extra com um plugin que troca `AuthContext`, `NotificationContext`, `SocketContext`, `services/api`, `services/auth` e os hooks `usePresence`, `useFirebaseChat`, `useSocket`, `useAudioRecorder` por mocks com dados falsos. Atenção: rode o Vite com `cwd` = `frontend/`, senão o Tailwind não gera as classes.
 

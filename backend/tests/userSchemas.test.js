@@ -156,3 +156,10 @@ test('zipCode: aceita com/sem hífen e normaliza pra 8 dígitos; rejeita formato
   assert.equal(createUserBodySchema.safeParse({ ...base, zipCode: '123' }).success, false)
   assert.equal(createUserBodySchema.safeParse({ ...base }).success, true)
 })
+
+test('endereço do CEP: rua e bairro opcionais no cadastro e na edição', () => {
+  const ok = createUserBodySchema.safeParse({ ...baseCreate, name: 'Ana Souza', zipCode: '50030-230', street: 'Rua da Aurora', neighborhood: 'Boa Vista', city: 'Recife', state: 'PE' })
+  assert.equal(ok.success, true, JSON.stringify(ok.error?.issues))
+  assert.equal(updateUserBodySchema.safeParse({ street: 'Rua da Aurora', neighborhood: 'Boa Vista' }).success, true)
+  assert.equal(updateUserBodySchema.safeParse({ street: 'x'.repeat(161) }).success, false)
+})

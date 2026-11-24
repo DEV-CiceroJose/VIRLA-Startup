@@ -12,6 +12,7 @@ import VolunteerActivismOutlined from '@mui/icons-material/VolunteerActivismOutl
 import CheckCircle from '@mui/icons-material/CheckCircle'
 import api from '../../services/api'
 import { Field, DatePickerField } from '../../components/ui'
+import CepField from '../../components/ui/CepField'
 import ProfileImageUpload from '../../components/ProfileImageUpload'
 import AuthLayout from '../../components/auth/AuthLayout'
 import Stepper from '../../components/auth/Stepper'
@@ -51,6 +52,8 @@ export default function Cadastro() {
   const [council, setCouncil] = useState('')
   const [stepIndex, setStepIndex] = useState(0)
   const [legal, setLegal] = useState({ terms: false, privacy: false })
+  const [cep, setCep] = useState('')
+  const [address, setAddress] = useState(null)
 
   const inputName = useRef()
   const inputEmail = useRef()
@@ -131,6 +134,14 @@ export default function Cadastro() {
       }
 
       if (profileImage) payload.profileImage = profileImage
+      // CEP opcional: o endereço (rua, bairro, cidade, UF) vem do ViaCEP.
+      if (address) {
+        payload.zipCode = cep
+        payload.street = address.street || null
+        payload.neighborhood = address.neighborhood || null
+        payload.city = address.city || null
+        payload.state = address.state || null
+      }
 
       if (role === 'CUIDADOR') {
         const registerNumber = inputRegister.current?.value?.trim()
@@ -274,6 +285,14 @@ export default function Cadastro() {
               max={new Date().toISOString().split('T')[0]}
             />
           </div>
+          <CepField
+            label="CEP (opcional)"
+            value={cep}
+            address={address}
+            onChange={setCep}
+            onResolve={setAddress}
+            hint={role === 'CUIDADOR' ? 'Mostra às famílias a cidade onde você atende.' : 'Ajuda a encontrar cuidadores perto de você.'}
+          />
         </section>
 
         {role === 'CUIDADOR' && (

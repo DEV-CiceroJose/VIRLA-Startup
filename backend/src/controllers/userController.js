@@ -68,6 +68,7 @@ const createUsers = async (req, res) => {
     name, birthDate: birthDateRaw, role, bio, cpf,
     profileImage, council, hourlyRate: hourlyRateRaw, registerNumber,
     approach, specialties, availableShifts, serviceFrequencies, description, city, state, zipCode,
+    street, neighborhood,
   } = req.body
 
   const birthDate = parseBirthDate(birthDateRaw)
@@ -116,6 +117,8 @@ const createUsers = async (req, res) => {
       city: emptyToNull(city),
       state: emptyToNull(state),
       zipCode: emptyToNull(zipCode),
+      street: emptyToNull(street),
+      neighborhood: emptyToNull(neighborhood),
       // Aceite dos Termos de Uso e da Política de Privacidade (exigido pelo schema).
       termsAcceptedAt: new Date(),
       termsVersion: TERMS_VERSION,
@@ -246,6 +249,8 @@ const updateUsers = async (req, res) => {
     ...(req.body.city !== undefined && { city: req.body.city || null }),
     ...(req.body.state !== undefined && { state: req.body.state || null }),
     ...(req.body.zipCode !== undefined && { zipCode: req.body.zipCode || null }),
+    ...(req.body.street !== undefined && { street: req.body.street || null }),
+    ...(req.body.neighborhood !== undefined && { neighborhood: req.body.neighborhood || null }),
   }
 
   if (data.council && data.registerNumber && (await registerExists(data.council, data.registerNumber, req.params.id))) {

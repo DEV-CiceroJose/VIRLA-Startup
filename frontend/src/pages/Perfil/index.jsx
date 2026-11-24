@@ -19,12 +19,11 @@ import ProfileImageUpload from '../../components/ProfileImageUpload'
 import { computeCompleteness } from '../../components/ProfileCompleteness/completeness'
 import '../../design-system/own-profile.css'
 import { Field, Button, Alert, ConfirmDialog, TagSelect, DatePickerField } from '../../components/ui'
+import CepField from '../../components/ui/CepField'
 import { hasPasswordProvider, linkPassword, mapAuthError } from '../../services/auth'
 import { COUNCILS, isValidRegister } from '../../constants/councils'
-import { STATES } from '../../constants/states'
 import { SPECIALTIES, SPECIALTY_VALUES } from '../../constants/specialties'
 import { TURNOS, FREQUENCIAS, TURNO_VALUES, FREQUENCIA_VALUES } from '../../constants/solicitacaoOptions'
-import { lookupCep } from '../../services/viacep'
 import { maskCep, maskCurrencyInput, parseCurrencyInput } from '../../utils/formatters'
 
 function initials(name = '') {
@@ -56,6 +55,8 @@ function emptyUserForm() {
     serviceFrequencies: [],
     description: '',
     zipCode: '',
+    street: '',
+    neighborhood: '',
     city: '',
     state: '',
   }
@@ -90,7 +91,9 @@ function mapUserToForm(user) {
       ? user.serviceFrequencies.filter((value) => FREQUENCIA_VALUES.includes(value))
       : [],
     description: user.description ?? '',
-    zipCode: user.zipCode ?? '',
+    zipCode: user.zipCode ? maskCep(user.zipCode) : '',
+    street: user.street ?? '',
+    neighborhood: user.neighborhood ?? '',
     city: user.city ?? '',
     state: user.state ?? '',
   }
@@ -160,14 +163,17 @@ export default function Perfil() {
         birthDate: userData.birthDate ? new Date(userData.birthDate).toISOString() : undefined,
         bio: userData.bio,
         profileImage: userData.profileImage.trim() || null,
+        // Endereço vem do CEP (ViaCEP) para família e cuidador.
+        zipCode: userData.zipCode.trim() || null,
+        street: userData.street.trim() || null,
+        neighborhood: userData.neighborhood.trim() || null,
+        city: userData.city.trim() || null,
+        state: userData.state.trim() || null,
       }
       let payload = basePayload
       if (!isFamiliar) {
         payload = {
           ...basePayload,
-          zipCode: userData.zipCode.trim() || null,
-          city: userData.city.trim() || null,
-          state: userData.state.trim() || null,
           council: userData.council || null,
           registerNumber: userData.registerNumber.trim() || null,
           approach: userData.approach.trim() || null,
@@ -190,20 +196,15 @@ export default function Perfil() {
     }
   }
 
-  async function handleZipCodeChange(e) {
-    const masked = maskCep(e.target.value)
-    setUserData((prev) => ({ ...prev, zipCode: masked }))
-    const digits = masked.replace(/\D/g, '')
-    if (digits.length === 8) {
-      const result = await lookupCep(digits)
-      if (result) {
-        setUserData((prev) => ({
-          ...prev,
-          city: result.city || prev.city,
-          state: result.state || prev.state,
-        }))
-      }
-    }
+  // CEP único: o endereço (rua, bairro, cidade, UF) vem do ViaCEP.
+  function handleCepResolve(address) {
+    setUserData((prev) => ({
+      ...prev,
+      street: address?.street ?? '',
+      neighborhood: address?.neighborhood ?? '',
+      city: address?.city ?? '',
+      state: address?.state ?? '',
+    }))
   }
 
   async function handleCriarSenha(e) {
@@ -259,7 +260,8 @@ export default function Perfil() {
   const sections = [
     { id: 'pf-dados', label: 'Dados pessoais' },
     { id: 'pf-foto', label: isFamiliar ? 'Foto de perfil' : 'Foto e valor' },
-    ...(!isFamiliar ? [{ id: 'pf-profissional', label: 'Perfil profissional' }, { id: 'pf-local', label: 'Onde você atende' }] : []),
+    ...(!isFamiliar ? [{ id: 'pf-profissional', label: 'Perfil profissional' }] : []),
+    { id: 'pf-local', label: isFamiliar ? 'Onde você mora' : 'Onde você atende' },
     { id: 'pf-conta', label: 'Conta e segurança' },
   ]
 
@@ -436,40 +438,16 @@ export default function Perfil() {
                 </section>
               )}
 
-              {!isFamiliar && (
-                <section id="pf-local" className="pf-panel" aria-labelledby="pf-local-t">
-                  <h2 id="pf-local-t"><LocationOn aria-hidden /> Onde você atende</h2>
-                  <Field
-                    label="CEP"
-                    icon={LocationOn}
-                    type="text"
-                    inputMode="numeric"
-                    value={userData.zipCode}
-                    onChange={handleZipCodeChange}
-                    maxLength={9}
-                    placeholder="00000-000"
-                  />
-                  <div className="pf-grid">
-                    <Field
-                      label="Cidade"
-                      value={userData.city}
-                      onChange={(e) => setUserData({ ...userData, city: e.target.value })}
-                    />
-                    <Field
-                      as="select"
-                      label="Estado (UF)"
-                      value={userData.state}
-                      onChange={(e) => setUserData({ ...userData, state: e.target.value })}
-                    >
-                      <option value="">Selecione…</option>
-                      {STATES.map((s) => (
-                        <option key={s.value} value={s.value}>{s.label}</option>
-                      ))}
-                    </Field>
-                  </div>
-                </section>
-              )}
-
+              <section id="pf-local" className="pf-panel" aria-labelledby="pf-local-t">
+                <h2 id="pf-local-t"><LocationOn aria-hidden /> {isFamiliar ? 'Onde você mora' : 'Onde você atende'}</h2>
+                <CepField
+                  value={userData.zipCode}
+                  address={userData}
+                  onChange={(zipCode) => setUserData((prev) => ({ ...prev, zipCode }))}
+                  onResolve={handleCepResolve}
+                  hint={isFamiliar ? 'Usamos para mostrar cuidadores perto de você.' : 'Rua e bairro ficam só com você; as famílias veem a cidade.'}
+                />
+              </section>
               <div className="pf-savebar">
                 <span>As alterações só valem depois de salvar.</span>
                 <Button type="submit" loading={saving} disabled={deleting} icon={Save}>

@@ -6,7 +6,8 @@
  * com o cartão subindo por cima.
  */
 
-.vp-page { max-width: 1120px; }
+/* Centralizado na folha: em telas largas o perfil não fica colado à esquerda. */
+.vp-page { max-width: 1180px; margin-inline: auto; }
 
 .vp-crumbs {
   display: flex;
@@ -33,9 +34,9 @@
 
 .vp-layout {
   display: grid;
-  grid-template-columns: 360px minmax(0, 1fr);
-  gap: 28px;
-  margin-top: 22px;
+  grid-template-columns: 380px minmax(0, 1fr);
+  gap: 32px;
+  margin-top: 24px;
   align-items: start;
 }
 

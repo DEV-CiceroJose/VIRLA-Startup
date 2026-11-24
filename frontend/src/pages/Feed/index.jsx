@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import Person from '@mui/icons-material/Person'
 import Groups from '@mui/icons-material/Groups'
 import Search from '@mui/icons-material/Search'
-import Handshake from '@mui/icons-material/Handshake'
+import PersonSearchOutlined from '@mui/icons-material/PersonSearchOutlined'
 import Chat from '@mui/icons-material/Chat'
 import ChevronLeft from '@mui/icons-material/ChevronLeft'
 import ChevronRight from '@mui/icons-material/ChevronRight'
@@ -286,7 +286,9 @@ export default function Feed() {
 
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
-            <Handshake sx={{ fontSize: 32 }} className="text-virla-roxo" />
+            <span className="vd-card-icon" aria-hidden>
+              <PersonSearchOutlined sx={{ fontSize: 24 }} />
+            </span>
             <h1
               className="text-3xl font-display font-black text-virla-roxo"
             >

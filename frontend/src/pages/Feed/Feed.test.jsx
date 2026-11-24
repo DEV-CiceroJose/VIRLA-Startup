@@ -48,4 +48,14 @@ describe('Feed com match inteligente', () => {
       { params: { page: 1, solicitacaoId: 'solicitacao1234567890' } },
     ))
   })
+
+  it('mostra o cartão do cuidador com valor, conversa e perfil completo para a família', async () => {
+    render(<MemoryRouter><Feed /></MemoryRouter>)
+
+    expect(await screen.findByRole('button', { name: 'Conversar com Ana Oliveira' })).toBeInTheDocument()
+    expect(screen.getByRole('list', { name: 'Resumo' })).toHaveTextContent('R$')
+    expect(screen.getByRole('list', { name: 'Especialidades' })).toHaveTextContent('Alzheimer')
+    expect(await screen.findByRole('button', { name: 'Ver perfil completo' })).toBeInTheDocument()
+    expect(screen.getByText('1 perfil')).toBeInTheDocument()
+  })
 })

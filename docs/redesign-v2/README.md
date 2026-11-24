@@ -9,7 +9,7 @@
 
 ```
  Landing ──── Painel ──── Chat ──── Finanças ──── Perfil cuidador ──── Feed ──── Solicitações ──── Perfil/Pagamento
- ✅ (ref 1)  ✅ (ref 5)  ✅ (ref 4)   ✅ (ref 3)       ✅ (ref 2)          ⏳          ⏳                  ⏳
+ ✅ (ref 1)  ✅ (ref 5)  ✅ (ref 4)   ✅ (ref 3)       ✅ (ref 2)       ✅ (ref 2)     ⏳                  ⏳
 ```
 
 ✅ feito · ⏳ falta
@@ -103,13 +103,21 @@ As imagens de referência estão em [`referencias/`](./referencias):
 - Tema escuro com tokens `--l-*` (hero) e `--o-*` (seções) em `pages/Landing/landing.css` (substitui `comfort-landing.css`). `style.css` da landing antiga não é mais importado — pode sair na faxina.
 - O rodapé trocou a coluna "Legal" (links `#` sem destino) por "Plataforma" (entrar, criar conta, como funciona). Quando houver páginas de Privacidade/Termos/FAQ, volte com a coluna.
 - Testes em `pages/Landing/Landing.test.jsx`.
-- **Tema com tinta (21st.dev "Ink Spill Theme Switch")**, só na landing: botão sol/lua no cabeçalho (`components/InkThemeToggle.jsx` + geometria em `components/ink.js`). O tema novo "escorre" a partir do botão como uma mancha de tinta. Em vez de renderizar a página duas vezes num palco com rolagem própria (como o original), usa a View Transitions API, então a rolagem e o `ThemeProvider` continuam iguais. Sem suporte à API ou com movimento reduzido, troca na hora. O botão flutuante de tema não aparece em `/`.
+- **Tema com tinta (21st.dev "Ink Spill Theme Switch")**, em todo o app: na landing, botão sol/lua no cabeçalho (`components/InkThemeToggle.jsx`); no resto, o próprio `ThemeToggle` (topbar, menu do celular e botão flutuante das páginas públicas). A lógica fica em `design-system/theme/inkSpill.js` (+ geometria em `ink.js` e CSS global em `ink-spill.css`). O tema novo "escorre" a partir do botão como uma mancha de tinta. Em vez de renderizar a página duas vezes num palco com rolagem própria (como o original), usa a View Transitions API, então a rolagem e o `ThemeProvider` continuam iguais. Sem suporte à API ou com movimento reduzido, troca na hora. O botão flutuante de tema não aparece em `/`.
 
 ### 8. Calendário (todas as datas)
 - `components/ui/DatePickerField.jsx` agora abre o `GlassCalendar` (adaptado do "Glass Calendar" do 21st.dev): vidro roxo da VIRLA, só a **visão mensal** (a faixa semanal saiu), leitura da data em **dd/mm/aaaa** e atalhos para mês e ano (útil para nascimento: ano → mês → dia). Setas do teclado andam entre os dias; Esc fecha.
 - Usado em todos os campos de data: data de início (Solicitações), data do serviço (relatório), data de nascimento no Cadastro, Completar cadastro e Perfil (antes eram `<input type="date">` nativos).
 - Aceita `ref` (lido como um input: `ref.current.value`) para os formulários com `useRef`; `shortcuts={false}` esconde Hoje/Amanhã/Em 7 dias.
 - Sem dependências novas (sem `date-fns`, `framer-motion` ou `lucide-react`); datas em `components/ui/dateUtils.js`. Testes em `components/ui/DatePickerField.test.jsx`.
+
+### 9. Feed `/feed` (ref 2)
+- Cada profissional virou o cartão da ref 2: retrato (ou iniciais em Playfair sobre lilás, como no perfil público), nome em Playfair com o ✓ de registro, cidade no canto, abordagem em 2 linhas e chips de valor/hora e idade. O chip de papel só aparece para perfis de família (no feed da família todos são cuidadores).
+- Até 4 especialidades em pílulas (+N para o resto).
+- Compatibilidade redesenhada só para o Feed (`FeedMatch`): número grande em Playfair, régua e os motivos com os pontos; cor pelo nível (`--vd-ok` no excelente, roxo no alto, lilás no bom, neutro no possível). O aviso "confirme os detalhes antes de contratar" saiu de cada cartão e ficou uma vez, acima da lista. O `MatchScore` original continua igual para as outras telas.
+- Ação principal de ponta a ponta "Conversar com {nome}" e, abaixo, a alternativa "Quer conhecer melhor? → Ver perfil completo" (mesma regra de antes: só para família vendo cuidador).
+- Busca e "Match inteligente para" numa barra só; contagem de perfis e página logo abaixo. Paginação com botões no padrão das outras telas.
+- Duas colunas quando cabem cartões de ~470px; uma coluna larga no resto; no celular o retrato encolhe para 84px e a alternativa empilha. Estilos em `design-system/feed.css` (`vfd-*`).
 
 ### 📁 Arquivos principais
 
@@ -125,13 +133,14 @@ As imagens de referência estão em [`referencias/`](./referencias):
 | `frontend/src/pages/Chat/index.jsx` | Chat (só a renderização mudou) |
 | `frontend/src/design-system/theme/ThemeToggle.jsx` | Variante `inline` |
 | `frontend/src/components/EmojiPicker.jsx` | Prop `buttonClassName` |
-| `frontend/src/pages/Feed/index.jsx` | Lê `?busca=` |
+| `frontend/src/pages/Feed/index.jsx` | Feed (importa `feed.css`; lê `?busca=`) |
+| `frontend/src/design-system/feed.css` | Estilos do Feed (`vfd-*`) |
 | `frontend/src/pages/Financas/index.jsx` | Finanças (importa `finance.css`) |
 | `frontend/src/design-system/finance.css` | Estilos de Finanças (`vf-*`) |
 | `frontend/src/pages/User/index.jsx` | Perfil público (importa `profile.css`) |
 | `frontend/src/design-system/profile.css` | Estilos do perfil público (`vp-*`) |
 
-Convenção de nomes CSS: `vd-` = shell/painel, `vc-` = chat. Para telas novas, siga o padrão (ex.: `vf-` finanças, `vp-` perfil).
+Convenção de nomes CSS: `vd-` = shell/painel, `vc-` = chat. Para telas novas, siga o padrão (ex.: `vf-` finanças, `vp-` perfil, `vfd-` feed).
 
 ---
 
@@ -154,7 +163,7 @@ Convenção de nomes CSS: `vd-` = shell/painel, `vc-` = chat. Para telas novas, 
    npm test
    npm run build
    ```
-   Estado atual: **164/164 testes passando** e build ok.
+   Estado atual: **165/165 testes passando** e build ok.
 4. **Ver no navegador:** `npm run dev` (precisa do backend + Firebase para logar).
    *Sem backend?* Dá para montar um "harness" temporário (não commitado): um `vite.config` extra com um plugin que troca `AuthContext`, `NotificationContext`, `SocketContext`, `services/api`, `services/auth` e os hooks `usePresence`, `useFirebaseChat`, `useSocket`, `useAudioRecorder` por mocks com dados falsos. Atenção: rode o Vite com `cwd` = `frontend/`, senão o Tailwind não gera as classes.
 
@@ -162,10 +171,9 @@ Convenção de nomes CSS: `vd-` = shell/painel, `vc-` = chat. Para telas novas, 
 
 ## ⏳ O que falta (em ordem sugerida)
 
-1. **Feed `/feed`** — cards de cuidador no mesmo idioma do perfil público (`vp-*`): retrato ou iniciais em Playfair sobre lilás, nome, chips de valor/hora e cidade, ✓ de registro, botões "Ver perfil" e "Conversar". Mantenha o seletor de solicitação e o MatchScore.
-2. **Solicitações `/solicitacoes` e `/solicitacoes-disponiveis`** — listas/cards com o visual do painel (pílulas de data, badges de status com `--vd-ok/wait/risk`).
-3. **Perfil próprio `/perfil` e Pagamento** — formulários com cartões `vd-panel`, inputs com o estilo da busca (borda `--vd-line`, foco roxo).
-4. **Faxina final** — remover regras órfãs de `comfort.css` (sidebar antiga `comfort-sidebar`, `comfort-chat*`, `comfort-home*`, `comfort-finance*`, `comfort-page-heading`, `comfort-info-note`, `comfort-public-profile`) e `pages/Landing/style.css`, revisar acessibilidade (contraste no escuro, foco visível), conferir tudo a 375px. O cabeçalho do celular continua branco no tema escuro.
+1. **Solicitações `/solicitacoes` e `/solicitacoes-disponiveis`** — listas/cards com o visual do painel (pílulas de data, badges de status com `--vd-ok/wait/risk`). Os cartões de solicitação para o cuidador podem reaproveitar o `FeedMatch` do Feed.
+2. **Perfil próprio `/perfil` e Pagamento** — formulários com cartões `vd-panel`, inputs com o estilo da busca (borda `--vd-line`, foco roxo).
+3. **Faxina final** — remover regras órfãs de `comfort.css` (sidebar antiga `comfort-sidebar`, `comfort-chat*`, `comfort-home*`, `comfort-finance*`, `comfort-page-heading`, `comfort-info-note`, `comfort-public-profile`) e `pages/Landing/style.css`, revisar acessibilidade (contraste no escuro, foco visível), conferir tudo a 375px. O cabeçalho do celular continua branco no tema escuro.
 
 ### ⚠️ Pendências conhecidas (já existiam antes do redesign)
 - Lint: `react-hooks/set-state-in-effect` em `Menu` (linha do "fechar drawer ao trocar de rota") e no `Chat` (efeito de carregamento), e 2 `no-unused-vars` (`e`, `err`) no `Chat`.
@@ -181,7 +189,7 @@ Cole isto no Claude Code, na raiz do repositório, já na branch `redesingv2`:
 Estamos continuando o redesign da VIRLA na branch redesingv2.
 Leia docs/redesign-v2/README.md e DESIGN_SYSTEM_VIRLA.md antes de tudo.
 As referências estão em docs/redesign-v2/referencias/.
-Próxima tela: Feed (/feed), com cards no mesmo idioma do perfil público (ref-2), mantendo a identidade VIRLA
+Próxima tela: Solicitações (/solicitacoes e /solicitacoes-disponiveis), no visual do painel e do Feed, mantendo a identidade VIRLA
 (roxo/lilás, Playfair Display + DM Sans, tokens --vd-*, tema claro/escuro, responsivo).
 Não altere lógica de negócio. Ao final rode npm test e npm run build no frontend
 e atualize o mapa "Onde estamos na jornada" deste README.
@@ -189,4 +197,4 @@ e atualize o mapa "Onde estamos na jornada" deste README.
 
 ---
 
-*Última atualização: 24/11/2026 — painel (ref 5), chat (ref 4), finanças (ref 3), perfil público (ref 2) e landing concluídos.*
+*Última atualização: 24/11/2026 — painel (ref 5), chat (ref 4), finanças (ref 3), perfil público (ref 2), landing, calendário e Feed concluídos.*

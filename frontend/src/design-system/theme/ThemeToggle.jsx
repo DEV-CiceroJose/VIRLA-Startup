@@ -1,16 +1,18 @@
 import { DarkModeOutlined, LightModeOutlined } from '@mui/icons-material'
 import { IconButton, Tooltip } from '@mui/material'
 import { useTheme } from './ThemeProvider'
+import { spillTheme } from './inkSpill'
 
 /**
- * Alternância de tema.
+ * Alternância de tema, com a troca "em tinta" a partir do botão (inkSpill.js).
  * - `floating` (padrão): botão fixo no canto, usado nas páginas públicas.
  * - `inline`: botão comum para a topbar/cabeçalho da área logada.
  */
 export default function ThemeToggle({ variant = 'floating', className = '' }) {
-  const { isDark, toggleTheme } = useTheme()
+  const { isDark, setTheme } = useTheme()
   const nextTheme = isDark ? 'claro' : 'escuro'
   const label = `Ativar tema ${nextTheme}`
+  const toggleTheme = (event) => spillTheme({ from: event.currentTarget, next: isDark ? 'light' : 'dark', setTheme })
 
   if (variant === 'inline') {
     return (

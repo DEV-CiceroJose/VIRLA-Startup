@@ -103,6 +103,13 @@ As imagens de referência estão em [`referencias/`](./referencias):
 - Tema escuro com tokens `--l-*` (hero) e `--o-*` (seções) em `pages/Landing/landing.css` (substitui `comfort-landing.css`). `style.css` da landing antiga não é mais importado — pode sair na faxina.
 - O rodapé trocou a coluna "Legal" (links `#` sem destino) por "Plataforma" (entrar, criar conta, como funciona). Quando houver páginas de Privacidade/Termos/FAQ, volte com a coluna.
 - Testes em `pages/Landing/Landing.test.jsx`.
+- **Tema com tinta (21st.dev "Ink Spill Theme Switch")**, só na landing: botão sol/lua no cabeçalho (`components/InkThemeToggle.jsx` + geometria em `components/ink.js`). O tema novo "escorre" a partir do botão como uma mancha de tinta. Em vez de renderizar a página duas vezes num palco com rolagem própria (como o original), usa a View Transitions API, então a rolagem e o `ThemeProvider` continuam iguais. Sem suporte à API ou com movimento reduzido, troca na hora. O botão flutuante de tema não aparece em `/`.
+
+### 8. Calendário (todas as datas)
+- `components/ui/DatePickerField.jsx` agora abre o `GlassCalendar` (adaptado do "Glass Calendar" do 21st.dev): vidro roxo da VIRLA, só a **visão mensal** (a faixa semanal saiu), leitura da data em **dd/mm/aaaa** e atalhos para mês e ano (útil para nascimento: ano → mês → dia). Setas do teclado andam entre os dias; Esc fecha.
+- Usado em todos os campos de data: data de início (Solicitações), data do serviço (relatório), data de nascimento no Cadastro, Completar cadastro e Perfil (antes eram `<input type="date">` nativos).
+- Aceita `ref` (lido como um input: `ref.current.value`) para os formulários com `useRef`; `shortcuts={false}` esconde Hoje/Amanhã/Em 7 dias.
+- Sem dependências novas (sem `date-fns`, `framer-motion` ou `lucide-react`); datas em `components/ui/dateUtils.js`. Testes em `components/ui/DatePickerField.test.jsx`.
 
 ### 📁 Arquivos principais
 
@@ -147,7 +154,7 @@ Convenção de nomes CSS: `vd-` = shell/painel, `vc-` = chat. Para telas novas, 
    npm test
    npm run build
    ```
-   Estado atual: **160/160 testes passando** e build ok.
+   Estado atual: **164/164 testes passando** e build ok.
 4. **Ver no navegador:** `npm run dev` (precisa do backend + Firebase para logar).
    *Sem backend?* Dá para montar um "harness" temporário (não commitado): um `vite.config` extra com um plugin que troca `AuthContext`, `NotificationContext`, `SocketContext`, `services/api`, `services/auth` e os hooks `usePresence`, `useFirebaseChat`, `useSocket`, `useAudioRecorder` por mocks com dados falsos. Atenção: rode o Vite com `cwd` = `frontend/`, senão o Tailwind não gera as classes.
 

@@ -9,9 +9,8 @@ import PersonAdd from '@mui/icons-material/PersonAdd'
 import ArrowBack from '@mui/icons-material/ArrowBack'
 import Badge from '@mui/icons-material/Badge'
 import VerifiedUser from '@mui/icons-material/VerifiedUser'
-import CalendarMonth from '@mui/icons-material/CalendarMonth'
 import api from '../../services/api'
-import { Field, Button, Card } from '../../components/ui'
+import { Field, Button, Card, DatePickerField } from '../../components/ui'
 import ProfileImageUpload from '../../components/ProfileImageUpload'
 import { isValidCpf, isValidEmail, maskCpf, stripCpf } from '../../utils/validators'
 import { registerWithEmail, loginWithGoogle, mapAuthError, getIdToken } from '../../services/auth'
@@ -184,12 +183,12 @@ export default function Cadastro() {
             maxLength={14}
           />
 
-          <Field
+          <DatePickerField
             ref={inputBirthDate}
             label="Data de nascimento"
             required
-            icon={CalendarMonth}
-            type="date"
+            shortcuts={false}
+            placeholder="dd/mm/aaaa"
             max={new Date().toISOString().split('T')[0]}
           />
 

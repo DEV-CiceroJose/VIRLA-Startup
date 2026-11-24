@@ -2,7 +2,6 @@ import { useEffect, useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import Person from '@mui/icons-material/Person'
-import CalendarMonth from '@mui/icons-material/CalendarMonth'
 import Cake from '@mui/icons-material/Cake'
 import Description from '@mui/icons-material/Description'
 import Save from '@mui/icons-material/Save'
@@ -18,7 +17,7 @@ import api from '../../services/api'
 import { calculateAge } from '../../utils/dateUtils'
 import ProfileImageUpload from '../../components/ProfileImageUpload'
 import ProfileCompleteness from '../../components/ProfileCompleteness'
-import { Field, Button, Card, Alert, ConfirmDialog, Badge as DSBadge, TagSelect } from '../../components/ui'
+import { Field, Button, Card, Alert, ConfirmDialog, Badge as DSBadge, TagSelect, DatePickerField } from '../../components/ui'
 import { hasPasswordProvider, linkPassword, mapAuthError } from '../../services/auth'
 import { COUNCILS, isValidRegister } from '../../constants/councils'
 import { STATES } from '../../constants/states'
@@ -313,10 +312,10 @@ export default function Perfil() {
               disabled
             />
 
-            <Field
+            <DatePickerField
               label="Data de Nascimento"
-              icon={CalendarMonth}
-              type="date"
+              shortcuts={false}
+              placeholder="dd/mm/aaaa"
               value={userData.birthDate ? userData.birthDate.split('T')[0] : ''}
               onChange={(e) => setUserData({ ...userData, birthDate: e.target.value })}
               max={new Date().toISOString().split('T')[0]}

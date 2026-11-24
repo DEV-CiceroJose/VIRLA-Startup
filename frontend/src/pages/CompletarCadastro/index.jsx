@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
-import { Field, Button, Card } from '../../components/ui'
+import { Field, Button, Card, DatePickerField } from '../../components/ui'
 import api from '../../services/api'
 import { getIdToken } from '../../services/auth'
 import { useAuth } from '../../context/AuthContext'
@@ -52,7 +52,7 @@ export default function CompletarCadastroPage() {
 
           <Field ref={nome} label="Nome completo" name="name" placeholder="Seu nome" />
           <Field ref={cpf} label="CPF" name="cpf" placeholder="000.000.000-00" />
-          <Field ref={birthDate} label="Data de nascimento" type="date" name="birthDate" max={new Date().toISOString().split('T')[0]} />
+          <DatePickerField ref={birthDate} label="Data de nascimento" name="birthDate" shortcuts={false} placeholder="dd/mm/aaaa" max={new Date().toISOString().split('T')[0]} />
 
           <div className="flex gap-2">
             <Button type="button" fullWidth variant={role === 'FAMILIAR' ? 'primary' : 'secondary'} onClick={() => setRole('FAMILIAR')}>Familiar</Button>

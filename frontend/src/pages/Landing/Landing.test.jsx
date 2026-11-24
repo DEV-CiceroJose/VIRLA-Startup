@@ -2,9 +2,10 @@ import { describe, expect, it } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
+import { ThemeProvider } from '../../design-system/theme/ThemeProvider'
 import Landing from './index'
 
-const renderLanding = () => render(<MemoryRouter><Landing /></MemoryRouter>)
+const renderLanding = () => render(<ThemeProvider><MemoryRouter><Landing /></MemoryRouter></ThemeProvider>)
 
 describe('Landing', () => {
   it('mantém a hero nova e as seções do site original', () => {
@@ -54,6 +55,17 @@ describe('Landing', () => {
     const region = screen.getByRole('region', { name: /eventos e instituições/i })
     const visibleLists = region.querySelectorAll('ul:not([aria-hidden="true"])')
     expect(visibleLists).toHaveLength(1)
+  })
+
+  it('troca o tema pelo botão do cabeçalho (sem View Transitions, troca na hora)', async () => {
+    const user = userEvent.setup()
+    document.documentElement.dataset.theme = 'light'
+    localStorage.setItem('virla-theme', 'light')
+    renderLanding()
+    await user.click(screen.getByRole('button', { name: 'Ativar tema escuro' }))
+    expect(document.documentElement.dataset.theme).toBe('dark')
+    expect(screen.getByRole('button', { name: 'Ativar tema claro' })).toBeInTheDocument()
+    localStorage.removeItem('virla-theme')
   })
 
   it('abre o menu no celular', async () => {

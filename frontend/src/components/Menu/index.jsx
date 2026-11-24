@@ -10,6 +10,8 @@ import SearchOutlined from '@mui/icons-material/SearchOutlined'
 import AssignmentOutlined from '@mui/icons-material/AssignmentOutlined'
 import AccountBalanceWalletOutlined from '@mui/icons-material/AccountBalanceWalletOutlined'
 import PersonOutline from '@mui/icons-material/PersonOutlined'
+import VerifiedUserOutlined from '@mui/icons-material/VerifiedUserOutlined'
+import FactCheckOutlined from '@mui/icons-material/FactCheckOutlined'
 import api from '../../services/api'
 import { logout } from '../../services/auth'
 import NotificationBell from '../NotificationBell'
@@ -33,8 +35,12 @@ const FAMILIAR_LINKS = [
 const CUIDADOR_LINKS = [
   { to: '/solicitacoes-disponiveis', label: 'Solicitações' },
   { to: '/financas', label: 'Finanças' },
+  { to: '/verificacao', label: 'Verificação' },
   { to: '/perfil', label: 'Perfil' },
 ]
+
+/** Equipe VIRLA (custom claim admin): revisão das verificações. */
+const ADMIN_LINKS = [{ to: '/admin/verificacoes', label: 'Verificações' }]
 
 // TODO: replace with the definitive review form URL
 const FEEDBACK_FORM_URL =
@@ -50,6 +56,8 @@ const NAV_ICONS = {
   '/solicitacoes': AssignmentOutlined,
   '/solicitacoes-disponiveis': AssignmentOutlined,
   '/financas': AccountBalanceWalletOutlined,
+  '/verificacao': VerifiedUserOutlined,
+  '/admin/verificacoes': FactCheckOutlined,
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -86,15 +94,16 @@ export default function Menu() {
     return () => { cancelled = true }
   }, [role])
 
-  const LINKS =
+  const { profile } = useAuth()
+  const roleLinks =
     role === 'FAMILIAR'
       ? [...BASE_LINKS, ...FAMILIAR_LINKS]
       : role === 'CUIDADOR'
         ? [...BASE_LINKS, ...CUIDADOR_LINKS]
         : BASE_LINKS
+  const LINKS = profile?.isAdmin ? [...roleLinks, ...ADMIN_LINKS] : roleLinks
 
   // ── Cartão de progresso do perfil (sidebar desktop) ───────────────────────
-  const { profile } = useAuth()
   const [progressDismissed, setProgressDismissed] = useState(() => {
     try { return sessionStorage.getItem('virla_hide_progress') === '1' } catch { return false }
   })

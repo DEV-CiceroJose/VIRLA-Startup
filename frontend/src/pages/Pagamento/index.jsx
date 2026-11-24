@@ -11,28 +11,27 @@ import Smartphone from '@mui/icons-material/Smartphone'
 import Replay from '@mui/icons-material/Replay'
 import { toast } from 'sonner'
 import api from '../../services/api'
-import { FIELD_CLASS } from '../../constants/formStyles'
 import { ButtonSpinner, InlineSpinner } from '../../components/Spinner'
 import { maskCpf, isValidCpf } from '../../utils/validators'
 import { formatCentsBRL } from '../../utils/paymentFees'
+import '../../design-system/payment.css'
 
 function StatusPill({ status }) {
   const map = {
-    PENDING: { label: 'Aguardando pagamento', color: 'bg-amber-50 text-amber-700 border-amber-200' },
-    ACTIVE: { label: 'Aguardando pagamento', color: 'bg-amber-50 text-amber-700 border-amber-200' },
-    PAID: { label: 'Pago', color: 'bg-green-50 text-green-700 border-green-200' },
-    EXPIRED: { label: 'Expirado', color: 'bg-red-50 text-red-700 border-red-200' },
-    CANCELED: { label: 'Cancelado', color: 'bg-gray-50 text-gray-600 border-gray-200' },
+    PENDING: { label: 'Aguardando pagamento', tone: 'wait' },
+    ACTIVE: { label: 'Aguardando pagamento', tone: 'wait' },
+    PAID: { label: 'Pago', tone: 'ok' },
+    EXPIRED: { label: 'Expirado', tone: 'risk' },
+    CANCELED: { label: 'Cancelado', tone: 'muted' },
   }
-  const { label, color } = map[status] ?? map.PENDING
+  const { label, tone } = map[status] ?? map.PENDING
   return (
-    <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full border ${color}`}>
-      <Schedule sx={{ fontSize: 14 }} />
+    <span className={`pg-pill tone-${tone}`}>
+      <Schedule aria-hidden />
       {label}
     </span>
   )
 }
-
 export default function Pagamento() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -53,6 +52,7 @@ export default function Pagamento() {
   const [copied, setCopied] = useState(false)
   const [status, setStatus] = useState('PENDING')
   const [expiredByTimer, setExpiredByTimer] = useState(false)
+  const [now, setNow] = useState(() => Date.now())
 
   const pollRef = useRef(null)
   const myRole = localStorage.getItem('meuRole')
@@ -115,6 +115,13 @@ export default function Pagamento() {
       toast.warning('QR Code expirado após 5 minutos.')
     }, timeoutMs)
     return () => clearTimeout(t)
+  }, [billing, status])
+
+  // Relógio da contagem regressiva do QR Code (só exibição).
+  useEffect(() => {
+    if (!billing?.expiresAt || status === 'PAID') return undefined
+    const t = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(t)
   }, [billing, status])
 
   function maskPhone(v) {
@@ -180,193 +187,172 @@ export default function Pagamento() {
 
   const canPay = amount && payeeId && (!myRole || myRole === 'FAMILIAR')
   const isExpired = status === 'EXPIRED' || status === 'CANCELED' || expiredByTimer
+  const step = status === 'PAID' ? 3 : billing ? 2 : 1
+  const remainingMs = billing?.expiresAt && !isExpired && status !== 'PAID'
+    ? Math.max(0, new Date(billing.expiresAt).getTime() - now)
+    : null
+  const countdown = remainingMs != null
+    ? `${Math.floor(remainingMs / 60000)}:${String(Math.floor((remainingMs % 60000) / 1000)).padStart(2, '0')}`
+    : null
 
   return (
-    <div className="min-h-screen pt-16 bg-virla-neve flex items-start justify-center px-4 py-10"
-      style={{ backgroundImage: 'radial-gradient(ellipse 80% 60% at 50% -10%, rgba(128,0,128,0.10), transparent)' }}
-    >
-      <div className="w-full max-w-md space-y-4">
-        <div className="flex items-center gap-3 mb-2">
-          <button
-            type="button"
-            onClick={() => navigate(-1)}
-            className="p-2 rounded-xl text-virla-roxo hover:bg-virla-roxo/10 transition-colors"
-          >
-            <ArrowBack sx={{ fontSize: 22 }} />
+    <div className="comfort-page min-h-screen pt-16">
+      <div className="vd-dash pg-page">
+        <header className="pg-header">
+          <button type="button" onClick={() => navigate(-1)} className="pg-back" aria-label="Voltar">
+            <ArrowBack aria-hidden />
           </button>
-          <div>
-            <h1 className="text-2xl font-display font-black text-virla-roxo">
-              Pagamento via PIX
-            </h1>
-            <p className="text-virla-texto/50 text-sm">Valor do serviço, sem taxa adicional da VIRLA</p>
+          <div className="vd-greeting">
+            <h1>Pagamento via PIX</h1>
+            <p>Valor do serviço, sem taxa adicional da VIRLA.</p>
           </div>
-        </div>
+        </header>
 
-        <div className="bg-virla-roxo rounded-2xl p-5 text-white shadow-lg">
-          <p className="text-white/70 text-xs font-medium uppercase tracking-widest mb-1">{description}</p>
-          {baseAmount != null && (
-            <p className="text-white/60 text-xs mb-1">
-              Base: {formatCentsBRL(baseAmount)} · Total:
-            </p>
-          )}
-          <p className="text-4xl font-display font-black">
-            {amount != null ? formatCentsBRL(amount) : '—'}
-          </p>
-          {billing && (
-            <div className="mt-3">
-              <StatusPill status={status} />
-            </div>
-          )}
-        </div>
-
-        {!billing && (
-          <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-virla-roxo/10 shadow-sm p-6 space-y-4">
-            <h2 className="font-bold text-virla-texto flex items-center gap-2">
-              <VerifiedUser sx={{ fontSize: 20 }} className="text-virla-roxo" />
-              Dados para emissão do PIX
-            </h2>
-
-            {error && (
-              <div className="flex items-start gap-2 px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm">
-                <ErrorIcon sx={{ fontSize: 18 }} className="flex-shrink-0 mt-0.5" />
-                {error}
-              </div>
-            )}
-
-            <div>
-              <label className="block text-xs font-semibold text-virla-texto/60 uppercase tracking-wide mb-1.5">
-                CPF *
-              </label>
-              <div className="relative">
-                <VerifiedUser sx={{ fontSize: 16 }} className="absolute left-3 top-1/2 -translate-y-1/2 text-virla-roxo/40 pointer-events-none" />
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  placeholder="000.000.000-00"
-                  value={taxId}
-                  onChange={(e) => setTaxId(maskCpf(e.target.value))}
-                  className={`${FIELD_CLASS} pl-9`}
-                  maxLength={14}
-                />
-              </div>
+        <div className="pg-layout">
+          <aside className="pg-summary">
+            <div className="vd-card vd-card-dark pg-amount">
+              <span className="pg-amount-label">{description}</span>
+              <strong>{amount != null ? formatCentsBRL(amount) : '—'}</strong>
+              {baseAmount != null && <span className="pg-amount-base">Base do serviço: {formatCentsBRL(baseAmount)}</span>}
+              {billing && <StatusPill status={status} />}
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-virla-texto/60 uppercase tracking-wide mb-1.5">
-                Celular (opcional)
-              </label>
-              <div className="relative">
-                <Smartphone sx={{ fontSize: 16 }} className="absolute left-3 top-1/2 -translate-y-1/2 text-virla-roxo/40 pointer-events-none" />
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  placeholder="(81) 99999-9999"
-                  value={cellphone}
-                  onChange={(e) => setCellphone(maskPhone(e.target.value))}
-                  className={`${FIELD_CLASS} pl-9`}
-                  maxLength={15}
-                />
-              </div>
-            </div>
+            <ol className="pg-steps" aria-label="Etapas do pagamento">
+              {['Seus dados', 'Pague com PIX', 'Confirmação'].map((label, index) => {
+                const n = index + 1
+                const state = n < step ? 'is-done' : n === step ? 'is-current' : ''
+                return (
+                  <li key={label} className={`pg-step ${state}`} aria-current={n === step ? 'step' : undefined}>
+                    <span className="pg-step-dot" aria-hidden="true">{n < step ? <DoneAll /> : n}</span>
+                    <span>{label}</span>
+                  </li>
+                )
+              })}
+            </ol>
 
-            <button
-              type="button"
-              onClick={handleGeneratePIX}
-              disabled={loading || !canPay}
-              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-virla-roxo hover:bg-virla-roxohighlight text-white font-semibold shadow-md hover:shadow-lg transition-all duration-200 hover:-translate-y-0.5 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0"
-            >
-              {loading ? (
-                <> <ButtonSpinner size={20} /> Gerando PIX… </>
-              ) : (
-                <> <QrCode sx={{ fontSize: 20 }} /> Gerar QR Code PIX </>
-              )}
-            </button>
-          </div>
-        )}
+            <p className="pg-safe"><VerifiedUser aria-hidden /> Pague só por aqui: a VIRLA não reconhece pagamentos feitos fora da plataforma.</p>
+          </aside>
 
-        {billing && (
-          <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-virla-roxo/10 shadow-sm p-6 space-y-5">
-            {billing.qrCodeBase64 ? (
-              <div className="flex flex-col items-center gap-3">
-                <p className="text-xs font-semibold text-virla-texto/60 uppercase tracking-widest">
-                  Escaneie o QR Code
-                </p>
-                <div className="p-3 rounded-2xl border-2 border-virla-roxo/15 bg-white shadow-inner">
-                  <img
-                    src={`data:image/png;base64,${billing.qrCodeBase64}`}
-                    alt="PIX QR Code"
-                    className="w-48 h-48 object-contain"
-                  />
+          <section className="pg-main" aria-live="polite">
+            {!billing && (
+              <div className="pg-panel">
+                <h2>Dados para emitir o PIX</h2>
+                <p className="pg-lede">Usamos o CPF de quem paga só para gerar a cobrança.</p>
+
+                {error && (
+                  <div className="pg-error" role="alert">
+                    <ErrorIcon aria-hidden />
+                    {error}
+                  </div>
+                )}
+
+                <div className="pg-field">
+                  <label htmlFor="pg-cpf">CPF <span aria-hidden="true">*</span></label>
+                  <div className="pg-input">
+                    <VerifiedUser aria-hidden />
+                    <input
+                      id="pg-cpf"
+                      type="text"
+                      inputMode="numeric"
+                      placeholder="000.000.000-00"
+                      value={taxId}
+                      onChange={(e) => setTaxId(maskCpf(e.target.value))}
+                      maxLength={14}
+                      required
+                    />
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center gap-2 py-4 text-virla-texto/40">
-                <QrCode sx={{ fontSize: 48 }} className="text-virla-roxo/20" />
-                <p className="text-sm">QR Code não disponível. Use o código abaixo.</p>
-              </div>
-            )}
 
-            <div className="flex items-center gap-3 text-virla-texto/30 text-xs font-medium uppercase tracking-widest">
-              <div className="flex-1 h-px bg-virla-roxo/10" /> ou copie o código <div className="flex-1 h-px bg-virla-roxo/10" />
-            </div>
-
-            <div className="space-y-2">
-              <p className="text-xs font-semibold text-virla-texto/60 uppercase tracking-widest">PIX Copia e Cola</p>
-              <div className="flex items-stretch gap-2">
-                <div className="flex-1 min-w-0 px-3 py-2.5 rounded-xl bg-virla-roxo/5 border border-virla-roxo/15 text-xs text-virla-texto/70 font-mono break-all select-all leading-relaxed">
-                  {billing.pixCode || '—'}
+                <div className="pg-field">
+                  <label htmlFor="pg-phone">Celular (opcional)</label>
+                  <div className="pg-input">
+                    <Smartphone aria-hidden />
+                    <input
+                      id="pg-phone"
+                      type="text"
+                      inputMode="numeric"
+                      placeholder="(81) 99999-9999"
+                      value={cellphone}
+                      onChange={(e) => setCellphone(maskPhone(e.target.value))}
+                      maxLength={15}
+                    />
+                  </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={handleCopy}
-                  disabled={!billing.pixCode}
-                  className={`flex-shrink-0 w-12 rounded-xl flex items-center justify-center transition-all duration-200 ${copied ? 'bg-green-500 text-white' : 'bg-virla-roxo text-white hover:bg-virla-roxohighlight'} disabled:opacity-40 disabled:cursor-not-allowed`}
-                >
-                  {copied ? <DoneAll sx={{ fontSize: 20 }} /> : <ContentCopy sx={{ fontSize: 20 }} />}
-                </button>
-              </div>
-              {copied && (
-                <p className="text-xs text-green-600 font-medium flex items-center gap-1">
-                  <DoneAll sx={{ fontSize: 14 }} /> Código copiado! Cole no app do seu banco.
-                </p>
-              )}
-            </div>
 
-            {!isExpired && status !== 'PAID' && (
-              <div className="flex items-start gap-2 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-sm">
-                <InlineSpinner size={18} />
-                <span>Aguardando confirmação do pagamento. Esta página atualiza automaticamente.</span>
-              </div>
-            )}
-
-            {isExpired && (
-              <div className="space-y-3">
-                <div className="flex items-start gap-2 px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm">
-                  <ErrorIcon sx={{ fontSize: 18 }} className="flex-shrink-0 mt-0.5" />
-                  <span>QR Code expirado. Gere um novo código para concluir o pagamento.</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setBilling(null)
-                    setStatus('PENDING')
-                    setExpiredByTimer(false)
-                  }}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-virla-roxo/20 text-virla-roxo hover:bg-virla-roxo/5"
-                >
-                  <Replay sx={{ fontSize: 18 }} /> Gerar novo QR Code
+                <button type="button" onClick={handleGeneratePIX} disabled={loading || !canPay} className="pg-primary">
+                  {loading ? <><ButtonSpinner size={20} /> Gerando PIX…</> : <><QrCode aria-hidden /> Gerar QR Code PIX</>}
                 </button>
               </div>
             )}
 
-            {status === 'PAID' && (
-              <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-green-50 border border-green-200 text-green-700 text-sm font-semibold">
-                <DoneAll sx={{ fontSize: 20 }} className="flex-shrink-0" />
-                Pagamento confirmado! Redirecionando…
+            {billing && (
+              <div className="pg-panel">
+                <div className="pg-qr-head">
+                  <h2>Escaneie o QR Code</h2>
+                  {countdown && <span className="pg-timer" aria-label={`Expira em ${countdown}`}><Schedule aria-hidden /> {countdown}</span>}
+                </div>
+
+                {billing.qrCodeBase64 ? (
+                  <div className={`pg-qr${isExpired ? ' is-expired' : ''}`}>
+                    <img src={`data:image/png;base64,${billing.qrCodeBase64}`} alt="QR Code do PIX" />
+                  </div>
+                ) : (
+                  <div className="pg-qr is-missing">
+                    <QrCode aria-hidden />
+                    <p>QR Code indisponível. Use o código abaixo.</p>
+                  </div>
+                )}
+
+                <div className="pg-divider"><span>ou copie o código</span></div>
+
+                <div className="pg-copy">
+                  <p className="pg-copy-label">PIX copia e cola</p>
+                  <div className="pg-copy-row">
+                    <code>{billing.pixCode || '—'}</code>
+                    <button type="button" onClick={handleCopy} disabled={!billing.pixCode} className={copied ? 'is-copied' : ''} aria-label={copied ? 'Código copiado' : 'Copiar código PIX'}>
+                      {copied ? <DoneAll aria-hidden /> : <ContentCopy aria-hidden />}
+                    </button>
+                  </div>
+                  {copied && <p className="pg-copied"><DoneAll aria-hidden /> Código copiado! Cole no app do seu banco.</p>}
+                </div>
+
+                {!isExpired && status !== 'PAID' && (
+                  <div className="pg-wait">
+                    <InlineSpinner size={18} />
+                    <span>Aguardando a confirmação do banco. Esta página atualiza sozinha.</span>
+                  </div>
+                )}
+
+                {isExpired && (
+                  <div className="pg-expired">
+                    <div className="pg-error" role="alert">
+                      <ErrorIcon aria-hidden />
+                      <span>QR Code expirado. Gere um novo código para concluir o pagamento.</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setBilling(null)
+                        setStatus('PENDING')
+                        setExpiredByTimer(false)
+                      }}
+                      className="pg-secondary"
+                    >
+                      <Replay aria-hidden /> Gerar novo QR Code
+                    </button>
+                  </div>
+                )}
+
+                {status === 'PAID' && (
+                  <div className="pg-paid">
+                    <DoneAll aria-hidden />
+                    Pagamento confirmado! Redirecionando…
+                  </div>
+                )}
               </div>
             )}
-          </div>
-        )}
+          </section>
+        </div>
       </div>
     </div>
   )

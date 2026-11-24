@@ -573,3 +573,31 @@ button.vd-card:hover { transform: translateY(-2px); box-shadow: 0 14px 30px rgba
   .vd-hero-sparkles { display: none; }
   .vd-agenda-items { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* Aviso de verificação do cuidador (painel) */
+.vd-verify-banner {
+  --tone: var(--virla-brand);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 20px;
+  padding: 16px 18px;
+  border-radius: 20px;
+  border: 1px solid color-mix(in srgb, var(--tone) 30%, var(--vd-line));
+  background: var(--vd-tint);
+  color: var(--vd-ink);
+}
+:root[data-theme='dark'] .vd-verify-banner { --tone: var(--vd-accent); }
+.vd-verify-banner.is-wait { --tone: var(--vd-wait); background: var(--vd-wait-bg); }
+.vd-verify-banner.is-risk { --tone: var(--vd-risk); background: var(--vd-risk-bg); }
+.vd-verify-icon { display: grid; place-items: center; flex: none; width: 44px; height: 44px; border-radius: 14px; background: var(--vd-card); color: var(--tone); }
+.vd-verify-banner > span:nth-child(2) { flex: 1; min-width: 0; }
+.vd-verify-banner strong { display: block; font-size: 15px; font-weight: 700; }
+.vd-verify-banner small { display: block; margin-top: 2px; font-size: 13px; color: var(--vd-ink-soft); }
+.vd-verify-cta { flex: none; padding: 9px 14px; border-radius: 12px; background: var(--tone); color: #fff; font-size: 13.5px; font-weight: 700; }
+:root[data-theme='dark'] .vd-verify-banner:not(.is-wait):not(.is-risk) .vd-verify-cta { color: var(--vd-accent-ink); }
+.vd-verify-banner:focus-visible { outline: 3px solid var(--virla-focus); outline-offset: 2px; }
+@media (max-width: 600px) {
+  .vd-verify-banner { flex-wrap: wrap; }
+  .vd-verify-cta { width: 100%; text-align: center; }
+}

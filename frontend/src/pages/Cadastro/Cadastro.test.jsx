@@ -15,6 +15,7 @@ vi.mock('../../services/auth', () => ({
   loginWithGoogle: vi.fn(),
   mapAuthError: vi.fn(() => ''),
   getIdToken: vi.fn(),
+  logout: vi.fn(() => Promise.resolve()),
 }))
 vi.mock('sonner', () => ({ toast: { warning: vi.fn(), error: vi.fn(), success: vi.fn() } }))
 // Upload de imagem usa FileReader/canvas — fora do escopo deste fluxo.
@@ -56,10 +57,21 @@ async function fillDados(user, { cpf = '52998224725' } = {}) {
   await next(user)
 }
 
-async function fillAcesso(user, { confirm = 'segredo1' } = {}) {
+/** Abre cada documento legal e aceita (no jsdom o texto já conta como lido até o fim). */
+async function acceptLegal(user) {
+  for (const doc of ['Termos de Uso', 'Política de Privacidade']) {
+    await user.click(screen.getByRole('button', { name: new RegExp(doc) }))
+    const accept = await screen.findByRole('button', { name: 'Li e aceito' })
+    await waitFor(() => expect(accept).toBeEnabled())
+    await user.click(accept)
+  }
+}
+
+async function fillAcesso(user, { confirm = 'segredo1', legal = true } = {}) {
   await user.type(screen.getByPlaceholderText('seu@email.com'), 'ana@provedor.com')
   await user.type(screen.getByPlaceholderText('Senha (mín. 6 caracteres)'), 'segredo1')
   await user.type(screen.getByPlaceholderText('Repita a senha'), confirm)
+  if (legal) await acceptLegal(user)
   await user.click(screen.getByRole('button', { name: /criar conta/i }))
 }
 
@@ -134,6 +146,17 @@ describe('Página de Cadastro (em etapas)', () => {
     expect(api.post).not.toHaveBeenCalled()
   })
 
+  it('não cria a conta sem ler e aceitar os Termos e a Política', async () => {
+    const user = userEvent.setup()
+    renderCadastro()
+    await next(user)
+    await fillDados(user)
+    await next(user)
+    await fillAcesso(user, { legal: false })
+    expect(toast.warning).toHaveBeenCalledWith('Leia e aceite os Termos de Uso e a Política de Privacidade para criar a conta.')
+    expect(registerWithEmail).not.toHaveBeenCalled()
+  })
+
   it('voltar mantém o que já foi digitado', async () => {
     const user = userEvent.setup()
     renderCadastro()
@@ -166,6 +189,7 @@ describe('Página de Cadastro (em etapas)', () => {
       role: 'CUIDADOR',
       birthDate: '1994-05-10',
     })
+    expect(payload).toMatchObject({ acceptedTerms: true, termsVersion: expect.any(String) })
     expect(payload).not.toHaveProperty('password')
     expect(payload).not.toHaveProperty('email')
     expect(getIdToken).toHaveBeenCalledWith(true)

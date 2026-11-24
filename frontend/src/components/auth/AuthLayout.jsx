@@ -26,6 +26,11 @@ export default function AuthLayout({ children }) {
         </div>
       </header>
       <main className="va-card">{children}</main>
+      <footer className="va-legal-links">
+        <Link to="/termos">Termos de Uso</Link>
+        <span aria-hidden="true">·</span>
+        <Link to="/privacidade">Política de Privacidade</Link>
+      </footer>
     </div>
   )
 }

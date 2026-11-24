@@ -16,6 +16,14 @@ export async function notifyMessage(io, { userId, senderId, senderName, preview 
   return notification
 }
 
+/** Resultado da verificação do cuidador (aprovada/reprovada). */
+export async function notifyVerification(io, { userId, type }) {
+  if (!userId) return null
+  const notification = await notificationRepo.create({ userId, type })
+  emit(io, userId, notification)
+  return notification
+}
+
 /** Notificação de evento de solicitação (assumida/concluída/cancelada). */
 export async function notifySolicitacao(io, { userId, type, solicitacaoId, solicitacaoTitulo, actorId, actorName }) {
   if (!userId) return null

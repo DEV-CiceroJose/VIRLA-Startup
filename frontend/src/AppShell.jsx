@@ -32,11 +32,16 @@ const CompletarCadastro = lazy(() => import('./pages/CompletarCadastro'))
 const ReportDemo        = lazy(() => import('./pages/ReportDemo'))
 const MatchDemo         = lazy(() => import('./pages/MatchDemo'))
 const Financas          = lazy(() => import('./pages/Financas'))
+const Legal             = lazy(() => import('./pages/Legal'))
+const Verificacao       = lazy(() => import('./pages/Verificacao'))
+const AdminVerificacoes = lazy(() => import('./pages/AdminVerificacoes'))
 
 const REPORT_DEMO_ENABLED = import.meta.env.DEV && import.meta.env.VITE_ENABLE_REPORT_DEMO === 'true'
 
 // ── Rotas que não exibem o Menu de navegação ─────────────────────────────
-const HIDDEN_MENU_ROUTES = ['/', '/login', '/cadastro', '/completar-cadastro', '/demo-relatorio', '/demo-match']
+const HIDDEN_MENU_ROUTES = ['/', '/login', '/cadastro', '/completar-cadastro', '/termos', '/privacidade', '/demo-relatorio', '/demo-match']
+// Telas com botão de tema no próprio cabeçalho (sem o botão flutuante).
+const OWN_THEME_TOGGLE_ROUTES = ['/', '/login', '/cadastro', '/completar-cadastro', '/termos', '/privacidade']
 
 // ── Fallback exibido enquanto o chunk da página carrega ───────────────────
 function PageFallback() {
@@ -85,6 +90,16 @@ function FeedRoute({ children }) {
   if (profile?.role === 'CUIDADOR') {
     return <Navigate to="/solicitacoes-disponiveis" replace />
   }
+  return children
+}
+
+/** Equipe VIRLA: custom claim dmin (vem em /users/me como isAdmin). */
+function AdminRoute({ children }) {
+  const { firebaseUser, profile, needsProfile, loading } = useAuth()
+  if (loading) return <PageFallback />
+  if (!firebaseUser) return <Navigate to="/login" replace />
+  if (needsProfile) return <Navigate to="/completar-cadastro" replace />
+  if (!profile?.isAdmin) return <Navigate to="/home" replace />
   return children
 }
 
@@ -191,7 +206,7 @@ export default function AppShell() {
       <PresenceManager />
       {/* Na área logada o botão de tema fica na topbar / cabeçalho mobile;
           na landing, no login e no cadastro ele fica no cabeçalho da página. */}
-      {!framed && !['/', '/login', '/cadastro'].includes(location.pathname) && <ThemeToggle />}
+      {!framed && !OWN_THEME_TOGGLE_ROUTES.includes(location.pathname) && <ThemeToggle />}
       {showMenu && <Menu />}
 
       {framed ? (
@@ -217,6 +232,8 @@ function AppRoutes() {
           <Route path="/"         element={<Landing />} />
           <Route path="/login"    element={<Login />} />
           <Route path="/cadastro" element={<Cadastro />} />
+          <Route path="/termos" element={<Legal />} />
+          <Route path="/privacidade" element={<Legal />} />
           {REPORT_DEMO_ENABLED && <Route path="/demo-relatorio" element={<ReportDemo />} />}
           {REPORT_DEMO_ENABLED && <Route path="/demo-match" element={<MatchDemo />} />}
 
@@ -225,6 +242,8 @@ function AppRoutes() {
           <Route path="/feed"   element={<FeedRoute><Feed /></FeedRoute>} />
           <Route path="/perfil" element={<ProtectedRoute><Perfil /></ProtectedRoute>} />
           <Route path="/financas" element={<CaregiverRoute><Financas /></CaregiverRoute>} />
+          <Route path="/verificacao" element={<CaregiverRoute><Verificacao /></CaregiverRoute>} />
+          <Route path="/admin/verificacoes" element={<AdminRoute><AdminVerificacoes /></AdminRoute>} />
           <Route path="/completar-cadastro" element={<ProfileSetupRoute><CompletarCadastro /></ProfileSetupRoute>} />
 
           {/* Solicitações — Familiar gerencia as próprias; Cuidador vê as disponíveis */}

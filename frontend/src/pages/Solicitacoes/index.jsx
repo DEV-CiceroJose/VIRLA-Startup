@@ -1,46 +1,25 @@
 import { useEffect, useMemo, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Add from '@mui/icons-material/Add'
-import Inbox from '@mui/icons-material/Inbox'
-import LocationOn from '@mui/icons-material/LocationOn'
-import PriorityHigh from '@mui/icons-material/PriorityHigh'
+import Inbox from '@mui/icons-material/InboxOutlined'
 import Chat from '@mui/icons-material/Chat'
 import Edit from '@mui/icons-material/Edit'
 import CheckCircle from '@mui/icons-material/CheckCircle'
 import Cancel from '@mui/icons-material/Cancel'
-import CalendarMonth from '@mui/icons-material/CalendarMonth'
-import Schedule from '@mui/icons-material/Schedule'
-import Repeat from '@mui/icons-material/Repeat'
-import Payments from '@mui/icons-material/Payments'
 import Assignment from '@mui/icons-material/Assignment'
 import api from '../../services/api'
 import { PageLoader } from '../../components/Spinner'
-import { Button, Card, Alert, Badge, EmptyState, Field, DatePickerField, ConfirmDialog } from '../../components/ui'
+import { Button, Alert, Field, DatePickerField, ConfirmDialog } from '../../components/ui'
+import AnimatedTabs from '../../components/ui/AnimatedTabs'
+import RequestCard from '../../components/requests/RequestCard'
 import { STATES } from '../../constants/states'
-import { PAYMENT_RECURRENCES, TURNOS, FREQUENCIAS, turnoLabel, frequenciaLabel, paymentRecurrenceLabel } from '../../constants/solicitacaoOptions'
-import { maskCurrencyInput, parseCurrencyInput, formatHourly, formatDateOnly } from '../../utils/formatters'
+import { PAYMENT_RECURRENCES, TURNOS, FREQUENCIAS } from '../../constants/solicitacaoOptions'
+import { maskCurrencyInput, parseCurrencyInput } from '../../utils/formatters'
 import ServiceReportReviewModal from '../../components/ServiceReportReviewModal'
 
 // ── Constantes de apresentação ─────────────────────────────────────────────
 const URGENCIA_OPTIONS = ['BAIXA', 'MEDIA', 'ALTA']
 const URGENCIA_LABEL = { BAIXA: 'Baixa', MEDIA: 'Média', ALTA: 'Alta' }
-const URGENCIA_TONE  = { BAIXA: 'gray',  MEDIA: 'amber', ALTA: 'red'  }
-
-const STATUS_LABEL = {
-  ABERTA:       'Aberta',
-  VISUALIZADA:  'Visualizada',
-  EM_ANDAMENTO: 'Em andamento',
-  CONCLUIDA:    'Concluída',
-  CANCELADA:    'Cancelada',
-}
-const STATUS_TONE = {
-  ABERTA:       'blue',
-  VISUALIZADA:  'violet',
-  EM_ANDAMENTO: 'amber',
-  CONCLUIDA:    'green',
-  CANCELADA:    'red',
-}
-
 const TIPO_CUIDADO_OPTIONS = [
   'Alzheimer', 'Parkinson', 'Pós-operatório', 'Mobilidade reduzida',
   'Diabetes', 'Hipertensão', 'Cuidados paliativos', 'Reabilitação',
@@ -77,13 +56,6 @@ function toFormState(initial) {
     frequencia: initial.frequencia ?? '',
     paymentRecurrence: initial.paymentRecurrence ?? '',
   }
-}
-
-function formatDate(iso) {
-  if (!iso) return ''
-  return new Date(iso).toLocaleDateString('pt-BR', {
-    day: '2-digit', month: '2-digit', year: 'numeric',
-  })
 }
 
 // ── Skeleton de carregamento ───────────────────────────────────────────────
@@ -148,10 +120,11 @@ function SolicitacaoForm({ initial = FORM_EMPTY, isEditing = false, onSave, onCa
   }
 
   return (
-    <Card className="p-6 space-y-4 border border-virla-roxo/20">
-      <h2 className="font-display font-bold text-virla-roxo text-lg">
-        {isEditing ? 'Editar solicitação' : 'Nova solicitação'}
-      </h2>
+    <section className="vs-form" aria-labelledby="vs-form-title">
+      <header className="vs-form-head">
+        <h2 id="vs-form-title">{isEditing ? 'Editar solicitação' : 'Nova solicitação'}</h2>
+        <p>Quanto mais claro o pedido, melhor o match com os cuidadores.</p>
+      </header>
 
       <form onSubmit={handleSubmit} noValidate className="space-y-4">
         <Field
@@ -238,10 +211,10 @@ function SolicitacaoForm({ initial = FORM_EMPTY, isEditing = false, onSave, onCa
         </Field>
 
         <div className="space-y-1.5">
-          <label className="block text-xs font-semibold text-virla-muted uppercase tracking-wide">
+          <p className="block text-xs font-semibold text-virla-muted uppercase tracking-wide" id="vs-tipo-label">
             Tipo de cuidado (selecione todos que se aplicam)
-          </label>
-          <div className="flex flex-wrap gap-2 mt-1">
+          </p>
+          <div className="vs-chips" role="group" aria-labelledby="vs-tipo-label">
             {TIPO_CUIDADO_OPTIONS.map((tag) => {
               const ativo = form.tipoCuidado.includes(tag)
               return (
@@ -249,11 +222,8 @@ function SolicitacaoForm({ initial = FORM_EMPTY, isEditing = false, onSave, onCa
                   key={tag}
                   type="button"
                   onClick={() => toggleTipo(tag)}
-                  className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all ${
-                    ativo
-                      ? 'bg-virla-roxo text-white border-virla-roxo'
-                      : 'bg-white text-virla-muted border-virla-roxo/30 hover:border-virla-roxo/60'
-                  }`}
+                  aria-pressed={ativo}
+                  className={`vs-chip${ativo ? ' is-on' : ''}`}
                 >
                   {tag}
                 </button>
@@ -273,7 +243,7 @@ function SolicitacaoForm({ initial = FORM_EMPTY, isEditing = false, onSave, onCa
           </Button>
         </div>
       </form>
-    </Card>
+    </section>
   )
 }
 
@@ -284,114 +254,49 @@ function SolicitacaoCard({ solicitacao, onEditar, onCancelar, onReviewReport, on
   const podeCancelar   = !['CANCELADA', 'CONCLUIDA'].includes(solicitacao.status)
   const emAndamento    = solicitacao.status === 'EM_ANDAMENTO'
   const temFluxoRelatorio = ['EM_ANDAMENTO', 'CONCLUIDA'].includes(solicitacao.status)
+  const interessados = solicitacao._count?.interessados ?? 0
 
   return (
-    <Card className="p-5 space-y-3">
-      <div className="flex items-start justify-between gap-3">
-        <h3 className="font-bold text-virla-texto text-base leading-snug">{solicitacao.titulo}</h3>
-        <Badge tone={STATUS_TONE[solicitacao.status] ?? 'gray'}>
-          {STATUS_LABEL[solicitacao.status] ?? solicitacao.status}
-        </Badge>
-      </div>
-
-      <p className="text-sm text-virla-muted whitespace-pre-wrap">{solicitacao.descricao}</p>
-
-      {solicitacao.tipoCuidado?.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          {solicitacao.tipoCuidado.map((tag) => (
-            <Badge key={tag} tone="roxo">{tag}</Badge>
-          ))}
-        </div>
+    <RequestCard
+      solicitacao={solicitacao}
+      place={local}
+      highlight={emAndamento}
+      extraMeta={interessados > 0 && (
+        <span className="vs-foot-strong">
+          {interessados} cuidador{interessados !== 1 ? 'es' : ''} interessado{interessados !== 1 ? 's' : ''}
+        </span>
       )}
-
-      <div className="flex items-center gap-3 text-xs text-virla-muted/80 pt-1 flex-wrap">
-        <Badge tone={URGENCIA_TONE[solicitacao.urgencia] ?? 'gray'} icon={PriorityHigh}>
-          Urgência {URGENCIA_LABEL[solicitacao.urgencia] ?? solicitacao.urgencia}
-        </Badge>
-        {local && (
-          <span className="flex items-center gap-1">
-            <LocationOn sx={{ fontSize: 14 }} /> {local}
-          </span>
-        )}
-        {solicitacao.dataInicio && (
-          <span className="flex items-center gap-1">
-            <CalendarMonth sx={{ fontSize: 14 }} /> Início {formatDateOnly(solicitacao.dataInicio)}
-          </span>
-        )}
-        {solicitacao.turno && (
-          <span className="flex items-center gap-1">
-            <Schedule sx={{ fontSize: 14 }} /> {turnoLabel(solicitacao.turno)}
-          </span>
-        )}
-        {solicitacao.frequencia && (
-          <span className="flex items-center gap-1">
-            <Repeat sx={{ fontSize: 14 }} /> {frequenciaLabel(solicitacao.frequencia)}
-          </span>
-        )}
-        {solicitacao.valorHora != null && (
-          <span className="flex items-center gap-1 text-virla-roxo font-semibold">
-            <Payments sx={{ fontSize: 14 }} /> {formatHourly(solicitacao.valorHora)}
-          </span>
-        )}
-        <span>Publicada em {formatDate(solicitacao.createdAt)}</span>
-        {solicitacao._count?.interessados > 0 && (
-          <span className="flex items-center gap-1 text-virla-roxo font-semibold">
-            <Chat sx={{ fontSize: 14 }} />
-            {solicitacao._count.interessados} cuidador{solicitacao._count.interessados !== 1 ? 'es' : ''} interessado{solicitacao._count.interessados !== 1 ? 's' : ''}
-          </span>
-        )}
-      </div>
-
-      {emAndamento && solicitacao.assignedCaregiverId && (
-        <p className="text-xs text-virla-texto/70 pt-1 border-t border-virla-roxo/10">
-          Um cuidador assumiu esta solicitação. Converse para combinar os detalhes.
-        </p>
-      )}
-
-      <div className="pt-2 border-t border-virla-roxo/10 flex flex-wrap gap-2">
-        {podeEditar && (
-          <Button size="sm" variant="secondary" icon={Edit} onClick={() => onEditar(solicitacao)}>
-            Editar
-          </Button>
-        )}
-        {emAndamento && (
-          <>
-            <Button
-              size="sm"
-              variant="secondary"
-              icon={Chat}
-              onClick={() => onConversar(solicitacao.assignedCaregiverId)}
-            >
+      actions={(
+        <>
+          {temFluxoRelatorio && (
+            <Button size="sm" icon={Assignment} onClick={() => onReviewReport(solicitacao)}>
+              {emAndamento ? 'Revisar relatório' : 'Relatório e pagamento'}
+            </Button>
+          )}
+          {emAndamento && (
+            <Button size="sm" variant="secondary" icon={Chat} onClick={() => onConversar(solicitacao.assignedCaregiverId)}>
               Conversar com o cuidador
             </Button>
-          </>
-        )}
-        {solicitacao.paymentRecurrence && (
-          <span className="flex items-center gap-1 font-semibold text-virla-roxo">
-            <Payments sx={{ fontSize: 14 }} /> Pagamento {paymentRecurrenceLabel(solicitacao.paymentRecurrence).toLowerCase()}
-          </span>
-        )}
-        {temFluxoRelatorio && (
-          <Button size="sm" icon={Assignment} onClick={() => onReviewReport(solicitacao)}>
-            {emAndamento ? 'Revisar relatório' : 'Relatório e pagamento'}
-          </Button>
-        )}
-        {podeCancelar && (
-          <Button
-            size="sm"
-            variant="danger"
-            icon={Cancel}
-            loading={canceling}
-            onClick={() => onCancelar(solicitacao.id)}
-          >
-            Cancelar solicitação
-          </Button>
-        )}
-      </div>
-    </Card>
+          )}
+          {podeEditar && (
+            <Button size="sm" variant="secondary" icon={Edit} onClick={() => onEditar(solicitacao)}>
+              Editar
+            </Button>
+          )}
+          {podeCancelar && (
+            <Button size="sm" variant="ghost" icon={Cancel} loading={canceling} onClick={() => onCancelar(solicitacao.id)} className="vs-cancel">
+              Cancelar solicitação
+            </Button>
+          )}
+        </>
+      )}
+    >
+      {emAndamento && solicitacao.assignedCaregiverId && (
+        <p className="vs-note">Um cuidador assumiu esta solicitação. Converse para combinar os detalhes.</p>
+      )}
+    </RequestCard>
   )
 }
-
 // ── Página principal ───────────────────────────────────────────────────────
 export default function Solicitacoes() {
   const navigate = useNavigate()
@@ -507,38 +412,25 @@ export default function Solicitacoes() {
   }
 
   const lista = tab === 'ativas' ? ativas : encerradas
+  const openNew = () => { setEditing(null); setShowForm(true) }
 
   return (
-    <div
-      className="min-h-screen pt-16 bg-virla-neve"
-      style={{
-        backgroundImage:
-          'radial-gradient(ellipse 70% 50% at 70% 0%, rgba(128,0,128,0.07), transparent)',
-      }}
-    >
-      <div className="max-w-2xl mx-auto px-6 py-10 space-y-6">
-
-        {/* Cabeçalho */}
-        <div className="flex items-start justify-between gap-4 animate-fade-up">
-          <div>
-            <h1 className="text-3xl font-display font-black text-virla-roxo">Minhas Solicitações</h1>
-            <p className="text-virla-muted text-sm mt-1">
-              Gerencie os pedidos de cuidado que você publicou
-            </p>
+    <div className="comfort-page min-h-screen pt-16">
+      <div className="vd-dash vs-page">
+        <header className="vs-header">
+          <div className="vd-greeting">
+            <h1>Minhas solicitações</h1>
+            <p>Publique o que você precisa e acompanhe cada pedido de cuidado.</p>
           </div>
           {!showForm && (
-            <Button icon={Add} onClick={() => { setEditing(null); setShowForm(true) }}>
-              Nova
-            </Button>
+            <Button icon={Add} onClick={openNew}>Nova solicitação</Button>
           )}
-        </div>
+        </header>
 
-        {/* Alerta de feedback */}
         {message.text && (
-          <Alert tone={message.type === 'success' ? 'success' : 'error'}>{message.text}</Alert>
+          <Alert tone={message.type === 'success' ? 'success' : 'error'} className="vs-alert">{message.text}</Alert>
         )}
 
-        {/* Formulário inline */}
         {showForm && (
           <SolicitacaoForm
             initial={editing ?? FORM_EMPTY}
@@ -549,49 +441,31 @@ export default function Solicitacoes() {
           />
         )}
 
-        {/* Abas */}
-        <div className="flex gap-1 bg-virla-roxo/8 rounded-xl p-1 w-fit">
-          {[
-            { key: 'ativas',     label: 'Ativas',     count: ativas.length     },
-            { key: 'encerradas', label: 'Encerradas', count: encerradas.length },
-          ].map(({ key, label, count }) => (
-            <button
-              key={key}
-              type="button"
-              onClick={() => setTab(key)}
-              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-                tab === key
-                  ? 'bg-white text-virla-roxo shadow-sm'
-                  : 'text-virla-muted hover:text-virla-roxo'
-              }`}
-            >
-              {label} {count > 0 && `(${count})`}
-            </button>
-          ))}
+        <div className="vs-toolbar">
+          <AnimatedTabs
+            label="Filtrar solicitações"
+            value={tab}
+            onChange={setTab}
+            tabs={[
+              { value: 'ativas', label: 'Ativas', count: ativas.length },
+              { value: 'encerradas', label: 'Encerradas', count: encerradas.length },
+            ]}
+          />
         </div>
 
-        {/* Lista */}
         {lista.length === 0 ? (
-          <EmptyState
-            icon={Inbox}
-            title={
-              tab === 'ativas'
-                ? 'Você não tem solicitações ativas'
-                : 'Nenhuma solicitação encerrada ainda'
-            }
-            description={
-              tab === 'ativas'
-                ? 'Clique em "Nova" para publicar sua primeira solicitação e encontrar um cuidador.'
-                : 'Quando uma solicitação for concluída ou cancelada, ela aparecerá aqui.'
-            }
-            action={
-              tab === 'ativas' && !showForm
-                ? <Button icon={Add} onClick={() => { setEditing(null); setShowForm(true) }}>Publicar solicitação</Button>
-                : undefined
-            }
-          />
+          <div className="vd-empty vs-empty">
+            <Inbox aria-hidden />
+            <strong>{tab === 'ativas' ? 'Você não tem solicitações ativas' : 'Nenhuma solicitação encerrada ainda'}</strong>
+            <span>
+              {tab === 'ativas'
+                ? 'Publique sua primeira solicitação para encontrar um cuidador.'
+                : 'Quando uma solicitação for concluída ou cancelada, ela aparece aqui.'}
+            </span>
+            {tab === 'ativas' && !showForm && <Button icon={Add} onClick={openNew}>Publicar solicitação</Button>}
+          </div>
         ) : (
-          <div className="space-y-4">
+          <div className="vs-list">
             {lista.map((s) => (
               <SolicitacaoCard
                 key={s.id}
@@ -606,7 +480,6 @@ export default function Solicitacoes() {
           </div>
         )}
       </div>
-
       {/* Diálogo de confirmação de cancelamento */}
       <ConfirmDialog
         open={!!confirmId}

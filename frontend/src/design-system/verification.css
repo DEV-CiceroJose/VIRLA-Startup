@@ -1,0 +1,278 @@
+/*
+ * VIRLA — Verificação do cuidador (vv-) e revisão da equipe (vr-)
+ */
+
+.vv-page,
+.vr-page { max-width: 1180px; margin-inline: auto; }
+.vv-loading { margin-top: 24px; color: var(--vd-ink-soft); }
+.vv-alert { margin-top: 20px; padding: 12px 16px; border-radius: 14px; background: var(--vd-risk-bg); color: var(--vd-risk); font-weight: 600; }
+
+/* ── Faixa de status ──────────────────────────────────────────────────── */
+.vv-status {
+  --tone: var(--virla-brand);
+  --tone-bg: var(--vd-tint);
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  margin-top: 24px;
+  padding: 20px;
+  border-radius: 22px;
+  background: var(--tone-bg);
+  border: 1px solid color-mix(in srgb, var(--tone) 22%, transparent);
+}
+.vv-status.tone-ok { --tone: var(--vd-ok); --tone-bg: var(--vd-ok-bg); }
+.vv-status.tone-wait { --tone: var(--vd-wait); --tone-bg: var(--vd-wait-bg); }
+.vv-status.tone-risk { --tone: var(--vd-risk); --tone-bg: var(--vd-risk-bg); }
+:root[data-theme='dark'] .vv-status.tone-brand { --tone: var(--vd-accent); }
+.vv-status-icon { display: grid; place-items: center; flex: none; width: 48px; height: 48px; border-radius: 14px; background: var(--vd-card); color: var(--tone); }
+.vv-status-icon svg { font-size: 26px; }
+.vv-status > div:not(.vv-progress) { flex: 1; min-width: 0; }
+.vv-status h2 { font-family: 'Playfair Display', Georgia, serif; font-size: 22px; font-weight: 700; color: var(--vd-ink); }
+.vv-status p { margin-top: 4px; font-size: 14.5px; line-height: 1.55; color: var(--vd-ink-soft); }
+.vv-reason { padding: 10px 12px; border-radius: 12px; background: var(--vd-card); color: var(--vd-ink) !important; }
+.vv-meta { font-size: 13px !important; }
+.vv-status-link { display: inline-block; margin-top: 10px; font-size: 14px; font-weight: 700; color: var(--tone); text-decoration: underline; text-underline-offset: 3px; }
+.vv-progress { flex: none; display: grid; justify-items: center; padding: 8px 14px; border-radius: 14px; background: var(--vd-card); }
+.vv-progress strong { font-family: 'Playfair Display', Georgia, serif; font-size: 26px; font-weight: 800; color: var(--tone); font-variant-numeric: tabular-nums; }
+.vv-progress span { font-size: 12px; color: var(--vd-ink-soft); }
+
+/* ── Etapas ───────────────────────────────────────────────────────────── */
+.vv-grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 24px; margin-top: 24px; align-items: start; }
+.vv-steps { display: grid; gap: 16px; }
+.vv-step {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  gap: 14px;
+  padding: 20px;
+  border-radius: 22px;
+  border: 1px solid var(--vd-line);
+  background: var(--vd-card);
+}
+.vv-step-num {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  background: var(--vd-tint);
+  font-weight: 800;
+  color: var(--virla-brand);
+}
+:root[data-theme='dark'] .vv-step-num { color: var(--vd-accent); }
+.vv-step.is-sent .vv-step-num { background: var(--vd-ok-bg); color: var(--vd-ok); }
+.vv-step-body { min-width: 0; display: grid; gap: 10px; }
+.vv-step h3 { font-size: 16.5px; font-weight: 700; color: var(--vd-ink); }
+.vv-step p { margin-top: -6px; font-size: 14px; line-height: 1.55; color: var(--vd-ink-soft); }
+.vv-ext { display: inline-flex; align-items: center; gap: 4px; justify-self: start; font-size: 13.5px; font-weight: 700; color: var(--virla-brand); }
+.vv-ext svg { font-size: 16px; }
+:root[data-theme='dark'] .vv-ext { color: var(--vd-accent); }
+.vv-cert { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
+
+/* Dropzone (Aceternity File Upload) */
+.vv-drop {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  width: 100%;
+  padding: 26px 16px;
+  border-radius: 18px;
+  border: 1.5px dashed color-mix(in srgb, var(--virla-brand) 35%, var(--vd-line));
+  background: var(--vd-canvas);
+  color: var(--vd-ink);
+  text-align: center;
+  cursor: pointer;
+  overflow: hidden;
+  transition: border-color 0.18s, background-color 0.18s;
+}
+.vv-drop-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(var(--vd-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--vd-line) 1px, transparent 1px);
+  background-size: 22px 22px;
+  opacity: 0.45;
+  -webkit-mask-image: radial-gradient(ellipse at center, #000 20%, transparent 75%);
+  mask-image: radial-gradient(ellipse at center, #000 20%, transparent 75%);
+  pointer-events: none;
+}
+.vv-drop > :not(.vv-drop-grid) { position: relative; }
+.vv-drop:hover:not(:disabled),
+.vv-drop.is-dragging { border-color: var(--virla-brand); background: var(--vd-tint); }
+.vv-drop.is-dragging .vv-drop-icon { transform: translateY(-4px) scale(1.06); }
+.vv-drop:disabled { cursor: not-allowed; opacity: 0.6; }
+.vv-drop:focus-visible { outline: 3px solid var(--virla-focus); outline-offset: 2px; }
+.vv-drop-icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  margin-bottom: 6px;
+  border-radius: 14px;
+  background: var(--vd-card);
+  color: var(--virla-brand);
+  box-shadow: 0 8px 20px -10px rgba(62, 24, 62, 0.4);
+  transition: transform 0.2s ease;
+}
+:root[data-theme='dark'] .vv-drop-icon { color: var(--vd-accent); }
+.vv-drop strong { font-size: 14px; font-weight: 700; }
+.vv-drop small { font-size: 12.5px; color: var(--vd-ink-soft); }
+.vv-file {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 16px;
+  border: 1px solid color-mix(in srgb, var(--vd-ok) 35%, var(--vd-line));
+  background: var(--vd-ok-bg);
+}
+.vv-file-icon { display: grid; place-items: center; flex: none; width: 40px; height: 40px; border-radius: 12px; background: var(--vd-card); color: var(--vd-ok); }
+.vv-file-text { flex: 1; min-width: 0; }
+.vv-file-text strong { display: block; font-size: 14px; color: var(--vd-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vv-file-text small { display: inline-flex; align-items: center; gap: 4px; font-size: 12.5px; font-weight: 600; color: var(--vd-ok); }
+.vv-file-text small svg { font-size: 15px; }
+.vv-file-actions { display: flex; gap: 6px; flex: none; }
+.vv-file-actions button {
+  padding: 7px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--vd-line);
+  background: var(--vd-card);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--vd-ink);
+  cursor: pointer;
+}
+.vv-file-actions button:hover:not(:disabled) { border-color: var(--virla-brand); }
+.vv-error { font-size: 13px; font-weight: 600; color: var(--vd-risk); }
+
+/* Lateral */
+.vv-side { position: sticky; top: 24px; display: grid; gap: 16px; }
+.vv-privacy { display: flex; gap: 12px; padding: 16px; border-radius: 18px; background: var(--vd-tint); }
+.vv-privacy > svg { flex: none; margin-top: 2px; color: var(--virla-brand); }
+:root[data-theme='dark'] .vv-privacy > svg { color: var(--vd-accent); }
+.vv-privacy strong { font-size: 14px; color: var(--vd-ink); }
+.vv-privacy p { margin-top: 4px; font-size: 13px; line-height: 1.55; color: var(--vd-ink-soft); }
+.vv-privacy a { font-weight: 700; color: inherit; text-decoration: underline; }
+.vv-submit { display: grid; gap: 12px; padding: 18px; border-radius: 20px; border: 1px solid var(--vd-line); background: var(--vd-card); }
+.vv-declaration { display: flex; gap: 10px; align-items: flex-start; font-size: 13.5px; line-height: 1.5; color: var(--vd-ink); cursor: pointer; }
+.vv-declaration input { flex: none; width: 18px; height: 18px; margin-top: 2px; accent-color: var(--virla-brand); }
+.vv-send { min-height: 50px; border: 0; border-radius: 14px; background: var(--virla-brand); color: #fff; font-size: 15px; font-weight: 700; cursor: pointer; }
+.vv-send:disabled { opacity: 0.45; cursor: not-allowed; }
+.vv-send:focus-visible { outline: 3px solid var(--virla-focus); outline-offset: 2px; }
+.vv-hint { font-size: 12.5px; line-height: 1.5; color: var(--vd-ink-soft); }
+
+/* ── Revisão da equipe ────────────────────────────────────────────────── */
+.vr-tabs { display: flex; gap: 4px; margin-top: 22px; border-bottom: 1px solid var(--vd-line); }
+.vr-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--vd-ink-soft);
+  cursor: pointer;
+}
+.vr-tab[aria-selected='true'] { border-bottom-color: var(--virla-brand); color: var(--vd-ink); }
+:root[data-theme='dark'] .vr-tab[aria-selected='true'] { border-bottom-color: var(--vd-accent); }
+.vr-count { padding: 1px 8px; border-radius: 999px; background: var(--vd-tint); font-size: 12px; font-weight: 700; }
+.vr-empty { display: grid; justify-items: center; gap: 6px; margin-top: 24px; text-align: center; }
+.vr-empty svg { font-size: 34px; color: var(--vd-ink-soft); }
+
+.vr-layout { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 20px; margin-top: 20px; align-items: start; }
+.vr-list { display: grid; gap: 6px; position: sticky; top: 24px; }
+.vr-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px;
+  border-radius: 16px;
+  border: 1px solid transparent;
+  background: none;
+  text-align: left;
+  color: var(--vd-ink);
+  cursor: pointer;
+}
+.vr-item:hover { background: var(--vd-tint); }
+.vr-item.is-active { border-color: var(--vd-line); background: var(--vd-card); box-shadow: 0 6px 20px -12px rgba(62, 24, 62, 0.35); }
+.vr-item-text { min-width: 0; }
+.vr-item-text strong { display: block; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vr-item-text small { font-size: 12.5px; color: var(--vd-ink-soft); }
+
+.vr-detail { display: grid; gap: 18px; padding: 22px; border-radius: 24px; border: 1px solid var(--vd-line); background: var(--vd-card); }
+.vr-person { display: flex; align-items: center; gap: 14px; }
+.vr-person h2 { font-family: 'Playfair Display', Georgia, serif; font-size: 26px; font-weight: 700; color: var(--vd-ink); }
+.vr-person p { font-size: 13.5px; color: var(--vd-ink-soft); }
+.vr-facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.vr-facts div { padding: 12px; border-radius: 14px; background: var(--vd-tint); min-width: 0; }
+.vr-facts dt { font-size: 12px; font-weight: 600; color: var(--vd-ink-soft); }
+.vr-facts dd { margin-top: 2px; font-size: 14px; font-weight: 600; color: var(--vd-ink); overflow-wrap: anywhere; }
+.vr-mono { font-family: ui-monospace, 'Cascadia Code', monospace; }
+.vr-docs { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+.vr-doc { display: grid; gap: 6px; }
+.vr-doc figcaption { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; font-weight: 600; color: var(--vd-ink); }
+.vr-doc figcaption a { display: inline-flex; align-items: center; gap: 2px; color: var(--virla-brand); }
+.vr-doc figcaption a svg { font-size: 14px; }
+.vr-doc-frame { display: grid; place-items: center; height: 220px; border-radius: 14px; border: 1px solid var(--vd-line); background: var(--vd-canvas); overflow: hidden; }
+.vr-doc-frame img { width: 100%; height: 100%; object-fit: contain; }
+.vr-doc-frame iframe { width: 100%; height: 100%; border: 0; }
+.vr-doc-frame p { font-size: 13px; color: var(--vd-ink-soft); }
+
+.vr-review { display: grid; gap: 14px; padding-top: 16px; border-top: 1px solid var(--vd-line); }
+.vr-checklist { display: grid; gap: 8px; margin: 0; padding: 0; border: 0; }
+.vr-checklist legend { margin-bottom: 6px; font-size: 14px; font-weight: 700; color: var(--vd-ink); }
+.vr-checklist label { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; line-height: 1.45; color: var(--vd-ink); cursor: pointer; }
+.vr-checklist input { flex: none; width: 18px; height: 18px; margin-top: 1px; accent-color: var(--virla-brand); }
+.vr-reason { display: grid; gap: 6px; font-size: 13px; font-weight: 600; color: var(--vd-ink-soft); }
+.vr-reason textarea { padding: 10px 12px; border-radius: 12px; border: 1px solid var(--vd-line); background: var(--vd-canvas); color: var(--vd-ink); font: inherit; font-weight: 400; resize: vertical; }
+.vr-reason textarea:focus { outline: none; border-color: var(--virla-brand); box-shadow: 0 0 0 3px var(--virla-focus); }
+.vr-actions { display: flex; justify-content: flex-end; gap: 10px; }
+.vr-approve,
+.vr-reject { display: inline-flex; align-items: center; gap: 6px; min-height: 46px; padding: 0 18px; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; }
+.vr-approve { border: 0; background: var(--vd-ok); color: #fff; }
+:root[data-theme='dark'] .vr-approve { color: #10241a; }
+.vr-reject { border: 1px solid color-mix(in srgb, var(--vd-risk) 45%, var(--vd-line)); background: var(--vd-card); color: var(--vd-risk); }
+.vr-approve:disabled,
+.vr-reject:disabled { opacity: 0.45; cursor: not-allowed; }
+.vr-approve svg,
+.vr-reject svg { font-size: 19px; }
+.vr-outcome { padding: 12px 14px; border-radius: 14px; font-size: 14px; font-weight: 600; }
+.vr-outcome.is-ok { background: var(--vd-ok-bg); color: var(--vd-ok); }
+.vr-outcome.is-risk { background: var(--vd-risk-bg); color: var(--vd-risk); }
+
+/* Campos (Field/DatePicker) seguem o tema escuro, inclusive desabilitados */
+:root[data-theme='dark'] .vv-page :is(input:not([type='checkbox']):not([type='file']), button[role='combobox']) {
+  background-color: var(--vd-canvas) !important;
+  border-color: var(--vd-line) !important;
+  color: var(--vd-ink) !important;
+}
+:root[data-theme='dark'] .vv-page :is(input, button[role='combobox']):disabled { opacity: 0.75; }
+
+@media (max-width: 1023px) {
+  .vv-grid,
+  .vr-layout { grid-template-columns: minmax(0, 1fr); }
+  .vv-side,
+  .vr-list { position: static; }
+  .vr-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 600px) {
+  .vv-status { flex-wrap: wrap; padding: 16px; }
+  .vv-progress { order: -1; margin-left: auto; }
+  .vv-step { grid-template-columns: minmax(0, 1fr); padding: 16px; }
+  .vv-cert,
+  .vr-facts { grid-template-columns: minmax(0, 1fr); }
+  .vv-file { flex-wrap: wrap; }
+  .vv-file-actions { width: 100%; }
+  .vv-file-actions button { flex: 1; }
+  .vr-actions { flex-direction: column-reverse; }
+  .vr-actions button { justify-content: center; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .vv-drop,
+  .vv-drop-icon { transition: none; }
+}

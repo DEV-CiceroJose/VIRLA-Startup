@@ -150,6 +150,15 @@ export default function User() {
 
               {isCaregiver && (
                 <ul className="vp-checks">
+                  {user.verificationStatus === 'APROVADO' && (
+                    <li>
+                      <span>
+                        Documentos e antecedentes
+                        <small>Conferidos pela equipe VIRLA</small>
+                      </span>
+                      <CheckCircle aria-label="Verificado" className="vp-check-ok" />
+                    </li>
+                  )}
                   {hasRegister ? (
                     <li>
                       <span>

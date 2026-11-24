@@ -17,8 +17,10 @@ import AuthLayout from '../../components/auth/AuthLayout'
 import Stepper from '../../components/auth/Stepper'
 import PasswordField from '../../components/auth/PasswordField'
 import GoogleIcon from '../../components/auth/GoogleIcon'
+import LegalConsent from '../../components/legal/LegalConsent'
+import { TERMS_VERSION } from '../../constants/legal'
 import { isValidCpf, isValidEmail, maskCpf, stripCpf } from '../../utils/validators'
-import { registerWithEmail, loginWithGoogle, mapAuthError, getIdToken } from '../../services/auth'
+import { registerWithEmail, loginWithGoogle, mapAuthError, getIdToken, logout } from '../../services/auth'
 import { COUNCILS, isValidRegister } from '../../constants/councils'
 
 const ALL_STEPS = [
@@ -48,6 +50,7 @@ export default function Cadastro() {
   const [profileImage, setProfileImage] = useState('')
   const [council, setCouncil] = useState('')
   const [stepIndex, setStepIndex] = useState(0)
+  const [legal, setLegal] = useState({ terms: false, privacy: false })
 
   const inputName = useRef()
   const inputEmail = useRef()
@@ -110,6 +113,10 @@ export default function Cadastro() {
       toast.warning('Informe um nome válido (apenas letras).')
       return
     }
+    if (!legal.terms || !legal.privacy) {
+      toast.warning('Leia e aceite os Termos de Uso e a Política de Privacidade para criar a conta.')
+      return
+    }
 
     setSubmitting(true)
     try {
@@ -119,6 +126,8 @@ export default function Cadastro() {
         bio: '',
         cpf: cpfDigits,
         birthDate,
+        acceptedTerms: true,
+        termsVersion: TERMS_VERSION,
       }
 
       if (profileImage) payload.profileImage = profileImage
@@ -143,6 +152,9 @@ export default function Cadastro() {
       await registerWithEmail(email, password)
       await api.post('/users', payload)
       await getIdToken(true)
+      // Sai da sessão criada pelo cadastro: o perfil foi checado antes de existir
+      // e o login seguinte precisa recarregá-lo (senão cai em completar cadastro).
+      await logout().catch(() => {})
       toast.success('Conta criada! Confirme seu e-mail para entrar.')
       navigate('/login')
     } catch (err) {
@@ -280,6 +292,7 @@ export default function Cadastro() {
           <Field ref={inputEmail} label="E-mail" required icon={Email} type="email" placeholder="seu@email.com" autoComplete="email" />
           <PasswordField ref={inputPassword} label="Senha" required placeholder="Senha (mín. 6 caracteres)" autoComplete="new-password" />
           <PasswordField ref={inputConfirmPassword} label="Confirmar senha" required placeholder="Repita a senha" autoComplete="new-password" />
+          <LegalConsent value={legal} onChange={setLegal} />
         </section>
 
         <div className="va-actions">

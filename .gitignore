@@ -34,3 +34,5 @@ Thumbs.db
 
 # Pasta de uploads do servidor
 backend/uploads/
+# Documentos da verificação de cuidadores (cifrados, nunca versionar)
+backend/private-uploads/

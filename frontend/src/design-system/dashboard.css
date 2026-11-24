@@ -25,6 +25,13 @@
   --vd-accent-ink: #3d0d42;
   --vd-icon-1: #800080;
   --vd-icon-2: #9932cc;
+  /* Tons de status: ok = confirmado/recebido · wait = pendente · risk = devolvido/travado */
+  --vd-ok: #1f7a52;
+  --vd-ok-bg: #e3f4ea;
+  --vd-wait: #8a5a00;
+  --vd-wait-bg: #fbf0d9;
+  --vd-risk: #b4372b;
+  --vd-risk-bg: #fbe6e3;
 }
 
 :root[data-theme='dark'] {
@@ -46,6 +53,12 @@
   --vd-accent-ink: #3d0d42;
   --vd-icon-1: #9b2a9b;
   --vd-icon-2: #b65bd6;
+  --vd-ok: #7fd6a8;
+  --vd-ok-bg: rgba(47, 158, 106, 0.18);
+  --vd-wait: #f0c674;
+  --vd-wait-bg: rgba(214, 158, 46, 0.16);
+  --vd-risk: #f3a197;
+  --vd-risk-bg: rgba(220, 80, 70, 0.18);
 }
 
 /* ── Shell ─────────────────────────────────────────────────────────────── */
@@ -270,6 +283,13 @@
 }
 :root[data-theme='dark'] .vd-avatar { color: var(--virla-brand-deep); }
 .vd-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+/* Telas logadas seguem o tema em qualquer largura (comfort.css força fundo
+   claro com !important; no celular isso deixava o tema escuro ilegível). */
+.vd-main .comfort-page {
+  background: var(--vd-canvas) !important;
+  color: var(--vd-ink);
+}
 
 /* ── Painel ────────────────────────────────────────────────────────────── */
 

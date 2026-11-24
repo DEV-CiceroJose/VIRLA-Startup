@@ -1,18 +1,34 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams, Link } from 'react-router-dom'
-import ArrowBack from '@mui/icons-material/ArrowBack'
-import Person from '@mui/icons-material/Person'
-import Chat from '@mui/icons-material/Chat'
+import {
+  ArrowBack,
+  ChatBubbleOutlineOutlined,
+  CheckCircle,
+  ChevronRight,
+  PlaceOutlined,
+  PostAddOutlined,
+} from '@mui/icons-material'
 import api from '../../services/api'
+import { useAuth } from '../../context/AuthContext'
 import { calculateAge } from '../../utils/dateUtils'
 import { formatHourly } from '../../utils/formatters'
 import { PageLoader } from '../../components/Spinner'
-import VerifiedSeal from '../../components/VerifiedSeal'
 import { specialtyLabel } from '../../constants/specialties'
+import { frequenciaLabel, turnoLabel } from '../../constants/solicitacaoOptions'
+import '../../design-system/profile.css'
+
+function initials(name = '') {
+  const parts = String(name).trim().split(/\s+/).filter(Boolean)
+  if (parts.length === 0) return '?'
+  return `${parts[0][0]}${parts.length > 1 ? parts[parts.length - 1][0] : ''}`.toUpperCase()
+}
+
+const list = (value) => (Array.isArray(value) ? value.filter(Boolean) : [])
 
 export default function User() {
   const { userId } = useParams()
   const navigate = useNavigate()
+  const { profile: me } = useAuth()
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -61,132 +77,166 @@ export default function User() {
     return <PageLoader label="Carregando perfil…" />
   }
 
+  const viewerIsFamily = me?.role === 'FAMILIAR'
+  const backTo = viewerIsFamily ? { to: '/feed', label: 'Buscar cuidadores' } : { to: '/home', label: 'Início' }
+
   if (error || !user) {
     return (
-      <div className="min-h-screen pt-16 bg-virla-neve flex flex-col items-center justify-center gap-4 px-6">
-        <p className="text-virla-texto text-center">{error || 'Perfil não encontrado.'}</p>
-        <button
-          type="button"
-          onClick={() => navigate('/feed')}
-          className="text-virla-roxo font-semibold underline"
-        >
-          Voltar ao feed
-        </button>
+      <div className="comfort-page min-h-screen pt-16">
+        <div className="vd-dash vp-page">
+          <div className="vd-empty vp-missing" role="alert">
+            <strong>{error || 'Perfil não encontrado.'}</strong>
+            <span>Confira o link ou volte e escolha outro perfil.</span>
+            <Link to={backTo.to} className="vp-missing-link">Voltar para {backTo.label.toLowerCase()}</Link>
+          </div>
+        </div>
       </div>
     )
   }
 
+  const isCaregiver = user.role === 'CUIDADOR'
+  const firstName = String(user.name ?? '').trim().split(/\s+/)[0] || 'este perfil'
   const age = calculateAge(user.birthDate)
-  const rateLabel = formatHourly(user.hourlyRate)
-  const specialties = Array.isArray(user.specialties) ? user.specialties : []
+  const rateLabel = isCaregiver ? formatHourly(user.hourlyRate) : null
+  const place = [user.city, user.state].filter(Boolean).join(', ')
+  const specialties = list(user.specialties)
+  const shifts = list(user.availableShifts)
+  const frequencies = list(user.serviceFrequencies)
+  const about = user.description || user.bio
+  const extraBio = user.description && user.bio && user.bio !== user.description ? user.bio : null
+  const hasRegister = Boolean(user.council && String(user.council).trim())
+  const roleLine = [isCaregiver ? 'Profissional de cuidado' : 'Familiar', age !== null ? `${age} anos` : null]
+    .filter(Boolean)
+    .join(', ')
+  const showPhoto = user.profileImage && !imgErr
 
   return (
-    <div
-      className="comfort-page comfort-public-profile min-h-screen pt-16 bg-virla-neve pb-10"
-      style={{
-        backgroundImage:
-          'radial-gradient(ellipse 60% 40% at 80% 10%, rgba(128,0,128,0.08), transparent)',
-      }}
-    >
-      <div className="comfort-content max-w-2xl mx-auto px-6 py-8">
-        <Link
-          to="/feed"
-          className="inline-flex items-center gap-1 text-sm text-virla-texto/60 hover:text-virla-roxo mb-6"
-        >
-          <ArrowBack sx={{ fontSize: 18 }} />
-          Voltar ao feed
-        </Link>
+    <div className="comfort-page min-h-screen pt-16">
+      <div className="vd-dash vp-page">
+        <nav className="vp-crumbs" aria-label="Você está em">
+          <Link to={backTo.to}>
+            <ArrowBack aria-hidden className="vp-crumbs-back" />
+            {backTo.label}
+          </Link>
+          <ChevronRight aria-hidden className="vp-crumbs-sep" />
+          <span aria-current="page">{user.name}</span>
+        </nav>
 
-        <div className="bg-white/90 backdrop-blur-sm rounded-2xl border border-virla-roxo/10 shadow-sm p-6 space-y-6">
-          <div className="flex flex-col sm:flex-row gap-6 sm:items-start">
-            <div className="w-28 h-28 rounded-2xl overflow-hidden bg-virla-roxo/10 flex items-center justify-center flex-shrink-0 mx-auto sm:mx-0">
-              {user.profileImage && !imgErr ? (
-                <img
-                  src={user.profileImage}
-                  alt=""
-                  className="w-full h-full object-cover"
-                  onError={() => setImgErr(true)}
-                />
+        <div className="vp-layout">
+          <aside className="vp-identity" aria-labelledby="vp-name">
+            <div className={`vp-portrait${showPhoto ? '' : ' is-initials'}`}>
+              {showPhoto ? (
+                <img src={user.profileImage} alt={`Foto de ${user.name}`} onError={() => setImgErr(true)} />
               ) : (
-                <Person sx={{ fontSize: 56 }} className="text-virla-roxo/35" />
+                <span aria-hidden>{initials(user.name)}</span>
               )}
             </div>
-            <div className="flex-1 min-w-0 text-center sm:text-left">
-              <h1
-                className="text-2xl font-display font-black text-virla-roxo truncate inline-flex items-center gap-1.5 max-w-full"
-              >
-                <span className="truncate">{user.name}</span>
-                <VerifiedSeal user={user} iconSize={22} />
-              </h1>
-              <p className="text-sm text-virla-texto/55 mt-1">
-                {user.role === 'CUIDADOR' ? 'Cuidador profissional' : 'Familiar'}
-                {age !== null && ` · ${age} anos`}
-              </p>
-              {user.city || user.state ? (
-                <p className="text-xs text-virla-texto/45 mt-2">
-                  {[user.city, user.state].filter(Boolean).join(', ')}
-                </p>
-              ) : null}
-            </div>
-          </div>
 
-          {user.bio && (
-            <div>
-              <p className="text-xs font-semibold text-virla-muted uppercase tracking-wide mb-2">Apresentação</p>
-              <p className="text-sm text-virla-texto/80 whitespace-pre-wrap leading-relaxed">{user.bio}</p>
-            </div>
-          )}
+            <div className="vp-card">
+              <h1 id="vp-name" className="vp-name">{user.name}</h1>
+              <p className="vp-role">{roleLine}</p>
 
-          {user.role === 'CUIDADOR' && (
-            <>
-              {rateLabel && (
-                <p className="text-lg font-black text-virla-roxo">
-                  {rateLabel}
-                </p>
+              {(rateLabel || place) && (
+                <ul className="vp-chips" aria-label="Resumo">
+                  {rateLabel && <li className="vp-chip vp-chip-strong">{rateLabel}</li>}
+                  {place && (
+                    <li className="vp-chip">
+                      <PlaceOutlined aria-hidden />
+                      {place}
+                    </li>
+                  )}
+                </ul>
               )}
-              {user.council && user.registerNumber && (
-                <p className="text-sm text-virla-texto/70">
-                  <span className="font-semibold">Registro: </span>
-                  {user.council} {user.registerNumber}
-                </p>
+
+              {isCaregiver && (
+                <ul className="vp-checks">
+                  {hasRegister ? (
+                    <li>
+                      <span>
+                        Registro profissional
+                        <small>{user.council} {user.registerNumber}</small>
+                      </span>
+                      <CheckCircle aria-label="Informado" className="vp-check-ok" />
+                    </li>
+                  ) : (
+                    <li className="is-missing">
+                      <span>
+                        Registro profissional
+                        <small>Ainda não informado</small>
+                      </span>
+                    </li>
+                  )}
+                </ul>
               )}
-              {user.approach && (
-                <p className="text-sm text-virla-texto/70">
-                  <span className="font-semibold">Abordagem: </span>
-                  {user.approach}
-                </p>
-              )}
-              {specialties.length > 0 && (
-                <div className="flex flex-wrap gap-1.5">
-                  {specialties.map((tag, i) => (
-                    <span
-                      key={`${tag}-${i}`}
-                      className="text-xs font-semibold px-2.5 py-1 rounded-full bg-violet-100 text-violet-800 border border-violet-200/80"
-                    >
-                      {specialtyLabel(tag)}
-                    </span>
-                  ))}
-                </div>
-              )}
-              {user.description && (
-                <div>
-                  <p className="text-xs font-semibold text-virla-muted uppercase tracking-wide mb-2">
-                    Sobre o profissional
+
+              <Link to={`/chat/${user.id}`} className="vp-cta">
+                <ChatBubbleOutlineOutlined aria-hidden />
+                Conversar com {firstName}
+              </Link>
+
+              {isCaregiver && viewerIsFamily && (
+                <div className="vp-alt">
+                  <p>
+                    <strong>Prefere descrever o que precisa?</strong>
+                    <span>Publique uma solicitação e receba o contato de cuidadores.</span>
                   </p>
-                  <p className="text-sm text-virla-texto/75 whitespace-pre-wrap leading-relaxed">{user.description}</p>
+                  <Link to="/solicitacoes" className="vp-alt-btn">
+                    <PostAddOutlined aria-hidden />
+                    Publicar solicitação
+                  </Link>
                 </div>
               )}
-            </>
-          )}
+            </div>
+          </aside>
 
-          <div className="pt-2 flex flex-wrap gap-3 justify-center sm:justify-start">
-            <Link
-              to={`/chat/${user.id}`}
-              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-virla-roxo text-white text-sm font-semibold hover:bg-virla-roxohighlight shadow-md transition-all"
-            >
-              <Chat sx={{ fontSize: 18 }} />
-              Enviar mensagem
-            </Link>
+          <div className="vp-sections">
+            <section className="vd-panel vp-section" aria-labelledby="vp-about">
+              <h2 id="vp-about">Sobre {firstName}</h2>
+              {about ? (
+                <>
+                  <p className="vp-prose">{about}</p>
+                  {extraBio && <p className="vp-prose">{extraBio}</p>}
+                </>
+              ) : (
+                <p className="vp-muted">{firstName} ainda não escreveu uma apresentação.</p>
+              )}
+            </section>
+
+            {isCaregiver && specialties.length > 0 && (
+              <section className="vd-panel vp-section" aria-labelledby="vp-skills">
+                <h2 id="vp-skills">Especialidades</h2>
+                <ul className="vp-tags">
+                  {specialties.map((tag, i) => <li key={`${tag}-${i}`}>{specialtyLabel(tag)}</li>)}
+                </ul>
+              </section>
+            )}
+
+            {isCaregiver && (shifts.length > 0 || frequencies.length > 0) && (
+              <section className="vd-panel vp-section" aria-labelledby="vp-availability">
+                <h2 id="vp-availability">Disponibilidade</h2>
+                <dl className="vp-availability">
+                  {shifts.length > 0 && (
+                    <div>
+                      <dt>Turnos</dt>
+                      <dd><ul className="vp-tags is-quiet">{shifts.map((s) => <li key={s}>{turnoLabel(s)}</li>)}</ul></dd>
+                    </div>
+                  )}
+                  {frequencies.length > 0 && (
+                    <div>
+                      <dt>Frequência</dt>
+                      <dd><ul className="vp-tags is-quiet">{frequencies.map((f) => <li key={f}>{frequenciaLabel(f)}</li>)}</ul></dd>
+                    </div>
+                  )}
+                </dl>
+              </section>
+            )}
+
+            {isCaregiver && user.approach && (
+              <section className="vd-panel vp-section" aria-labelledby="vp-approach">
+                <h2 id="vp-approach">Como {firstName} trabalha</h2>
+                <p className="vp-prose">{user.approach}</p>
+              </section>
+            )}
           </div>
         </div>
       </div>

@@ -90,7 +90,7 @@ export default function Landing() {
     <div className="comfort-landing">
       <header className="landing-header">
         <Link to="/" className="landing-brand" aria-label="VIRLA, página inicial">
-          <span className="landing-brand-mark" aria-hidden>♥</span> VIRLA
+          <img className="landing-brand-logo" src="/icon-192.png" alt="" width="34" height="34" /> VIRLA
         </Link>
         <button
           className="landing-menu-button"
@@ -116,16 +116,10 @@ export default function Landing() {
         {/* Hero — modelo novo aprovado */}
         <section className="landing-hero" aria-labelledby="landing-title">
           <div className="landing-hero-copy">
-            <span className="landing-eyebrow"><FavoriteBorder fontSize="small" /> Cuidado que aproxima</span>
             <h1 id="landing-title">Mais conforto para quem precisa. <em>Mais tranquilidade para você.</em></h1>
-            <p>Encontre quem pode estar ao lado da sua família com atenção, respeito e carinho. Um espaço para conhecer, conversar e construir confiança.</p>
             <div className="landing-hero-actions">
               <Link className="landing-button" to="/cadastro">Encontrar um cuidador <ArrowForward fontSize="small" /></Link>
               <a className="landing-text-link" href="#solucao">Entenda como funciona</a>
-            </div>
-            <div className="landing-hero-foot">
-              <span className="landing-foot-icon"><ShieldOutlined fontSize="small" /></span>
-              <span>Uma escolha importante merece tempo e informação.</span>
             </div>
           </div>
           <div className="landing-hero-visual">
@@ -299,7 +293,7 @@ export default function Landing() {
       <footer className="o-footer">
         <div className="o-footer-grid">
           <div className="o-footer-brand">
-            <strong><span className="landing-brand-mark" aria-hidden>♥</span> VIRLA</strong>
+            <strong><img className="landing-brand-logo" src="/icon-192.png" alt="" width="34" height="34" /> VIRLA</strong>
             <p>Democratizando o acesso a cuidadores confiáveis e garantindo segurança e dignidade às famílias brasileiras.</p>
             <div className="o-social">
               <a href="https://instagram.com/virlaoficial" target="_blank" rel="noreferrer" aria-label="Instagram da VIRLA"><Instagram fontSize="small" /></a>

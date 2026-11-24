@@ -1,7 +1,7 @@
 # 🎨 VIRLA — Redesign v2 (branch `redesingv2`)
 
 > **Para quem chega agora (inclusive você, em outra máquina):** este arquivo é o "mapa do tesouro".
-> Leia de cima para baixo, siga o 🧭 *Como continuar* e cole o 🤖 *prompt pronto* numa nova sessão do Claude Code.
+> Leia de cima para baixo, siga o 🧭 *Como continuar* e use o 📌 *resumo para retomar* no fim do arquivo.
 
 ---
 
@@ -219,9 +219,9 @@ Convenção de nomes CSS: `vd-` = shell/painel, `vc-` = chat. Para telas novas, 
 
 ---
 
-## 🤖 Prompt pronto para a próxima sessão
+## 📌 Resumo para retomar o trabalho
 
-Cole isto no Claude Code, na raiz do repositório, já na branch `redesingv2`:
+Ponto de partida, na raiz do repositório e já na branch `redesingv2`:
 
 ```
 Estamos continuando o redesign da VIRLA na branch redesingv2.

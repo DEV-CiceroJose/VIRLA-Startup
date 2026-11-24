@@ -19,7 +19,7 @@
 - A criação de notificação **nunca** pode quebrar a ação principal (envio de mensagem / assumir / concluir / cancelar): sempre em `try/catch` que loga e segue.
 - Consultas Firestore por **um único campo** (`userId`) + filtro/ordenção em memória — sem índice composto (padrão de `solicitacaoRepository`).
 - Verificação: backend `node --test` verde, frontend `npx vitest run` verde, `npm run build` OK, `npm run lint` delta 0, sem dep npm nova.
-- Commits pt-BR terminando com `Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>`.
+- Commits em pt-BR.
 
 ## File Structure
 
@@ -115,9 +115,7 @@ Expected: PASS.
 
 ```bash
 git add backend/src/utils/notificationTypes.js backend/tests/notificationTypes.test.js
-git commit -m "feat(notificacao): enum de tipos de notificação no backend
-
-Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
+git commit -m "feat(notificacao): enum de tipos de notificação no backend"
 ```
 
 ---
@@ -274,9 +272,7 @@ Expected: PASS — nenhum teste quebrou (o novo módulo importa sem erro).
 
 ```bash
 git add backend/src/repositories/notificationRepository.js
-git commit -m "feat(notificacao): repository Firestore com colapso de mensagens
-
-Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
+git commit -m "feat(notificacao): repository Firestore com colapso de mensagens"
 ```
 
 ---
@@ -384,9 +380,7 @@ Expected: PASS — suíte inteira verde (service importa sem erro).
 
 ```bash
 git add backend/src/services/notificationService.js backend/src/schemas/notificationSchemas.js backend/tests/notificationSchemas.test.js
-git commit -m "feat(notificacao): service de criação/emissão + schemas das rotas
-
-Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
+git commit -m "feat(notificacao): service de criação/emissão + schemas das rotas"
 ```
 
 ---
@@ -536,9 +530,7 @@ Expected: PASS — nada quebrou; `server.js` importa as rotas novas sem erro.
 
 ```bash
 git add backend/src/controllers/notificationController.js backend/src/routes/notificationRoutes.js backend/server.js
-git commit -m "feat(notificacao): rotas + controller da central e io exposto aos controllers
-
-Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
+git commit -m "feat(notificacao): rotas + controller da central e io exposto aos controllers"
 ```
 
 ---
@@ -678,9 +670,7 @@ Expected: PASS — nada quebrou.
 
 ```bash
 git add backend/src/events/messageEvents.js backend/src/controllers/solicitacaoController.js
-git commit -m "feat(notificacao): mensagens e eventos de solicitação criam notificações
-
-Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
+git commit -m "feat(notificacao): mensagens e eventos de solicitação criam notificações"
 ```
 
 ---
@@ -929,9 +919,7 @@ Expected: PASS — ambos os arquivos verdes.
 
 ```bash
 git add frontend/src/utils/notificationsReducer.js frontend/src/utils/notificationsReducer.test.js frontend/src/utils/notificationsView.js frontend/src/utils/notificationsView.test.js
-git commit -m "feat(notificacao): lógica pura do frontend (reducer + apresentação)
-
-Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
+git commit -m "feat(notificacao): lógica pura do frontend (reducer + apresentação)"
 ```
 
 ---
@@ -1080,9 +1068,7 @@ Expected: build OK.
 
 ```bash
 git add frontend/src/context/NotificationContext.jsx frontend/src/AppShell.jsx
-git commit -m "feat(notificacao): NotificationProvider (carga, socket, ações)
-
-Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
+git commit -m "feat(notificacao): NotificationProvider (carga, socket, ações)"
 ```
 
 ---
@@ -1376,9 +1362,7 @@ Expected: PASS — suíte verde (incl. o novo teste do sino).
 
 ```bash
 git add frontend/src/components/NotificationBell/index.jsx frontend/src/components/NotificationBell/NotificationBell.test.jsx frontend/src/components/Menu/index.jsx
-git commit -m "feat(notificacao): NotificationBell no header (desktop + mobile)
-
-Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
+git commit -m "feat(notificacao): NotificationBell no header (desktop + mobile)"
 ```
 
 ---
@@ -1447,9 +1431,7 @@ Expected: 0 novos erros/warnings (delta 0 vs. baseline).
 
 ```bash
 git add frontend/src/pages/Chat/index.jsx
-git commit -m "feat(notificacao): Chat zera a notificação da conversa ao abrir
-
-Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
+git commit -m "feat(notificacao): Chat zera a notificação da conversa ao abrir"
 ```
 
 ---

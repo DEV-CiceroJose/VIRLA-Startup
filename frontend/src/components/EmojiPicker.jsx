@@ -12,7 +12,10 @@ const EMOJIS = [
 ]
 
 /** Seletor de emoji próprio (sem dependência). onSelect(emoji) recebe o escolhido. */
-export default function EmojiPicker({ onSelect }) {
+export default function EmojiPicker({
+  onSelect,
+  buttonClassName = 'h-11 w-11 sm:h-12 sm:w-12 rounded-xl bg-gray-100 text-virla-roxo flex items-center justify-center hover:bg-gray-200 transition-all',
+}) {
   const [open, setOpen] = useState(false)
   const wrapRef = useRef(null)
 
@@ -37,10 +40,10 @@ export default function EmojiPicker({ onSelect }) {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="h-11 w-11 sm:h-12 sm:w-12 rounded-xl bg-gray-100 text-virla-roxo flex items-center justify-center hover:bg-gray-200 transition-all"
+        className={buttonClassName}
         aria-label="Emojis"
       >
-        <EmojiEmotions sx={{ fontSize: 24 }} />
+        <EmojiEmotions sx={{ fontSize: 22 }} />
       </button>
 
       {open && (

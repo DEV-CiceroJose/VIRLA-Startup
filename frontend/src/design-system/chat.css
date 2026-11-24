@@ -1,0 +1,305 @@
+/*
+ * VIRLA — chat (lista de conversas + conversa), dentro do shell da área logada.
+ * Usa os tokens --vd-* de dashboard.css.
+ */
+
+.vc-chat {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  height: calc(100dvh - 64px);
+  margin-top: 64px;
+  color: var(--vd-ink);
+  background: var(--vd-canvas);
+}
+
+/* ── Lista de conversas ─────────────────────────────────────────────── */
+.vc-list { display: none; }
+
+@media (min-width: 768px) {
+  .vc-chat {
+    grid-template-columns: 340px minmax(0, 1fr);
+    height: calc(100dvh - 12px - 84px);
+    margin-top: 0;
+  }
+  .vc-list {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    border-right: 1px solid var(--vd-line);
+  }
+  .vc-back { display: none !important; }
+}
+
+.vc-list-head { display: flex; align-items: center; justify-content: space-between; padding: 22px 20px 14px; }
+.vc-list-head h2 { font-size: 18px; font-weight: 700; color: var(--vd-ink); }
+.vc-icon-btn {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  flex: none;
+  border-radius: 10px;
+  color: var(--vd-ink-soft);
+  transition: background-color 160ms ease, color 160ms ease;
+}
+.vc-icon-btn:hover { background: var(--vd-tint); color: var(--virla-brand); }
+.vc-icon-btn.brand { color: var(--virla-brand); }
+
+.vc-list-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 20px;
+  height: 42px;
+  padding: 0 12px;
+  border: 1px solid var(--vd-line);
+  border-radius: 12px;
+  color: var(--vd-ink-soft);
+  background: var(--vd-card);
+}
+.vc-list-search:focus-within { border-color: var(--virla-brand); box-shadow: 0 0 0 3px var(--virla-focus); }
+.vc-list-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0 !important;
+  outline: 0;
+  background: transparent !important;
+  font-size: 13.5px;
+  color: var(--vd-ink);
+}
+
+.vc-tabs { display: flex; margin-top: 12px; border-bottom: 1px solid var(--vd-line); }
+.vc-tab {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 8px;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--vd-ink-soft);
+}
+.vc-tab[aria-selected='true'] { color: var(--virla-brand); border-color: var(--virla-brand); }
+:root[data-theme='dark'] .vc-tab[aria-selected='true'] { color: var(--virla-brand-highlight); border-color: var(--virla-brand-highlight); }
+.vc-count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  background: var(--virla-brand);
+}
+.vc-count.muted { background: var(--vd-tint-strong); color: var(--vd-ink-soft); }
+
+.vc-list-items { flex: 1; min-height: 0; overflow-y: auto; }
+.vc-item {
+  position: relative;
+  display: flex;
+  gap: 12px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--vd-line);
+  color: var(--vd-ink);
+  transition: background-color 160ms ease;
+}
+.vc-item:hover { background: var(--vd-tint); }
+.vc-item.active { background: var(--vd-tint); }
+.vc-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 10px;
+  bottom: 10px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--virla-brand);
+}
+.vc-item-body { flex: 1; min-width: 0; }
+.vc-item-top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.vc-item-top strong { overflow: hidden; font-size: 14px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.vc-item-top time { flex: none; font-size: 11.5px; color: var(--vd-ink-soft); }
+.vc-item-bottom { display: flex; align-items: center; gap: 8px; margin-top: 3px; }
+.vc-item-bottom p { flex: 1; min-width: 0; overflow: hidden; font-size: 13px; color: var(--vd-ink-soft); text-overflow: ellipsis; white-space: nowrap; }
+.vc-item.unread .vc-item-bottom p { color: var(--vd-ink); font-weight: 500; }
+.vc-list-empty { padding: 28px 20px; font-size: 13px; text-align: center; color: var(--vd-ink-soft); }
+
+/* ── Conversa ───────────────────────────────────────────────────────── */
+.vc-pane { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+
+.vc-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 72px;
+  padding: 12px clamp(12px, 2vw, 24px);
+  border-bottom: 1px solid var(--vd-line);
+  background: var(--vd-canvas);
+}
+.vc-head-info { min-width: 0; }
+.vc-head-info h1 { overflow: hidden; font-size: 15px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.vc-head-info p { display: flex; align-items: center; gap: 6px; margin-top: 2px; font-size: 12px; color: var(--vd-ink-soft); }
+.vc-online-dot { width: 8px; height: 8px; border-radius: 50%; background: #2f9e6a; }
+.vc-chip { display: none; }
+@media (min-width: 1024px) { .vc-chip { display: inline-flex; } }
+.vc-chip {
+  align-items: center;
+  gap: 6px;
+  margin-left: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--vd-ink-soft);
+  background: var(--vd-tint);
+}
+.vc-head-actions { display: flex; align-items: center; gap: 2px; margin-left: auto; }
+.vc-head-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--vd-ink-soft);
+  transition: background-color 160ms ease, color 160ms ease;
+}
+.vc-head-action:hover { background: var(--vd-tint); color: var(--virla-brand); }
+.vc-head-action svg { font-size: 19px; }
+.vc-head-action .label { display: none; }
+@media (min-width: 1100px) { .vc-head-action .label { display: inline; } }
+
+.vc-banner { padding: 8px 16px; font-size: 13px; text-align: center; }
+.vc-banner.warn { color: #7a5200; background: #fff6df; border-bottom: 1px solid #f1dfae; }
+.vc-banner button { margin-left: 8px; font-weight: 700; text-decoration: underline; }
+
+/* Área das mensagens com padrão discreto, como papel de parede */
+.vc-messages {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 20px clamp(14px, 3vw, 40px) 28px;
+  background-color: var(--vd-canvas);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' fill='none' stroke='%23800080' stroke-opacity='.07' stroke-width='1.4'%3E%3Ccircle cx='22' cy='24' r='9'/%3E%3Cpath d='M86 16v16M78 24h16'/%3E%3Crect x='70' y='70' width='16' height='16' rx='4'/%3E%3Cpath d='M14 88c6-6 12-6 18 0'/%3E%3C/svg%3E");
+}
+.vc-day { display: flex; justify-content: center; margin: 8px 0 18px; }
+.vc-day span {
+  padding: 4px 12px;
+  border: 1px solid var(--vd-line);
+  border-radius: 999px;
+  font-size: 12px;
+  color: var(--vd-ink-soft);
+  background: var(--vd-card);
+}
+.vc-row { display: flex; margin-bottom: 12px; }
+.vc-row.mine { justify-content: flex-end; }
+.vc-bubble {
+  position: relative;
+  max-width: min(78%, 560px);
+  padding: 11px 14px 8px;
+  border: 1px solid var(--vd-line);
+  border-radius: 14px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--vd-ink);
+  background: var(--vd-card);
+  box-shadow: 0 1px 2px rgba(62, 24, 62, 0.04);
+}
+.vc-row.mine .vc-bubble {
+  border-color: #e3c9e8;
+  background: #f6ecf8;
+}
+:root[data-theme='dark'] .vc-row.mine .vc-bubble { border-color: #5a3a60; background: #3a2540; }
+.vc-bubble.optimistic { opacity: 0.7; }
+.vc-bubble.clickable { cursor: pointer; }
+.vc-meta { display: flex; align-items: center; justify-content: flex-end; gap: 4px; margin-top: 4px; font-size: 11px; color: var(--vd-ink-soft); }
+.vc-tick { color: var(--vd-ink-soft); letter-spacing: -2px; }
+.vc-tick.read { color: var(--virla-brand); }
+:root[data-theme='dark'] .vc-tick.read { color: var(--virla-brand-highlight); }
+.vc-delete {
+  position: absolute;
+  top: -10px;
+  left: -10px;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid #f1c4c8;
+  border-radius: 50%;
+  color: var(--virla-danger);
+  background: var(--vd-card);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+.vc-typing { display: inline-flex; gap: 4px; padding: 12px 14px; }
+.vc-typing span { width: 6px; height: 6px; border-radius: 50%; background: var(--vd-ink-soft); animation: vc-bounce 1s infinite; }
+.vc-typing span:nth-child(2) { animation-delay: 0.15s; }
+.vc-typing span:nth-child(3) { animation-delay: 0.3s; }
+@keyframes vc-bounce { 0%, 80%, 100% { transform: translateY(0); opacity: 0.5; } 40% { transform: translateY(-4px); opacity: 1; } }
+.vc-empty-msg { padding: 40px 0; font-size: 13px; text-align: center; color: var(--vd-ink-soft); }
+
+/* Composer */
+.vc-composer {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  padding: 12px clamp(12px, 2vw, 24px);
+  border-top: 1px solid var(--vd-line);
+  background: var(--vd-canvas);
+}
+.vc-composer .vc-icon-btn { width: 42px; height: 42px; }
+.vc-input {
+  flex: 1;
+  min-height: 46px;
+  max-height: 128px;
+  padding: 12px 16px;
+  border: 1px solid var(--vd-line);
+  border-radius: 12px;
+  resize: none;
+  font-size: 14px;
+  color: var(--vd-ink);
+  background: var(--vd-card);
+}
+.vc-input::placeholder { color: var(--vd-ink-soft); }
+.vc-input:focus { outline: 0; border-color: var(--virla-brand); box-shadow: 0 0 0 3px var(--virla-focus); }
+.vc-staged {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 46px;
+  padding: 0 10px;
+  border: 1px solid var(--vd-line);
+  border-radius: 12px;
+  background: var(--vd-tint);
+  font-size: 13px;
+}
+.vc-staged.recording { color: var(--virla-danger); border-color: #f1c4c8; background: #fff3f4; }
+:root[data-theme='dark'] .vc-staged.recording { background: #3a1d22; }
+.vc-send {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  color: #fff;
+  background: var(--virla-brand);
+  box-shadow: 0 6px 16px rgba(128, 0, 128, 0.25);
+  transition: background-color 160ms ease, transform 160ms ease;
+}
+.vc-send:hover { background: var(--virla-brand-highlight); }
+.vc-send:active { transform: scale(0.96); }
+.vc-send:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.vc-skeleton { display: flex; flex-direction: column; gap: 14px; padding: 24px; }
+.vc-skeleton div { height: 54px; border-radius: 14px; background: var(--vd-tint); animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+.vc-skeleton div:nth-child(even) { align-self: flex-end; width: 55%; }
+.vc-skeleton div:nth-child(odd) { width: 45%; }

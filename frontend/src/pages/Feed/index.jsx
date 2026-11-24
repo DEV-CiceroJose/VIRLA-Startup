@@ -150,7 +150,8 @@ export default function Feed() {
   const navigate = useNavigate()
   const [feedUsers, setFeedUsers] = useState([])
   const [loading, setLoading] = useState(true)
-  const [search, setSearch] = useState('')
+  // A busca global da topbar chega como ?busca=termo
+  const [search, setSearch] = useState(() => new URLSearchParams(window.location.search).get('busca') ?? '')
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [fetchError, setFetchError] = useState('')

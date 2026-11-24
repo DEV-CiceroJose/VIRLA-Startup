@@ -1,81 +1,103 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import Person from '@mui/icons-material/Person'
-import CalendarMonth from '@mui/icons-material/CalendarMonth'
-import Cake from '@mui/icons-material/Cake'
-import Work from '@mui/icons-material/Work'
-import Description from '@mui/icons-material/Description'
-import Email from '@mui/icons-material/Email'
-import CheckCircle from '@mui/icons-material/CheckCircle'
-import Schedule from '@mui/icons-material/Schedule'
+import ArrowForward from '@mui/icons-material/ArrowForward'
+import SearchOutlined from '@mui/icons-material/SearchOutlined'
+import PostAddOutlined from '@mui/icons-material/PostAddOutlined'
+import PersonOutline from '@mui/icons-material/PersonOutlined'
+import NotificationsNoneOutlined from '@mui/icons-material/NotificationsNoneOutlined'
+import ChatBubbleOutline from '@mui/icons-material/ChatBubbleOutlined'
+import AssignmentTurnedInOutlined from '@mui/icons-material/AssignmentTurnedInOutlined'
+import TaskAltOutlined from '@mui/icons-material/TaskAltOutlined'
+import EventBusyOutlined from '@mui/icons-material/EventBusyOutlined'
 import Chat from '@mui/icons-material/Chat'
-import Payments from '@mui/icons-material/Payments'
-import LocalOffer from '@mui/icons-material/LocalOffer'
-import WorkspacePremium from '@mui/icons-material/WorkspacePremium'
-import VolunteerActivism from '@mui/icons-material/VolunteerActivism'
 import api from '../../services/api'
-import { calculateAge, formatDateBR } from '../../utils/dateUtils'
 import { formatHourly } from '../../utils/formatters'
 import { PageLoader, Spinner, InlineSpinner } from '../../components/Spinner'
 import VerifiedSeal from '../../components/VerifiedSeal'
-import { specialtyLabel } from '../../constants/specialties'
+import Avatar from '../../components/Avatar'
+import { computeCompleteness } from '../../components/ProfileCompleteness/completeness'
+import { turnoLabel } from '../../constants/solicitacaoOptions'
 import { useNotifications } from '../../context/NotificationContext'
-import { notificationText } from '../../utils/notificationsView'
+import { notificationText, notificationHref } from '../../utils/notificationsView'
 
-function InfoRow({ icon: Icon, label, value }) {
+const NOTIFICATION_ICON = {
+  MESSAGE: ChatBubbleOutline,
+  SOLICITACAO_ASSUMIDA: AssignmentTurnedInOutlined,
+  SOLICITACAO_CONCLUIDA: TaskAltOutlined,
+  SOLICITACAO_CANCELADA: EventBusyOutlined,
+}
+
+const NOTIFICATION_TITLE = {
+  MESSAGE: 'Nova mensagem',
+  SOLICITACAO_ASSUMIDA: 'Solicitação assumida',
+  SOLICITACAO_CONCLUIDA: 'Atendimento concluído',
+  SOLICITACAO_CANCELADA: 'Solicitação cancelada',
+}
+
+const money = (cents) =>
+  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format((cents || 0) / 100)
+
+function todayKey() {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+/** Agrupa solicitações por data de início (YYYY-MM-DD), em ordem cronológica. */
+function groupByDate(requests, maxGroups = 5) {
+  const groups = new Map()
+  for (const r of requests) {
+    const key = r.dataInicio ? String(r.dataInicio).slice(0, 10) : 'sem-data'
+    if (!groups.has(key)) groups.set(key, [])
+    groups.get(key).push(r)
+  }
+  return [...groups.entries()]
+    .sort(([a], [b]) => (a === 'sem-data' ? 1 : b === 'sem-data' ? -1 : a.localeCompare(b)))
+    .slice(0, maxGroups)
+}
+
+function Sparkles() {
+  const star = 'M12 0 C13 8 16 11 24 12 C16 13 13 16 12 24 C11 16 8 13 0 12 C8 11 11 8 12 0Z'
   return (
-    <div className="flex items-start gap-3 py-3 border-b border-virla-roxo/10 last:border-0">
-      <div className="w-8 h-8 rounded-lg bg-virla-roxo/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-        <Icon sx={{ fontSize: 18 }} className="text-virla-roxo" />
-      </div>
-      <div>
-        <p className="text-xs text-virla-muted font-medium uppercase tracking-wide">{label}</p>
-        <p className="text-virla-texto font-semibold mt-0.5">{value ?? '—'}</p>
-      </div>
-    </div>
+    <svg className="vd-hero-sparkles" viewBox="0 0 160 120" width="160" aria-hidden>
+      <path d={star} fill="#fff" transform="translate(70 6) scale(1.4)" />
+      <path d={star} fill="#fff" transform="translate(20 70) scale(1)" />
+      <path d={star} fill="#fff" transform="translate(112 74) scale(.8)" />
+    </svg>
   )
 }
 
 function DashboardSkeleton() {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-pulse">
-      <div className="h-64 bg-white/60 rounded-2xl border border-virla-roxo/10" />
-      <div className="h-64 bg-white/60 rounded-2xl border border-virla-roxo/10" />
-      <div className="md:col-span-2 h-40 bg-white/60 rounded-2xl border border-virla-roxo/10" />
+    <div className="vd-grid animate-pulse" aria-hidden>
+      <div className="vd-col">
+        <div className="h-28 rounded-[22px] bg-[var(--vd-tint)]" />
+        <div className="vd-cards">
+          {[0, 1, 2].map((i) => <div key={i} className="h-44 rounded-[20px] bg-[var(--vd-tint)]" />)}
+        </div>
+        <div className="h-56 rounded-[20px] bg-[var(--vd-tint)]" />
+      </div>
+      <div className="vd-col">
+        <div className="h-72 rounded-[20px] bg-[var(--vd-tint)]" />
+      </div>
     </div>
   )
 }
 
 export default function Home() {
   const navigate = useNavigate()
-  const [searchParams, setSearchParams] = useSearchParams()
+  const [searchParams] = useSearchParams()
   const activeTab = searchParams.get('tab') === 'mensagens' ? 'mensagens' : 'dashboard'
 
   const [userData, setUserData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [conversations, setConversations] = useState([])
-  const [requests, setRequests] = useState([])
-  const { notifications } = useNotifications()
   const [convLoading, setConvLoading] = useState(false)
-  
-  const [unreadCount, setUnreadCount] = useState(0)
-
-  const fetchUnreadCount = useCallback(async () => {
-    try {
-      const res = await api.get('/messages/unread-count')
-      setUnreadCount(res.data.count)
-    } catch (err) { console.error(err) }
-  }, [])
-
-  useEffect(() => {
-    fetchUnreadCount()
-    const interval = setInterval(fetchUnreadCount, 10000)
-    return () => clearInterval(interval)
-  }, [fetchUnreadCount])
+  const [requests, setRequests] = useState([])
+  const [finance, setFinance] = useState(null)
+  const { notifications } = useNotifications()
 
   useEffect(() => {
     const id = localStorage.getItem('meuId')
-
     if (!id) {
       navigate('/login')
       return
@@ -90,12 +112,8 @@ export default function Home() {
       } catch (err) {
         console.error(err)
         const status = err.response?.status
-        if (status === 401 || status === 403) {
-          localStorage.clear()
-          navigate('/login')
-        } else {
-          navigate('/login')
-        }
+        if (status === 401 || status === 403) localStorage.clear()
+        navigate('/login')
       } finally {
         setLoading(false)
       }
@@ -118,9 +136,7 @@ export default function Home() {
   }, [])
 
   useEffect(() => {
-    const t = setTimeout(() => {
-      loadConversations()
-    }, 0)
+    const t = setTimeout(loadConversations, 0)
     return () => clearTimeout(t)
   }, [activeTab, loadConversations])
 
@@ -129,351 +145,261 @@ export default function Home() {
     let active = true
     const path = userData.role === 'CUIDADOR' ? '/solicitacoes/disponiveis' : '/solicitacoes/minhas'
     api.get(path).then(({ data }) => {
-      if (active) setRequests((data.solicitacoes ?? []).filter((item) => !['CONCLUIDA', 'CANCELADA'].includes(item.status)).slice(0, 4))
+      if (active) setRequests((data.solicitacoes ?? []).filter((item) => !['CONCLUIDA', 'CANCELADA'].includes(item.status)))
     }).catch(() => {})
+
+    // Cuidador: total recebido (pode estar indisponível se pagamentos estiverem desligados).
+    if (userData.role === 'CUIDADOR') {
+      api.get('/payments/caregiver/summary')
+        .then(({ data }) => { if (active) setFinance(data) })
+        .catch(() => {})
+    }
     return () => { active = false }
   }, [userData?.role])
 
-  function selectTab(tab) {
-    setSearchParams(tab === 'mensagens' ? { tab: 'mensagens' } : {})
-  }
-
-  // --- LÓGICA DE VERIFICAÇÃO DE PERFIL COMPLETO ---
-  // Analisa se falta alguma informação vital baseado no tipo de conta
-  const isProfileIncomplete = () => {
-    if (!userData) return false;
-
-    if (userData.role === 'CUIDADOR') {
-      return (
-        !userData.birthDate ||
-        !userData.bio ||
-        !userData.profileImage ||
-        userData.hourlyRate == null ||
-        !userData.council ||
-        !userData.city ||
-        !userData.state
-      );
-    }
-
-    if (userData.role === 'FAMILIAR') {
-      return (
-        !userData.birthDate ||
-        !userData.bio ||
-        !userData.profileImage
-      );
-    }
-
-    return false;
-  };
+  const agenda = useMemo(() => groupByDate(requests), [requests])
 
   if (loading || !userData) {
     return (
       <PageLoader label="Carregando painel…">
-        <div className="w-full max-w-4xl mt-2">
-          <DashboardSkeleton />
-        </div>
+        <div className="w-full max-w-5xl mt-2 px-6"><DashboardSkeleton /></div>
       </PageLoader>
     )
   }
 
-  const age = calculateAge(userData?.birthDate)
-  const rateLabel = formatHourly(userData?.hourlyRate)
-  const specialties = Array.isArray(userData?.specialties) ? userData.specialties : []
-  const showBanner = isProfileIncomplete();
+  const isCaregiver = userData.role === 'CUIDADOR'
+  const firstName = (userData.name ?? '').split(' ')[0]
+  const rateLabel = formatHourly(userData.hourlyRate)
+  const completeness = computeCompleteness(userData, userData.role)
+  const requestsPath = isCaregiver ? '/solicitacoes-disponiveis' : '/solicitacoes'
+  const today = todayKey()
+
+  // Conteúdo que muda conforme o perfil (familiar x cuidador).
+  const hero = isCaregiver
+    ? { title: 'Novas oportunidades', text: 'Solicitações de famílias aguardando um cuidador como você.', cta: 'Ver todas' }
+    : { title: 'Pedidos em andamento', text: 'Acompanhe as solicitações de cuidado que você publicou.', cta: 'Ver todos' }
+
+  const statCard = isCaregiver
+    ? finance
+      ? { value: money(finance.receivedCents), title: 'Total recebido', text: 'Valores de atendimentos confirmados na VIRLA.', cta: 'Ver finanças', to: '/financas' }
+      : { value: rateLabel ?? '—', title: 'Seu valor por hora', text: 'Referência exibida para as famílias.', cta: 'Ver finanças', to: '/financas' }
+    : { value: String(conversations.length), title: 'Conversas ativas', text: 'Converse com cuidadores e combine os detalhes.', cta: 'Abrir conversas', to: '/home?tab=mensagens' }
+
+  const actionCards = isCaregiver
+    ? [
+        { icon: SearchOutlined, title: 'Encontrar oportunidades', text: 'Veja solicitações próximas e com o seu perfil.', cta: 'Ver solicitações', to: '/solicitacoes-disponiveis' },
+        { icon: PersonOutline, title: 'Seu perfil profissional', text: 'Mantenha especialidades, registro e valores em dia.', cta: 'Editar perfil', to: '/perfil', alt: true },
+      ]
+    : [
+        { icon: SearchOutlined, title: 'Encontrar cuidadores', text: 'Conheça perfis verificados e converse com profissionais.', cta: 'Explorar perfis', to: '/feed' },
+        { icon: PostAddOutlined, title: 'Publicar solicitação', text: 'Descreva a necessidade e receba o contato de cuidadores.', cta: 'Meus pedidos', to: '/solicitacoes', alt: true },
+      ]
 
   return (
-    <div
-      className="comfort-page comfort-home min-h-screen pt-16 bg-virla-neve"
-      style={{
-        backgroundImage:
-          'radial-gradient(ellipse 70% 50% at 70% 0%, rgba(128,0,128,0.08), transparent)',
-      }}
-    >
-      <div className="comfort-content max-w-4xl mx-auto px-6 py-10">
-        
-        {/* CABEÇALHO ROXO DO PERFIL */}
-        <div className="bg-virla-roxo rounded-3xl p-8 text-white mb-6 shadow-lg relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/4 pointer-events-none" />
-          <div className="absolute bottom-0 left-0 w-40 h-40 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/4 pointer-events-none" />
-          <div className="relative z-10 flex flex-col sm:flex-row gap-6 sm:items-center">
-            <div className="w-20 h-20 rounded-2xl overflow-hidden flex-shrink-0 ring-2 ring-white/30 bg-white/10 flex items-center justify-center">
-              {userData?.profileImage ? (
-                <img src={userData.profileImage} alt="" className="w-full h-full object-cover" />
-              ) : (
-                <Person sx={{ fontSize: 48 }} className="text-white/80" />
-              )}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-white/70 text-sm font-medium mb-1">Bem-vindo de volta,</p>
-              <h1
-                className="text-3xl font-display font-black tracking-tight inline-flex items-center gap-2 flex-wrap"
-              >
-                <span>{userData?.name}</span>
-                <VerifiedSeal user={userData} className="text-emerald-300" iconSize={24} />
-              </h1>
-              <div className="flex items-center gap-2 mt-3 flex-wrap">
-                <span className="inline-flex items-center gap-1.5 bg-white/20 rounded-full px-3 py-1 text-xs font-semibold backdrop-blur-sm">
-                  <CheckCircle sx={{ fontSize: 14 }} />
-                  {userData?.role === 'CUIDADOR' ? 'Cuidador Profissional' : 'Familiar'}
-                </span>
-                <span className="inline-flex items-center gap-1.5 bg-white/20 rounded-full px-3 py-1 text-xs font-semibold backdrop-blur-sm">
-                  <Schedule sx={{ fontSize: 14 }} />
-                  Conta ativa
-                </span>
-                {rateLabel && (
-                  <span className="inline-flex items-center gap-1.5 bg-white/25 rounded-full px-3 py-1 text-xs font-bold backdrop-blur-sm">
-                    <Payments sx={{ fontSize: 14 }} />
-                    {rateLabel}
-                  </span>
-                )}
-              </div>
-              {specialties.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 mt-4">
-                  {specialties.slice(0, 6).map((tag, i) => (
-                    <span
-                      key={`${tag}-${i}`}
-                      className="text-[10px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full bg-white/20 text-white border border-white/25"
-                    >
-                      {specialtyLabel(tag)}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+    <div className="comfort-page comfort-home min-h-screen pt-16">
+      <div className="vd-dash">
+        <header className="vd-greeting">
+          <h1>
+            Olá, {firstName} <span aria-hidden>👋</span>
+            <VerifiedSeal user={userData} iconSize={22} className="!text-[#9932CC]" />
+          </h1>
+          <p>
+            {isCaregiver
+              ? 'Suas oportunidades, conversas e atendimentos em um só lugar.'
+              : 'Tudo o que você precisa para encontrar e acompanhar o cuidado, em um só lugar.'}
+          </p>
+        </header>
 
-        {/* ========================================= */}
-        {/* BANNER DE GAMIFICAÇÃO / BOAS-VINDAS */}
-        {/* ========================================= */}
-        {showBanner && userData?.role === 'CUIDADOR' && (
-          <div className="bg-virla-roxo/5 backdrop-blur-sm border border-virla-roxo/15 border-l-4 border-l-virla-roxo text-virla-texto p-4 mb-6 rounded-xl shadow-sm flex flex-col sm:flex-row items-start sm:items-center gap-4 transition-all hover:shadow-md">
-            <div className="flex items-start gap-3 flex-1">
-              <WorkspacePremium sx={{ fontSize: 24 }} className="text-virla-roxo flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="font-bold text-sm">O seu perfil está incompleto!</p>
-                <p className="text-xs mt-1 text-virla-muted">
-                  Complete sua foto, apresentação, registro profissional, valor e localização para ajudar famílias a conhecerem melhor seu trabalho.
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={() => navigate('/perfil')}
-              className="w-full sm:w-auto px-5 py-2.5 bg-virla-roxo hover:bg-virla-roxohighlight text-white text-xs font-bold uppercase tracking-wider rounded-xl shadow-sm transition-all hover:-translate-y-0.5 whitespace-nowrap"
-            >
-              Completar Perfil
-            </button>
-          </div>
-        )}
-
-        {showBanner && userData?.role === 'FAMILIAR' && (
-          <div className="bg-virla-roxo/5 backdrop-blur-sm border border-virla-roxo/15 border-l-4 border-l-virla-roxo text-virla-texto p-4 mb-6 rounded-xl shadow-sm flex flex-col sm:flex-row items-start sm:items-center gap-4 transition-all hover:shadow-md">
-            <div className="flex items-start gap-3 flex-1">
-              <VolunteerActivism sx={{ fontSize: 24 }} className="text-virla-roxo flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="font-bold text-sm">O seu perfil está incompleto!</p>
-                <p className="text-xs mt-1 text-virla-muted">
-                  Adicione uma foto, sua data de nascimento e uma apresentação detalhada para que os profissionais saibam exatamente como ajudar.
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={() => navigate('/perfil')}
-              className="w-full sm:w-auto px-5 py-2.5 bg-virla-roxo hover:bg-virla-roxohighlight text-white text-xs font-bold uppercase tracking-wider rounded-xl shadow-sm transition-all hover:-translate-y-0.5 whitespace-nowrap"
-            >
-              Completar Perfil
-            </button>
-          </div>
-        )}
-        {/* ========================================= */}
-
-        {/* NAVEGAÇÃO DE ABAS */}
-        <div className="flex gap-2 mb-6 p-1 bg-white/60 rounded-2xl border border-virla-roxo/10 shadow-sm w-fit">
+        {/* Perfil incompleto — no desktop esse aviso fica no cartão da sidebar */}
+        {completeness.percent < 100 && (
           <button
             type="button"
-            onClick={() => selectTab('dashboard')}
-            className={`px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200
-              ${
-                activeTab === 'dashboard'
-                  ? 'bg-virla-roxo text-white shadow-md'
-                  : 'text-virla-texto/70 hover:text-virla-roxo'
-              }`}
+            onClick={() => navigate('/perfil')}
+            className="md:hidden mt-5 w-full flex items-center gap-3 p-4 rounded-2xl text-left bg-[var(--vd-tint)] text-[var(--vd-ink)]"
           >
-            Painel
+            <span className="font-display font-extrabold text-xl text-virla-roxo">{completeness.percent}%</span>
+            <span className="flex-1 text-sm">Complete seu perfil para transmitir mais confiança.</span>
+            <ArrowForward fontSize="small" className="text-virla-roxo" />
           </button>
-          
-          <button
-            type="button"
-            onClick={() => selectTab('mensagens')}
-            className={`px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 inline-flex items-center gap-2 relative
-              ${
-                activeTab === 'mensagens'
-                  ? 'bg-virla-roxo text-white shadow-md'
-                  : 'text-virla-texto/70 hover:text-virla-roxo'
-              }`}
-          >
-            <Chat sx={{ fontSize: 18 }} />
-            Mensagens
-            {unreadCount > 0 && (
-              <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold rounded-full h-5 w-5 flex items-center justify-center shadow-md">
-                {unreadCount > 9 ? '9+' : unreadCount}
-              </span>
-            )}
-          </button>
-        </div>
+        )}
 
         {activeTab === 'dashboard' ? (
-          <div className="comfort-dashboard">
-            <div className="comfort-quick-actions">
-              <button type="button" onClick={() => navigate(userData?.role === 'CUIDADOR' ? '/solicitacoes-disponiveis' : '/feed')}><span>01</span><strong>{userData?.role === 'CUIDADOR' ? 'Encontrar oportunidades' : 'Encontrar cuidadores'}</strong><small>{userData?.role === 'CUIDADOR' ? 'Veja solicitações disponíveis para você.' : 'Conheça perfis e converse com profissionais.'}</small><b>Explorar →</b></button>
-              <button type="button" onClick={() => navigate('/home?tab=mensagens')}><span>02</span><strong>Suas conversas</strong><small>Continue falando com as pessoas com quem se conectou.</small><b>Abrir conversas →</b></button>
-              <button type="button" onClick={() => navigate(userData?.role === 'CUIDADOR' ? '/financas' : '/solicitacoes')}><span>03</span><strong>{userData?.role === 'CUIDADOR' ? 'Minhas finanças' : 'Meus pedidos'}</strong><small>{userData?.role === 'CUIDADOR' ? 'Acompanhe atendimentos e valores.' : 'Acompanhe as necessidades que você publicou.'}</small><b>Ver detalhes →</b></button>
+          <div className="vd-grid">
+            <div className="vd-col">
+              <section className="vd-hero" aria-labelledby="vd-hero-title">
+                <span className="vd-hero-count">{requests.length}</span>
+                <div>
+                  <h2 id="vd-hero-title">{hero.title}</h2>
+                  <p>{hero.text}</p>
+                </div>
+                <Sparkles />
+                <button type="button" className="vd-pill-btn" onClick={() => navigate(requestsPath)}>
+                  {hero.cta}
+                  <i><ArrowForward sx={{ fontSize: 16 }} /></i>
+                </button>
+              </section>
+
+              <div className="vd-cards">
+                <button type="button" className="vd-card vd-card-dark" onClick={() => navigate(statCard.to)}>
+                  <span className="vd-stat">{statCard.value}</span>
+                  <h3>{statCard.title}</h3>
+                  <p>{statCard.text}</p>
+                  <span className="vd-card-link">{statCard.cta} <ArrowForward sx={{ fontSize: 16 }} /></span>
+                </button>
+                {actionCards.map(({ icon: Icon, title, text, cta, to, alt }) => (
+                  <button type="button" className="vd-card" key={to} onClick={() => navigate(to)}>
+                    <span className={`vd-card-icon ${alt ? 'alt' : ''}`}><Icon /></span>
+                    <h3>{title}</h3>
+                    <p>{text}</p>
+                    <span className="vd-card-link">{cta} <ArrowForward sx={{ fontSize: 16 }} /></span>
+                  </button>
+                ))}
+              </div>
+
+              <section aria-labelledby="vd-agenda-title">
+                <div className="vd-section-title">
+                  <h2 id="vd-agenda-title">{isCaregiver ? 'Oportunidades por data' : 'Sua agenda de cuidados'}</h2>
+                  {requests.length > 0 && (
+                    <button type="button" className="vd-link-sm" onClick={() => navigate(requestsPath)}>
+                      Ver todas <ArrowForward sx={{ fontSize: 15 }} />
+                    </button>
+                  )}
+                </div>
+
+                {agenda.length === 0 ? (
+                  <div className="vd-empty">
+                    <p>{isCaregiver ? 'Nenhuma solicitação disponível no momento.' : 'Você ainda não tem solicitações em andamento.'}</p>
+                    <button type="button" onClick={() => navigate(requestsPath)}>
+                      {isCaregiver ? 'Ver solicitações' : 'Publicar uma solicitação'}
+                    </button>
+                  </div>
+                ) : (
+                  <div>
+                    {agenda.map(([dateKey, items]) => {
+                      const date = dateKey === 'sem-data' ? null : new Date(`${dateKey}T12:00:00`)
+                      return (
+                        <div className="vd-agenda-day" key={dateKey}>
+                          <div className={`vd-agenda-date ${dateKey === today ? 'today' : ''}`}>
+                            <small>
+                              {date
+                                ? dateKey === today ? 'Hoje' : date.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '')
+                                : 'A definir'}
+                            </small>
+                            <strong>{date ? String(date.getDate()).padStart(2, '0') : '—'}</strong>
+                          </div>
+                          <div className="vd-agenda-items">
+                            {items.map((r) => (
+                              <button type="button" className="vd-agenda-item" key={r.id} onClick={() => navigate(requestsPath)}>
+                                <span className={`vd-agenda-bar s-${r.status}`} aria-hidden />
+                                <Avatar name={r.titulo} size={32} radius={10} />
+                                <span>
+                                  <strong>{r.titulo}</strong>
+                                  <small>
+                                    {[r.turno ? turnoLabel(r.turno) : null, [r.cidade, r.estado].filter(Boolean).join(', ')]
+                                      .filter(Boolean)
+                                      .join(' · ') || 'Local a combinar'}
+                                  </small>
+                                </span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </section>
             </div>
-            <div className="comfort-dashboard-activity">
-              <section className="comfort-panel">
-                <div className="comfort-section-heading"><span className="comfort-eyebrow">Sua rotina</span><h2>{userData?.role === 'CUIDADOR' ? 'Oportunidades para você' : 'Seus pedidos de cuidado'}</h2></div>
-                {requests.length === 0 ? <p className="comfort-activity-empty">Nenhuma solicitação por aqui no momento.</p> : requests.map((request) => (
-                  <button type="button" className="comfort-request-row" key={request.id} onClick={() => navigate(userData?.role === 'CUIDADOR' ? '/solicitacoes-disponiveis' : '/solicitacoes')}>
-                    <span className="comfort-request-date">{request.dataInicio ? new Date(`${String(request.dataInicio).slice(0, 10)}T12:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }) : '—'}</span>
-                    <span><strong>{request.titulo}</strong><small>{[request.cidade, request.estado].filter(Boolean).join(', ') || 'Local a combinar'}</small></span>
-                    <b>→</b>
+
+            <aside className="vd-col vd-side" aria-label="Atividade recente">
+              <section className="vd-panel">
+                <div className="vd-panel-head">
+                  <h2>Notificações</h2>
+                </div>
+                {notifications.length === 0 ? (
+                  <p className="vd-list-empty">Tudo em dia por aqui.</p>
+                ) : notifications.slice(0, 5).map((n) => {
+                  const Icon = NOTIFICATION_ICON[n.type] ?? NotificationsNoneOutlined
+                  return (
+                    <button type="button" className="vd-list-item" key={n.id} onClick={() => navigate(notificationHref(n))}>
+                      <span className={`vd-list-icon ${n.read ? '' : 'unread'}`}><Icon /></span>
+                      <span className="min-w-0">
+                        <strong>{NOTIFICATION_TITLE[n.type] ?? 'Notificação'}</strong>
+                        <small>{notificationText(n)}</small>
+                      </span>
+                    </button>
+                  )
+                })}
+              </section>
+
+              <section className="vd-panel">
+                <div className="vd-panel-head">
+                  <h2>Mensagens</h2>
+                  {conversations.length > 0 && (
+                    <button type="button" className="vd-link-sm" onClick={() => navigate('/home?tab=mensagens')}>
+                      Ver todas <ArrowForward sx={{ fontSize: 15 }} />
+                    </button>
+                  )}
+                </div>
+                {conversations.length === 0 ? (
+                  <p className="vd-list-empty">Suas conversas aparecerão aqui.</p>
+                ) : conversations.slice(0, 4).map((c) => (
+                  <button type="button" className="vd-list-item" key={c.peerId} onClick={() => navigate(`/chat/${c.peerId}`)}>
+                    <Avatar name={c.peerName} size={38} radius={10} />
+                    <span className="min-w-0">
+                      <strong>{c.peerName}</strong>
+                      <small>{c.lastMessage}</small>
+                    </span>
                   </button>
                 ))}
               </section>
-              <div className="comfort-dashboard-side">
-                <section className="comfort-panel"><div className="comfort-section-heading"><span className="comfort-eyebrow">Acompanhe</span><h2>Notificações</h2></div>{notifications.length === 0 ? <p className="comfort-activity-empty">Tudo em dia por aqui.</p> : notifications.slice(0, 3).map((item) => <p className="comfort-activity-note" key={item.id}>{notificationText(item)}</p>)}</section>
-                <section className="comfort-panel"><div className="comfort-section-heading"><span className="comfort-eyebrow">Perto de você</span><h2>Conversas</h2></div>{conversations.length === 0 ? <p className="comfort-activity-empty">Suas conversas aparecerão aqui.</p> : conversations.slice(0, 2).map((item) => <button className="comfort-activity-conversation" type="button" key={item.peerId} onClick={() => navigate(`/chat/${item.peerId}`)}><strong>{item.peerName}</strong><small>{item.lastMessage}</small></button>)}</section>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-virla-roxo/10 shadow-sm p-6">
-              <h2 className="font-bold text-virla-texto mb-4 flex items-center gap-2">
-                <Person sx={{ fontSize: 20 }} className="text-virla-roxo" />
-                Dados pessoais
-              </h2>
-
-              <div className="flex justify-center mb-4">
-                <div className="w-24 h-24 rounded-2xl overflow-hidden ring-2 ring-virla-roxo/15 bg-virla-roxo/5 flex items-center justify-center">
-                  {userData?.profileImage ? (
-                    <img src={userData.profileImage} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    <Person sx={{ fontSize: 40 }} className="text-virla-roxo/30" />
-                  )}
-                </div>
-              </div>
-
-              <InfoRow icon={CalendarMonth} label="Data de nascimento" value={formatDateBR(userData?.birthDate)} />
-              <InfoRow icon={Cake} label="Idade" value={age !== null ? `${age} anos` : '—'} />
-              <InfoRow
-                icon={Work}
-                label="Tipo de conta"
-                value={userData?.role === 'CUIDADOR' ? 'Cuidador' : 'Familiar'}
-              />
-              <InfoRow icon={Email} label="E-mail" value={userData?.email} />
-              {rateLabel && <InfoRow icon={Payments} label="Valor por hora" value={rateLabel} />}
-            </div>
-
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-virla-roxo/10 shadow-sm p-6">
-              <h2 className="font-bold text-virla-texto mb-4 flex items-center gap-2">
-                <Description sx={{ fontSize: 20 }} className="text-virla-roxo" />
-                Apresentação
-              </h2>
-              <p className="text-virla-texto/70 text-sm leading-relaxed whitespace-pre-wrap">
-                {userData?.bio || 'Nenhuma bio adicionada ainda. Acesse o Perfil para se apresentar!'}
-              </p>
-              {specialties.length > 0 && (
-                <div className="mt-5 pt-5 border-t border-virla-roxo/10">
-                  <p className="text-xs font-semibold text-virla-muted uppercase tracking-wide mb-2 flex items-center gap-1">
-                    <LocalOffer sx={{ fontSize: 16 }} className="text-virla-roxo" />
-                    Especialidades
-                  </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {specialties.map((tag, i) => (
-                      <span
-                        key={`${tag}-${i}`}
-                        className="text-xs font-semibold px-2.5 py-1 rounded-full bg-violet-100 text-violet-800 border border-violet-200/80"
-                      >
-                        {specialtyLabel(tag)}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-            </div>
+            </aside>
           </div>
         ) : (
-          <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-virla-roxo/10 shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-virla-roxo/10 flex items-center justify-between gap-3">
-              <h2 className="font-bold text-virla-texto flex items-center gap-2">
-                <Chat sx={{ fontSize: 22 }} className="text-virla-roxo" />
-                Conversas recentes
+          <section className="vd-panel mt-7 overflow-hidden" style={{ padding: 0 }} aria-labelledby="vd-conv-title">
+            <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-[var(--vd-line)]">
+              <h2 id="vd-conv-title" className="font-bold text-[var(--vd-ink)] flex items-center gap-2">
+                <Chat sx={{ fontSize: 20 }} className="text-virla-roxo" />
+                Conversas
               </h2>
               <button
                 type="button"
                 onClick={loadConversations}
                 disabled={convLoading}
-                className="text-xs font-semibold text-virla-roxo hover:underline disabled:opacity-50 inline-flex items-center gap-1"
+                className="vd-link-sm disabled:opacity-50"
               >
                 {convLoading && <InlineSpinner size={14} />}
                 Atualizar
               </button>
             </div>
             {convLoading && conversations.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 gap-3 text-virla-muted">
-                <Spinner size={28} label="Carregando conversas…" />
-                <div className="w-full max-w-md space-y-3 px-6 mt-4">
-                  {[1, 2, 3].map((i) => (
-                    <div key={i} className="h-16 rounded-xl bg-virla-roxo/5 animate-pulse" />
-                  ))}
-                </div>
-              </div>
+              <div className="flex justify-center py-16"><Spinner size={28} label="Carregando conversas…" /></div>
             ) : conversations.length === 0 ? (
-              <div className="px-6 py-16 text-center text-virla-muted text-sm">
-                Nenhuma conversa ainda. Visite o{' '}
-                <button
-                  type="button"
-                  className="text-virla-roxo font-semibold underline"
-                  onClick={() =>
-                    navigate(
-                      localStorage.getItem('meuRole') === 'CUIDADOR' ? '/solicitacoes-disponiveis' : '/feed',
-                    )
-                  }
-                >
-                  {localStorage.getItem('meuRole') === 'CUIDADOR' ? 'Solicitações' : 'Feed'}
-                </button>{' '}
-                e envie uma mensagem.
+              <div className="vd-empty m-5">
+                <p>Nenhuma conversa ainda.</p>
+                <button type="button" onClick={() => navigate(isCaregiver ? '/solicitacoes-disponiveis' : '/feed')}>
+                  {isCaregiver ? 'Ver solicitações' : 'Encontrar cuidadores'}
+                </button>
               </div>
             ) : (
-              <ul className="divide-y divide-virla-roxo/10">
+              <div className="vd-conversations">
                 {conversations.map((c) => (
-                  <li key={c.peerId}>
-                    <button
-                      type="button"
-                      onClick={() => navigate(`/chat/${c.peerId}`)}
-                      className="w-full text-left px-6 py-4 hover:bg-virla-roxo/5 transition-colors flex gap-4"
-                    >
-                      <div className="w-11 h-11 rounded-xl bg-virla-roxo/10 flex items-center justify-center flex-shrink-0">
-                        <Person sx={{ fontSize: 24 }} className="text-virla-roxo" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="font-semibold text-virla-texto truncate">{c.peerName}</p>
-                        <p className="text-sm text-virla-texto/60 truncate mt-0.5">{c.lastMessage}</p>
-                      </div>
-                      <span className="text-xs text-virla-texto/40 flex-shrink-0 pt-1">
-                        {c.lastMessageAt
-                          ? new Date(c.lastMessageAt).toLocaleDateString('pt-BR', {
-                              day: '2-digit',
-                              month: 'short',
-                            })
-                          : ''}
-                      </span>
-                    </button>
-                  </li>
+                  <button type="button" className="vd-list-item" key={c.peerId} onClick={() => navigate(`/chat/${c.peerId}`)}>
+                    <Avatar name={c.peerName} size={44} radius={12} />
+                    <span className="min-w-0 flex-1">
+                      <strong>{c.peerName}</strong>
+                      <small>{c.lastMessage}</small>
+                    </span>
+                    <span className="text-xs text-[var(--vd-ink-soft)] shrink-0 pt-1">
+                      {c.lastMessageAt
+                        ? new Date(c.lastMessageAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
+                        : ''}
+                    </span>
+                  </button>
                 ))}
-              </ul>
+              </div>
             )}
-          </div>
+          </section>
         )}
       </div>
     </div>

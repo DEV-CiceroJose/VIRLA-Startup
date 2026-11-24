@@ -21,6 +21,7 @@ import { requestLogger } from './src/middlewares/requestLogger.js'
 import { healthCheck, dashboard } from './src/controllers/observabilityController.js'
 import { socketAuthMiddleware, registerConnectionEvents } from './src/events/authEvents.js'
 import { registerMessageEvents } from './src/events/messageEvents.js'
+import { bootstrapAdmins } from './src/lib/adminBootstrap.js'
 
 // ─── Resolve __dirname in ES Modules ─────────────────────────────
 const __filename = fileURLToPath(import.meta.url)
@@ -225,6 +226,8 @@ server.listen(PORT, (err) => {
     return
   }
   logger.info('server:started', { port: PORT, env: NODE_ENV })
+  // Equipe VIRLA (VIRLA_ADMIN_EMAILS): garante o claim admin sem script manual.
+  bootstrapAdmins().catch((e) => logger.error('admin:bootstrap_failed', { error: e.message }))
 })
 
 // ─── Graceful shutdown ───────────────────────────────────────────

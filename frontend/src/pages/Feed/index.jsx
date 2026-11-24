@@ -1,147 +1,138 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import Person from '@mui/icons-material/Person'
-import Groups from '@mui/icons-material/Groups'
 import Search from '@mui/icons-material/Search'
-import PersonSearchOutlined from '@mui/icons-material/PersonSearchOutlined'
-import Chat from '@mui/icons-material/Chat'
 import ChevronLeft from '@mui/icons-material/ChevronLeft'
 import ChevronRight from '@mui/icons-material/ChevronRight'
-import Work from '@mui/icons-material/Work'
-import Cake from '@mui/icons-material/Cake'
+import ChatBubbleOutlineOutlined from '@mui/icons-material/ChatBubbleOutlineOutlined'
+import PlaceOutlined from '@mui/icons-material/PlaceOutlined'
+import Check from '@mui/icons-material/Check'
+import InfoOutlined from '@mui/icons-material/InfoOutlined'
 import api from '../../services/api'
 import { calculateAge } from '../../utils/dateUtils'
 import { formatHourly } from '../../utils/formatters'
 import { PageLoader, LoadingOverlay } from '../../components/Spinner'
 import VerifiedSeal from '../../components/VerifiedSeal'
-import { EmptyState, Alert, Field } from '../../components/ui'
+import { Field } from '../../components/ui'
 import { specialtyLabel } from '../../constants/specialties'
-import MatchScore from '../../components/MatchScore'
+import '../../design-system/feed.css'
 
-function RoleBadge({ role }) {
-  const isCuidador = role === 'CUIDADOR'
+const MAX_TAGS = 4
+
+const LEVEL = {
+  EXCELENTE: { label: 'Excelente match', tone: 'ok' },
+  ALTA: { label: 'Alta compatibilidade', tone: 'brand' },
+  BOA: { label: 'Boa compatibilidade', tone: 'calm' },
+  POSSIVEL: { label: 'Compatibilidade possível', tone: 'muted' },
+}
+
+function initials(name = '') {
+  const parts = String(name).trim().split(/\s+/).filter(Boolean)
+  if (parts.length === 0) return '?'
+  return `${parts[0][0]}${parts.length > 1 ? parts[parts.length - 1][0] : ''}`.toUpperCase()
+}
+
+/** Compatibilidade da solicitação escolhida: número, régua e os motivos. */
+function FeedMatch({ match }) {
+  if (!match || !Number.isFinite(Number(match.score))) return null
+  const score = Math.max(0, Math.min(100, Math.round(Number(match.score))))
+  const level = LEVEL[match.level] ?? { label: 'Compatibilidade calculada', tone: 'muted' }
+  const reasons = Array.isArray(match.reasons) ? match.reasons.slice(0, 4) : []
+  const attention = Array.isArray(match.attention) ? match.attention[0] : null
+  const isFallback = match.isFallback === true
+
   return (
-    <span
-      className={`inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full
-      ${isCuidador ? 'bg-virla-roxo/10 text-virla-roxo' : 'bg-blue-50 text-blue-600'}`}
-    >
-      <Work sx={{ fontSize: 12 }} />
-      {isCuidador ? 'Cuidador' : 'Familiar'}
-    </span>
+    <section className={`vfd-match tone-${level.tone}`} aria-label={`Compatibilidade de ${score}%`}>
+      <div className="vfd-match-head">
+        <p className="vfd-match-score"><strong>{score}%</strong> compatível</p>
+        <span className="vfd-match-level">{isFallback ? 'Alternativa por baixa oferta' : level.label}</span>
+      </div>
+      <div className="vfd-meter" aria-hidden="true"><span style={{ width: `${score}%` }} /></div>
+      {reasons.length > 0 && (
+        <ul className="vfd-reasons">
+          {reasons.map((reason) => (
+            <li key={reason.code}>
+              <Check aria-hidden className="vfd-reason-icon" />
+              <span>{reason.label}</span>
+              <b>+{reason.points}</b>
+            </li>
+          ))}
+        </ul>
+      )}
+      {attention && (
+        <p className="vfd-attention"><InfoOutlined aria-hidden />{attention}</p>
+      )}
+      {isFallback && (
+        <p className="vfd-attention">Exibida porque há poucas opções com pelo menos 60% de compatibilidade.</p>
+      )}
+    </section>
   )
 }
 
 function UserCard({ user, onOpenChat, viewerIsFamiliar, onVerMais }) {
+  const [imgErr, setImgErr] = useState(false)
   const age = calculateAge(user.birthDate)
   const rateLabel = formatHourly(user.hourlyRate)
   const specialties = Array.isArray(user.specialties) ? user.specialties : []
-  const [imgErr, setImgErr] = useState(false)
+  const place = [user.city, user.state].filter(Boolean).join(', ')
+  const firstName = String(user.name ?? '').trim().split(/\s+/)[0] || 'este perfil'
+  const isCaregiver = user.role === 'CUIDADOR'
+  const summary = user.approach || user.bio
+  const showPhoto = user.profileImage && !imgErr
+  const canSeeProfile = viewerIsFamiliar && isCaregiver
 
   return (
-    <li
-      className="comfort-caregiver-card bg-white/90 backdrop-blur-sm rounded-2xl border border-virla-roxo/10 shadow-sm p-5
-                 hover:shadow-md hover:border-virla-roxo/20 transition-all duration-200 flex flex-col gap-4"
-    >
-      <div className="flex gap-4">
-        <div
-          className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden flex-shrink-0 bg-gradient-to-br from-virla-roxo/12 to-violet-100/50 ring-1 ring-virla-roxo/10 flex items-center justify-center"
-        >
-          {user.profileImage && !imgErr ? (
-            <img
-              src={user.profileImage}
-              alt=""
-              className="w-full h-full object-cover"
-              onError={() => setImgErr(true)}
-            />
+    <li className="vfd-card">
+      <div className="vfd-top">
+        <div className={`vfd-photo${showPhoto ? '' : ' is-initials'}`}>
+          {showPhoto ? (
+            <img src={user.profileImage} alt="" onError={() => setImgErr(true)} />
           ) : (
-            <Person sx={{ fontSize: 40 }} className="text-virla-roxo/35" />
+            <span aria-hidden>{initials(user.name)}</span>
           )}
         </div>
 
-        <div className="flex-1 min-w-0">
-          <h3 className="font-bold text-lg text-virla-texto truncate inline-flex items-center gap-1 max-w-full">
-            <span className="truncate">{user.name}</span>
-            <VerifiedSeal user={user} iconSize={18} />
-          </h3>
-          {user.approach ? (
-            <p className="text-sm text-virla-texto/55 mt-0.5 line-clamp-2">{user.approach}</p>
-          ) : (
-            <p className="text-sm text-virla-texto/40 mt-0.5 italic">Perfil profissional</p>
-          )}
-          <div className="flex flex-wrap items-center gap-2 mt-2">
-            <RoleBadge role={user.role} />
-            {age !== null && (
-              <span className="inline-flex items-center gap-1 text-xs text-virla-texto/60">
-                <Cake sx={{ fontSize: 14 }} className="text-virla-roxo/50" />
-                {age} anos
-              </span>
+        <div className="vfd-id">
+          <div className="vfd-name-row">
+            <h3 className="vfd-name">
+              <span>{user.name}</span>
+              <VerifiedSeal user={user} iconSize={18} className="vfd-seal" />
+            </h3>
+            {place && (
+              <span className="vfd-place"><PlaceOutlined aria-hidden />{place}</span>
             )}
           </div>
+          <p className={summary ? 'vfd-summary' : 'vfd-summary is-empty'}>{summary || 'Perfil profissional'}</p>
+          <ul className="vfd-chips" aria-label="Resumo">
+            <li className="is-strong">{rateLabel || 'Valor sob consulta'}</li>
+            {age !== null && <li>{age} anos</li>}
+            {!isCaregiver && <li>Familiar</li>}
+          </ul>
         </div>
       </div>
 
       {specialties.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          {specialties.slice(0, 8).map((tag, i) => (
-            <span
-              key={`${tag}-${i}`}
-              className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-violet-100/95 text-violet-800 border border-violet-200/90"
-            >
-              {specialtyLabel(tag)}
-            </span>
-          ))}
-          {specialties.length > 8 && (
-            <span className="text-[11px] text-virla-texto/45 px-2 py-1 self-center">
-              +{specialties.length - 8}
-            </span>
-          )}
-        </div>
+        <ul className="vfd-tags" aria-label="Especialidades">
+          {specialties.slice(0, MAX_TAGS).map((tag, i) => <li key={`${tag}-${i}`}>{specialtyLabel(tag)}</li>)}
+          {specialties.length > MAX_TAGS && <li className="is-more">+{specialties.length - MAX_TAGS}</li>}
+        </ul>
       )}
 
-      {user.bio && (
-        <p className="text-sm text-virla-texto/65 line-clamp-2 border-l-2 border-virla-roxo/20 pl-3">
-          {user.bio}
-        </p>
-      )}
+      <FeedMatch match={user.match} />
 
-      <MatchScore match={user.match} />
+      <button type="button" className="vfd-cta" onClick={() => onOpenChat(user.id)} aria-label={`Conversar com ${user.name}`}>
+        <ChatBubbleOutlineOutlined aria-hidden />
+        Conversar com {firstName}
+      </button>
 
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-3 border-t border-virla-roxo/10">
-          <div className="min-h-[1.5rem] flex items-center">
-            {rateLabel ? (
-              <div>
-                <p className="text-[10px] font-semibold text-virla-texto/45 uppercase tracking-wider">
-                  Consulta / hora
-                </p>
-                <p className="text-xl font-black text-virla-roxo tracking-tight">{rateLabel}</p>
-              </div>
-            ) : (
-              <p className="text-xs text-virla-texto/45">Valor sob consulta</p>
-            )}
-          </div>
-          <div className="flex flex-wrap gap-2 sm:justify-end">
-            <button
-              type="button"
-              onClick={() => onOpenChat(user.id)}
-              aria-label="Abrir chat com este usuário"
-              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-virla-roxo text-white text-sm font-semibold
-                         hover:bg-virla-roxohighlight shadow-md transition-all sm:min-w-[180px]"
-            >
-              <Chat sx={{ fontSize: 18 }} />
-              Enviar mensagem
-            </button>
-            {viewerIsFamiliar && user.role === 'CUIDADOR' && (
-              <button
-                type="button"
-                onClick={() => onVerMais(user.id)}
-                className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl border-2 border-virla-roxo text-virla-roxo text-sm font-semibold
-                           bg-transparent hover:bg-virla-roxo/10 transition-all sm:min-w-[140px]"
-              >
-                Ver mais
-              </button>
-            )}
-          </div>
+      {canSeeProfile && (
+        <div className="vfd-more">
+          <p>
+            <strong>Quer conhecer melhor?</strong>
+            <span>Experiência, disponibilidade e como {firstName} trabalha.</span>
+          </p>
+          <button type="button" className="vfd-more-btn" onClick={() => onVerMais(user.id)}>Ver perfil completo</button>
         </div>
+      )}
     </li>
   )
 }
@@ -267,42 +258,35 @@ export default function Feed() {
     return <PageLoader label="Carregando profissionais…" />
   }
 
+  const count = filtered.length
+  const countLabel = `${count} ${count === 1 ? 'perfil' : 'perfis'}${search ? ' para essa busca' : ''}`
+
   return (
-    <div
-      className="comfort-page comfort-feed min-h-screen pt-16 bg-virla-neve"
-      style={{
-        backgroundImage:
-          'radial-gradient(ellipse 60% 40% at 80% 10%, rgba(128,0,128,0.08), transparent)',
-      }}
-    >
-      <div className="comfort-content max-w-5xl mx-auto px-6 py-10 pb-28 relative">
+    <div className="comfort-page min-h-screen pt-16">
+      <div className="vd-dash vfd-page">
         {loading && feedUsers.length > 0 && <LoadingOverlay label="Atualizando lista…" />}
 
-        {fetchError && (
-          <Alert tone="error" className="mb-6">
-            {fetchError}
-          </Alert>
-        )}
+        <header className="vd-greeting">
+          <h1>Encontre quem cuida</h1>
+          <p>Conheça profissionais com calma, veja suas especialidades e converse antes de escolher.</p>
+        </header>
 
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-2">
-            <span className="vd-card-icon" aria-hidden>
-              <PersonSearchOutlined sx={{ fontSize: 24 }} />
-            </span>
-            <h1
-              className="text-3xl font-display font-black text-virla-roxo"
-            >
-              Encontre quem cuida
-            </h1>
-          </div>
-          <p className="comfort-feed-intro">Conheça profissionais com calma, veja suas especialidades e converse antes de escolher.</p>
-          {totalPages > 1 && (
-            <p className="text-virla-muted text-sm">
-              Página {page} de {totalPages}
-            </p>
-          )}
-          {solicitacoes.length > 0 && (
-            <div className="mt-5 max-w-xl rounded-2xl border border-violet-200 bg-white/90 p-4 shadow-sm">
+        {fetchError && <div role="alert" className="vfd-alert">{fetchError}</div>}
+
+        <div className="vfd-toolbar">
+          <label className="vfd-search">
+            <Search aria-hidden />
+            <span className="sr-only">Buscar profissionais</span>
+            <input
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar por nome, abordagem ou especialidade"
+            />
+          </label>
+
+          {solicitacoes.length > 0 ? (
+            <div className="vfd-match-select">
               <Field
                 label="Match inteligente para"
                 id="match-solicitacao"
@@ -315,45 +299,37 @@ export default function Feed() {
               >
                 {solicitacoes.map((item) => <option key={item.id} value={item.id}>{item.titulo}</option>)}
               </Field>
-              <p className="mt-2 text-xs text-virla-muted">
-                {matchContext ? 'Profissionais ordenados por especialidade, localização, valor e qualidade do perfil.' : 'Escolha uma solicitação para calcular a compatibilidade.'}
-              </p>
             </div>
-          )}
-          {solicitacoes.length === 0 && (
-            <p className="mt-4 text-sm text-virla-muted">Publique uma solicitação para receber recomendações personalizadas.</p>
+          ) : (
+            <p className="vfd-toolbar-hint">Publique uma solicitação para receber recomendações personalizadas.</p>
           )}
         </div>
 
-        <div className="relative mb-6">
-          <Search
-            sx={{ fontSize: 18 }}
-            className="absolute left-4 top-1/2 -translate-y-1/2 text-virla-roxo/40 pointer-events-none"
-          />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar por nome, abordagem ou especialidades…"
-            className="w-full pl-11 pr-4 py-3 rounded-xl border border-virla-roxo/20 bg-white/80
-                       text-virla-texto placeholder-virla-texto/40 text-sm
-                       focus:outline-none focus:ring-2 focus:ring-virla-roxo/30 focus:border-virla-roxo
-                       transition-all duration-200 shadow-sm"
-          />
+        <div className="vfd-meta">
+          <p role="status">
+            <strong>{countLabel}</strong>
+            {totalPages > 1 && <span> · página {page} de {totalPages}</span>}
+          </p>
+          {solicitacoes.length > 0 && (
+            <p className="vfd-meta-note">
+              {matchContext
+                ? 'Ordenados por especialidade, localização, valor e qualidade do perfil. A compatibilidade é uma sugestão: confirme os detalhes antes de contratar.'
+                : 'Escolha uma solicitação para calcular a compatibilidade.'}
+            </p>
+          )}
         </div>
 
-        {filtered.length === 0 ? (
-          <EmptyState
-            icon={Groups}
-            title={search ? 'Nenhum perfil encontrado' : 'Nenhum perfil disponível'}
-            description={
-              search
+        {count === 0 ? (
+          <div className="vd-empty vfd-empty">
+            <strong>{search ? 'Nenhum perfil encontrado' : 'Nenhum perfil disponível'}</strong>
+            <span>
+              {search
                 ? 'Não há resultados para essa busca nesta página. Tente outro termo.'
-                : 'Ainda não há perfis disponíveis no momento. Volte em breve.'
-            }
-          />
+                : 'Ainda não há perfis disponíveis no momento. Volte em breve.'}
+            </span>
+          </div>
         ) : (
-          <ul className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <ul className="vfd-list">
             {filtered.map((u) => (
               <UserCard
                 key={`${u.id}-${u.profileImage ?? ''}`}
@@ -367,33 +343,17 @@ export default function Feed() {
         )}
 
         {totalPages > 1 && (
-          <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
-            <button
-              type="button"
-              disabled={page <= 1 || loading}
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-virla-roxo/30
-                         text-sm font-semibold text-virla-roxo hover:bg-virla-roxo/10
-                         disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-            >
-              <ChevronLeft sx={{ fontSize: 20 }} />
+          <nav className="vfd-pager" aria-label="Páginas">
+            <button type="button" disabled={page <= 1 || loading} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+              <ChevronLeft aria-hidden />
               Anterior
             </button>
-            <span className="text-sm text-virla-texto/60 font-medium px-2">
-              {page} / {totalPages}
-            </span>
-            <button
-              type="button"
-              disabled={page >= totalPages || loading}
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-virla-roxo/30
-                         text-sm font-semibold text-virla-roxo hover:bg-virla-roxo/10
-                         disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-            >
+            <span>{page} / {totalPages}</span>
+            <button type="button" disabled={page >= totalPages || loading} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>
               Próxima
-              <ChevronRight sx={{ fontSize: 20 }} />
+              <ChevronRight aria-hidden />
             </button>
-          </div>
+          </nav>
         )}
       </div>
     </div>

@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import VerifiedUserOutlined from '@mui/icons-material/VerifiedUserOutlined'
 import ArrowForward from '@mui/icons-material/ArrowForward'
 import SearchOutlined from '@mui/icons-material/SearchOutlined'
 import PostAddOutlined from '@mui/icons-material/PostAddOutlined'
@@ -209,6 +210,28 @@ export default function Home() {
               : 'Tudo o que você precisa para encontrar e acompanhar o cuidado, em um só lugar.'}
           </p>
         </header>
+
+        {/* Cuidador ainda não aprovado: só aparece para famílias depois da verificação */}
+        {isCaregiver && userData.verificationStatus !== 'APROVADO' && (
+          <Link to="/verificacao" className={`vd-verify-banner${userData.verificationStatus === 'REPROVADO' ? ' is-risk' : userData.verificationStatus === 'EM_ANALISE' ? ' is-wait' : ''}`}>
+            <span className="vd-verify-icon"><VerifiedUserOutlined aria-hidden /></span>
+            <span>
+              <strong>
+                {userData.verificationStatus === 'EM_ANALISE'
+                  ? 'Seus documentos estão em análise'
+                  : userData.verificationStatus === 'REPROVADO'
+                    ? 'Sua verificação precisa de ajustes'
+                    : 'Verifique seu perfil para receber solicitações'}
+              </strong>
+              <small>
+                {userData.verificationStatus === 'EM_ANALISE'
+                  ? 'Avisamos por notificação quando a equipe terminar.'
+                  : 'Famílias só encontram cuidadores com documentos e antecedentes conferidos.'}
+              </small>
+            </span>
+            <span className="vd-verify-cta">{userData.verificationStatus === 'EM_ANALISE' ? 'Acompanhar' : 'Verificar agora'}</span>
+          </Link>
+        )}
 
         {/* Perfil incompleto — no desktop esse aviso fica no cartão da sidebar */}
         {completeness.percent < 100 && (

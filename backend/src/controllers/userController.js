@@ -15,6 +15,8 @@ import { USER_PUBLIC_SELECT, USER_SELF_SELECT } from '../lib/userSelects.js'
 import * as solicitacaoRepo from '../repositories/solicitacaoRepository.js'
 import { objectIdSchema } from '../schemas/paymentSchemas.js'
 import { rankCaregiversForSolicitacao } from '../services/matchingService.js'
+import { isCaregiverVisible, VERIFICATION_STATUS } from '../services/verificationDomain.js'
+import { TERMS_VERSION, PRIVACY_VERSION } from '../utils/legal.js'
 
 function parseBirthDate(value) {
   if (value == null || value === '') return null
@@ -74,6 +76,10 @@ const createUsers = async (req, res) => {
     return res.status(422).json({ msg: 'Valor por hora inválido' })
   }
 
+  if (req.body.termsVersion !== TERMS_VERSION) {
+    return res.status(409).json({ msg: 'Os Termos de Uso foram atualizados. Recarregue a página e leia a versão nova.' })
+  }
+
   try {
     // Idempotência: se o perfil já existe (retry), não recria.
     const already = await getUserById(uid)
@@ -110,6 +116,11 @@ const createUsers = async (req, res) => {
       city: emptyToNull(city),
       state: emptyToNull(state),
       zipCode: emptyToNull(zipCode),
+      // Aceite dos Termos de Uso e da Política de Privacidade (exigido pelo schema).
+      termsAcceptedAt: new Date(),
+      termsVersion: TERMS_VERSION,
+      privacyVersion: PRIVACY_VERSION,
+      ...(role === 'CUIDADOR' && { verificationStatus: VERIFICATION_STATUS.NAO_ENVIADO }),
     })
 
     // role em custom claim → checkToken/requireRole leem sem read extra no Firestore.
@@ -157,7 +168,8 @@ const getFeedUsers = async (req, res) => {
     // Paginação por offset emulada: o Firestore não tem offset eficiente, mas
     // o feed tem volume baixo no MVP — buscamos os usuários do papel oposto e
     // recortamos a página em memória. Mantém o contrato `?page=N` do frontend.
-    const allOfRole = await listByRole(oppositeRole)
+    // Cuidadores só aparecem depois que a equipe aprova documentos e antecedentes.
+    const allOfRole = (await listByRole(oppositeRole)).filter(isCaregiverVisible)
     const ranked = matchSolicitacao
       ? rankCaregiversForSolicitacao(allOfRole, matchSolicitacao)
       : allOfRole.map((caregiver) => ({ caregiver, match: null }))

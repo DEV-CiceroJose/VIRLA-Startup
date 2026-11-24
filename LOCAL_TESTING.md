@@ -11,10 +11,12 @@ Este modo usa Firebase Auth, Firestore e Realtime Database em emuladores locais.
 ## Contas locais
 
 - Familiar: `familiar.teste@virla.local`
-- Cuidador: `cuidador.teste@virla.local`
+- Cuidador (verificado): `cuidador.teste@virla.local`
+- Cuidador com verificação em análise: `pendente.teste@virla.local`
+- Equipe VIRLA (admin, revisa verificações em `/admin/verificacoes`): `admin.teste@virla.local`
 - Senha comum: `VirlaTeste#2026`
 
-As contas são criadas com e-mail confirmado e dados fictícios. O seed também adiciona perfis auxiliares, sete solicitações abertas com diferentes compatibilidades e dois relatórios de atendimento fictícios para validar o resumo financeiro do cuidador.
+As contas são criadas com e-mail confirmado e dados fictícios. Os documentos do cuidador em análise são PDFs fictícios, gravados cifrados em `backend/private-uploads/` (ignorada pelo git). O seed também adiciona perfis auxiliares, sete solicitações abertas com diferentes compatibilidades e dois relatórios de atendimento fictícios para validar o resumo financeiro do cuidador.
 
 ## Como iniciar novamente
 

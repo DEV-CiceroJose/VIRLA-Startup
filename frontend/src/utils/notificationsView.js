@@ -17,6 +17,10 @@ export function notificationText(n) {
       return `${n.actorName ?? 'A família'} concluiu "${n.solicitacaoTitulo ?? 'a solicitação'}"`
     case 'SOLICITACAO_CANCELADA':
       return `${n.actorName ?? 'A família'} cancelou "${n.solicitacaoTitulo ?? 'a solicitação'}"`
+    case 'VERIFICACAO_APROVADA':
+      return 'Sua verificação foi aprovada. Seu perfil já aparece para as famílias.'
+    case 'VERIFICACAO_REPROVADA':
+      return 'Sua verificação não foi aprovada. Veja o motivo e envie de novo.'
     default:
       return 'Nova notificação'
   }
@@ -32,6 +36,9 @@ export function notificationHref(n) {
     case 'SOLICITACAO_CONCLUIDA':
     case 'SOLICITACAO_CANCELADA':
       return '/solicitacoes-disponiveis'
+    case 'VERIFICACAO_APROVADA':
+    case 'VERIFICACAO_REPROVADA':
+      return '/verificacao'
     default:
       return '/home'
   }

@@ -1,0 +1,175 @@
+/*
+ * VIRLA — Meu perfil (prefixo pf-)
+ * Cartão de identidade fixo à esquerda + formulário em painéis e barra de
+ * salvar sempre visível (padrão "sticky action bar" do 21st.dev).
+ */
+
+.pf-page { max-width: 1180px; margin-inline: auto; }
+.pf-alert { margin-top: 20px; }
+.pf-layout { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 24px; margin-top: 24px; align-items: start; }
+
+/* ── Lateral ──────────────────────────────────────────────────────────── */
+.pf-aside { position: sticky; top: 24px; display: grid; gap: 14px; }
+.pf-id {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  padding: 24px 20px 20px;
+  border-radius: 24px;
+  border: 1px solid var(--vd-line);
+  background: var(--vd-card);
+  text-align: center;
+}
+.pf-photo {
+  display: grid;
+  place-items: center;
+  width: 112px;
+  height: 112px;
+  margin-bottom: 10px;
+  border-radius: 32px;
+  overflow: hidden;
+  background:
+    radial-gradient(90% 80% at 20% 10%, rgba(255, 255, 255, 0.55), transparent 60%),
+    linear-gradient(160deg, var(--virla-brand-soft), #c79ad0);
+}
+:root[data-theme='dark'] .pf-photo { background: linear-gradient(160deg, #4a1f52, #2b0b2f); }
+.pf-photo img { width: 100%; height: 100%; object-fit: cover; }
+.pf-photo span { font-family: 'Playfair Display', Georgia, serif; font-size: 40px; font-weight: 800; color: var(--virla-brand-deep); }
+:root[data-theme='dark'] .pf-photo span { color: var(--vd-accent); }
+.pf-name { font-family: 'Playfair Display', Georgia, serif; font-size: 22px; font-weight: 700; color: var(--vd-ink); overflow-wrap: anywhere; }
+.pf-role { font-size: 13.5px; color: var(--vd-ink-soft); }
+
+.pf-complete { width: 100%; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--vd-line); text-align: left; }
+.pf-complete-head { display: flex; justify-content: space-between; font-size: 13.5px; font-weight: 700; color: var(--vd-ink); }
+.pf-bar { height: 8px; margin-top: 8px; border-radius: 999px; background: var(--vd-tint); overflow: hidden; }
+.pf-bar span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--virla-brand), #c66fd6); transition: width 0.3s ease; }
+.pf-complete p { margin-top: 6px; font-size: 12.5px; line-height: 1.45; color: var(--vd-ink-soft); }
+
+.pf-verify {
+  --tone: var(--virla-brand);
+  --tone-bg: var(--vd-tint);
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  margin-top: 14px;
+  padding: 12px;
+  border-radius: 14px;
+  background: var(--tone-bg);
+  text-align: left;
+  color: var(--vd-ink);
+}
+.pf-verify.tone-ok { --tone: var(--vd-ok); --tone-bg: var(--vd-ok-bg); }
+.pf-verify.tone-wait { --tone: var(--vd-wait); --tone-bg: var(--vd-wait-bg); }
+.pf-verify.tone-risk { --tone: var(--vd-risk); --tone-bg: var(--vd-risk-bg); }
+:root[data-theme='dark'] .pf-verify.tone-brand { --tone: var(--vd-accent); }
+.pf-verify > svg { flex: none; color: var(--tone); }
+.pf-verify strong { display: block; font-size: 13.5px; }
+.pf-verify small { display: block; font-size: 12.5px; color: var(--vd-ink-soft); }
+.pf-verify:focus-visible { outline: 3px solid var(--virla-focus); outline-offset: 2px; }
+
+.pf-nav { display: grid; gap: 2px; padding: 8px; border-radius: 18px; background: var(--vd-tint); }
+.pf-nav a { padding: 9px 12px; border-radius: 12px; font-size: 13.5px; font-weight: 600; color: var(--vd-ink-soft); }
+.pf-nav a:hover { background: var(--vd-card); color: var(--vd-ink); }
+
+/* ── Painéis ──────────────────────────────────────────────────────────── */
+.pf-main { display: grid; gap: 18px; min-width: 0; }
+.pf-form { display: grid; gap: 18px; }
+.pf-panel {
+  display: grid;
+  gap: 16px;
+  padding: 22px;
+  border-radius: 24px;
+  border: 1px solid var(--vd-line);
+  background: var(--vd-card);
+  scroll-margin-top: 24px;
+}
+.pf-panel h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 21px;
+  font-weight: 700;
+  color: var(--vd-ink);
+}
+.pf-panel h2 svg { font-size: 22px; color: var(--virla-brand); }
+:root[data-theme='dark'] .pf-panel h2 svg { color: var(--vd-accent); }
+.pf-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; align-items: start; }
+.pf-readonly { display: grid; gap: 6px; }
+.pf-readonly span { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--vd-ink-soft); }
+.pf-readonly strong { display: flex; align-items: center; min-height: 48px; padding: 0 14px; border-radius: 12px; background: var(--vd-tint); font-size: 14px; color: var(--vd-ink); }
+
+/* Barra de salvar */
+.pf-savebar {
+  position: sticky;
+  bottom: 16px;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 12px 12px 18px;
+  border-radius: 18px;
+  border: 1px solid var(--vd-line);
+  background: color-mix(in srgb, var(--vd-card) 88%, transparent);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 16px 40px -22px rgba(62, 24, 62, 0.45);
+}
+.pf-savebar span { font-size: 13px; color: var(--vd-ink-soft); }
+
+/* Conta e segurança */
+.pf-password { display: grid; gap: 12px; padding: 16px; border-radius: 16px; background: var(--vd-tint); }
+.pf-password strong,
+.pf-danger strong { font-size: 15px; color: var(--vd-ink); }
+.pf-password p,
+.pf-danger p { margin-top: 2px; font-size: 13.5px; line-height: 1.5; color: var(--vd-ink-soft); }
+.pf-input {
+  width: 100%;
+  min-height: 48px;
+  padding: 0 14px;
+  border-radius: 12px;
+  border: 1px solid var(--vd-line);
+  background: var(--vd-card);
+  color: var(--vd-ink);
+  font-size: 14px;
+}
+.pf-input:focus { outline: none; border-color: var(--virla-brand); box-shadow: 0 0 0 3px var(--virla-focus); }
+.pf-legal { font-size: 13.5px; color: var(--vd-ink-soft); }
+.pf-legal a { font-weight: 700; color: var(--virla-brand); }
+:root[data-theme='dark'] .pf-legal a { color: var(--vd-accent); }
+.pf-danger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid color-mix(in srgb, var(--vd-risk) 30%, var(--vd-line));
+  background: var(--vd-risk-bg);
+}
+
+/* Campos seguem o tema escuro nesta tela */
+:root[data-theme='dark'] .pf-panel :is(input:not([type='checkbox']):not([type='file']), textarea, button[role='combobox']) {
+  background-color: var(--vd-canvas) !important;
+  border-color: var(--vd-line) !important;
+  color: var(--vd-ink) !important;
+}
+
+@media (max-width: 1023px) {
+  .pf-layout { grid-template-columns: minmax(0, 1fr); }
+  .pf-aside { position: static; }
+  .pf-nav { display: none; }
+}
+@media (max-width: 600px) {
+  .pf-panel { padding: 16px; }
+  .pf-grid { grid-template-columns: minmax(0, 1fr); }
+  .pf-savebar { padding: 8px; bottom: 10px; }
+  .pf-savebar span { display: none; }
+  .pf-savebar button { flex: 1; justify-content: center; }
+  .pf-danger { flex-direction: column; align-items: stretch; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pf-bar span { transition: none; }
+}

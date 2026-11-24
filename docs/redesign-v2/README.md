@@ -9,7 +9,7 @@
 
 ```
  Landing ──── Painel ──── Chat ──── Finanças ──── Perfil cuidador ──── Feed ──── Solicitações ──── Perfil/Pagamento
- ✅ (ref 1)  ✅ (ref 5)  ✅ (ref 4)   ✅ (ref 3)       ✅ (ref 2)       ✅ (ref 2)     ⏳                  ⏳
+ ✅ (ref 1)  ✅ (ref 5)  ✅ (ref 4)   ✅ (ref 3)       ✅ (ref 2)       ✅ (ref 2)     ✅                  ✅
 ```
 
 ✅ feito · ⏳ falta
@@ -125,6 +125,36 @@ As imagens de referência estão em [`referencias/`](./referencias):
 - **Cadastro em etapas** com `Stepper` (Origin UI): Conta (cartões "Sou da família" / "Sou cuidador" + Google) → Seus dados (foto, nome, CPF, nascimento) → Registro (só cuidador, opcional) → Acesso (e-mail e senhas). Cada "Continuar" confere só a etapa atual com as mesmas mensagens de antes; o envio final (`createUser`) não mudou. Todas as etapas ficam montadas (só a atual aparece), então "Voltar" mantém o que foi digitado. Etapas feitas viram ✓ e podem ser revisitadas; o foco vai para o título de cada etapa.
 - Campos (`Field`, `DatePickerField`, `SelectField`, upload) acompanham o tema escuro nessas telas. Estilos em `design-system/auth.css` (`va-*`).
 
+### 11. Verificação de cuidadores (documentos + antecedentes) — backend e frontend
+Decisão do produto: **documentos + revisão pela equipe**, e o cuidador **fica oculto até ser aprovado**.
+- **Fluxo:** o cuidador envia (1) documento com foto, (2) selfie segurando o documento e (3) certidão de antecedentes criminais emitida há no máximo 90 dias (link para a emissão gratuita da Polícia Federal), informa o código de validação e a data de emissão e marca a declaração de veracidade. Status: `NAO_ENVIADO → EM_ANALISE → APROVADO | REPROVADO` (reprovado mostra o motivo e permite reenviar).
+- **Quem aparece:** o Feed das famílias só lista cuidadores `APROVADO`; `/solicitacoes/disponiveis`, `visualizar` e `assumir` exigem aprovação (`middlewares/requireApprovedCaregiver.js`, 403 com `code: VERIFICATION_REQUIRED`, que a tela trata sem mandar para o login).
+- **Equipe VIRLA:** papel novo via custom claim `admin` (só pelo script `node backend/scripts/set-admin.js email@...`). Tela `/admin/verificacoes` com abas (em análise / aprovadas / reprovadas), prévia dos documentos, dados do cadastro, código da certidão + link para validar no site da PF e checklist obrigatório antes de aprovar. Aprovação/reprovação gera notificação para o cuidador.
+- **Segurança dos documentos:** nunca vão para `/uploads` (público). Ficam em memória até serem **cifrados (AES-256-GCM, `lib/fileCrypto.js`)** e gravados em `backend/private-uploads/` (ignorada pelo git); só o dono e a equipe abrem, e cada acesso da equipe é registrado no log de segurança. Dados ficam na coleção `verifications/{uid}`; o perfil só guarda `verificationStatus` (que aparece no perfil público como "Documentos e antecedentes conferidos").
+- **Frontend:** `/verificacao` (menu do cuidador "Verificação") com dropzone adaptada do "File Upload" (Aceternity, 21st.dev), aviso no Painel e na tela de Solicitações. Arquivos: `pages/Verificacao`, `pages/AdminVerificacoes`, `components/verification/DocumentDrop.jsx`, `services/verification.js`, `design-system/verification.css`.
+- **Backend:** `routes/verificationRoutes.js`, `controllers/verificationController.js`, `services/verificationDomain.js` (regras puras, testadas), `services/verificationStorage.js`, `repositories/verificationRepository.js`, `middlewares/requireAdmin.js`. Testes: `verificationDomain.test.js`, `fileCrypto.test.js`.
+
+> ⚠️ **Antes de produção:** (1) o disco da Render é efêmero — troque `verificationStorage.js` por um bucket privado (Firebase Storage com regras fechadas ou S3), mantendo a interface; (2) os cuidadores que já existem em produção ficam **fora do Feed** até serem aprovados — defina quem vai revisar e avise-os; (3) dê acesso de equipe com `set-admin.js`.
+
+### 12. Termos de Uso e Política de Privacidade (aceite obrigatório)
+- Páginas públicas `/termos` e `/privacidade` (índice lateral, tema claro/escuro) e links no rodapé do login/cadastro. Texto em `pages/Legal/documents.js` (LGPD: dados coletados, bases legais, compartilhamento, retenção, direitos, verificação de antecedentes).
+- No cadastro (última etapa) e no completar cadastro (Google), cada documento abre numa caixa adaptada do "Terms dialog" (Origin UI, 21st.dev): barra de leitura e **"Li e aceito" só libera ao chegar no fim**. Sem aceitar os dois, a conta não é criada.
+- O backend exige `acceptedTerms: true` + `termsVersion` igual à vigente (`backend/src/utils/legal.js` e `frontend/src/constants/legal.js`) e grava `termsAcceptedAt`, `termsVersion` e `privacyVersion` no perfil. O perfil mostra a data do aceite.
+- Correção junto: depois do cadastro a sessão é encerrada (antes, voltar ao login na mesma aba levava para "completar cadastro").
+
+> ⚠️ **Minuta:** um(a) advogado(a) precisa revisar os textos e preencher `[RAZÃO SOCIAL]`, `[CNPJ]`, `[ENDEREÇO]` e `[ENCARREGADO]`. Ao mudar o texto, suba a versão nos dois arquivos de versão.
+
+### 13. Solicitações `/solicitacoes` e `/solicitacoes-disponiveis`
+- Cartão compartilhado `components/requests/RequestCard.jsx`: pílula com a data de início (dia + mês em Playfair), título e status com tokens `--vd-ok/wait/risk`, descrição curta, chips (valor/hora, turno, frequência, cidade, pagamento, urgência), tipos de cuidado e rodapé com datas.
+- Abas com pílula deslizante (`components/ui/AnimatedTabs.jsx`, "Animated Tabs" do 21st.dev, com setas do teclado).
+- Cuidador: compatibilidade com o `MatchMeter` (o mesmo do Feed, agora em `components/MatchMeter`); sem verificação aprovada aparece o aviso para concluir.
+- Família: formulário de nova solicitação em painel, chips de tipo de cuidado com `aria-pressed`. Estilos em `design-system/requests.css` (`vs-`, `vx-`).
+
+### 14. Perfil, Pagamento e Completar cadastro
+- **Perfil `/perfil`:** cartão fixo à esquerda (foto/iniciais, papel, % completo, status da verificação, atalhos das seções) e formulário em painéis (Dados pessoais, Foto e valor, Perfil profissional, Onde você atende, Conta e segurança) com barra de salvar sempre visível. Lógica igual. Estilos em `design-system/own-profile.css` (`pf-`).
+- **Pagamento `/pagamento`:** resumo escuro com o valor em Playfair, etapas (dados → PIX → confirmação), QR em cartão, contagem regressiva até expirar, "copia e cola" e estados de espera/expirado/pago com tokens. Labels agora associados aos campos. Lógica do PIX igual. Estilos em `design-system/payment.css` (`pg-`). *Não testado no navegador: a rota exige vir do chat com uma cobrança.*
+- **Completar cadastro:** mesmo cartão com fundo animado do login, cartões de tipo de conta e aceite obrigatório dos termos.
+
 ### 📁 Arquivos principais
 
 | Arquivo | O quê |
@@ -171,7 +201,7 @@ Convenção de nomes CSS: `vd-` = shell/painel, `vc-` = chat. Para telas novas, 
    npm test
    npm run build
    ```
-   Estado atual: **167/167 testes passando** e build ok.
+   Estado atual: **168/168 testes no frontend, 145/145 no backend** e build ok.
 4. **Ver no navegador:** `npm run dev` (precisa do backend + Firebase para logar).
    *Sem backend?* Dá para montar um "harness" temporário (não commitado): um `vite.config` extra com um plugin que troca `AuthContext`, `NotificationContext`, `SocketContext`, `services/api`, `services/auth` e os hooks `usePresence`, `useFirebaseChat`, `useSocket`, `useAudioRecorder` por mocks com dados falsos. Atenção: rode o Vite com `cwd` = `frontend/`, senão o Tailwind não gera as classes.
 
@@ -179,9 +209,8 @@ Convenção de nomes CSS: `vd-` = shell/painel, `vc-` = chat. Para telas novas, 
 
 ## ⏳ O que falta (em ordem sugerida)
 
-1. **Solicitações `/solicitacoes` e `/solicitacoes-disponiveis`** — listas/cards com o visual do painel (pílulas de data, badges de status com `--vd-ok/wait/risk`). Os cartões de solicitação para o cuidador podem reaproveitar o `FeedMatch` do Feed.
-2. **Perfil próprio `/perfil` e Pagamento** — formulários com cartões `vd-panel`, inputs com o estilo da busca (borda `--vd-line`, foco roxo).
-3. **Faxina final** — remover regras órfãs de `comfort.css` (sidebar antiga `comfort-sidebar`, `comfort-chat*`, `comfort-home*`, `comfort-finance*`, `comfort-page-heading`, `comfort-info-note`, `comfort-public-profile`) e `pages/Landing/style.css`, revisar acessibilidade (contraste no escuro, foco visível), conferir tudo a 375px. O cabeçalho do celular continua branco no tema escuro.
+1. **Antes de produção (verificação e termos)** — bucket privado para os documentos, revisão jurídica dos textos, plano para os cuidadores já cadastrados (ficam ocultos até aprovação) e contas de equipe com `set-admin.js`.
+2. **Faxina final** — remover regras órfãs de `comfort.css` (sidebar antiga `comfort-sidebar`, `comfort-chat*`, `comfort-home*`, `comfort-finance*`, `comfort-page-heading`, `comfort-info-note`, `comfort-public-profile`) e `pages/Landing/style.css`, revisar acessibilidade (contraste no escuro, foco visível), conferir tudo a 375px. O cabeçalho do celular continua branco no tema escuro.
 
 ### ⚠️ Pendências conhecidas (já existiam antes do redesign)
 - Lint: `react-hooks/set-state-in-effect` em `Menu` (linha do "fechar drawer ao trocar de rota") e no `Chat` (efeito de carregamento), e 2 `no-unused-vars` (`e`, `err`) no `Chat`.
@@ -197,7 +226,7 @@ Cole isto no Claude Code, na raiz do repositório, já na branch `redesingv2`:
 Estamos continuando o redesign da VIRLA na branch redesingv2.
 Leia docs/redesign-v2/README.md e DESIGN_SYSTEM_VIRLA.md antes de tudo.
 As referências estão em docs/redesign-v2/referencias/.
-Próxima tela: Solicitações (/solicitacoes e /solicitacoes-disponiveis), no visual do painel e do Feed, mantendo a identidade VIRLA
+Próximo passo: faxina final (comfort.css órfão, Landing/style.css, cabeçalho do celular no escuro, NotificationBell, lint antigo), mantendo a identidade VIRLA
 (roxo/lilás, Playfair Display + DM Sans, tokens --vd-*, tema claro/escuro, responsivo).
 Não altere lógica de negócio. Ao final rode npm test e npm run build no frontend
 e atualize o mapa "Onde estamos na jornada" deste README.
@@ -205,4 +234,4 @@ e atualize o mapa "Onde estamos na jornada" deste README.
 
 ---
 
-*Última atualização: 24/11/2026 — painel (ref 5), chat (ref 4), finanças (ref 3), perfil público (ref 2), landing, calendário, Feed, login e cadastro concluídos.*
+*Última atualização: 24/11/2026 — painel (ref 5), chat (ref 4), finanças (ref 3), perfil público (ref 2), landing, calendário, Feed, login, cadastro, solicitações, perfil, pagamento, verificação de cuidadores e termos concluídos.*

@@ -1,6 +1,7 @@
 import express from 'express'
 import checkToken from '../middlewares/checkToken.js'
 import { requireRole } from '../middlewares/requireRole.js'
+import { requireApprovedCaregiver } from '../middlewares/requireApprovedCaregiver.js'
 import { validateZod } from '../middlewares/validateZod.js'
 import { rateLimit } from '../middlewares/rateLimit.js'
 import {
@@ -64,11 +65,12 @@ router.patch(
 )
 
 // ─── Cuidador ──────────────────────────────────────────────────────
-router.get('/solicitacoes/disponiveis', checkToken, requireRole('CUIDADOR'), listAvailableSolicitacoes)
+router.get('/solicitacoes/disponiveis', checkToken, requireRole('CUIDADOR'), requireApprovedCaregiver, listAvailableSolicitacoes)
 router.put(
   '/solicitacoes/:id/visualizar',
   checkToken,
   requireRole('CUIDADOR'),
+  requireApprovedCaregiver,
   writeSolicitacaoLimiter,
   validateZod(solicitacaoIdParamSchema, 'params'),
   markSolicitacaoViewed,
@@ -77,6 +79,7 @@ router.patch(
   '/solicitacoes/:id/assumir',
   checkToken,
   requireRole('CUIDADOR'),
+  requireApprovedCaregiver,
   writeSolicitacaoLimiter,
   validateZod(solicitacaoIdParamSchema, 'params'),
   assumirSolicitacao,

@@ -5,8 +5,6 @@ import ChevronLeft from '@mui/icons-material/ChevronLeft'
 import ChevronRight from '@mui/icons-material/ChevronRight'
 import ChatBubbleOutlineOutlined from '@mui/icons-material/ChatBubbleOutlineOutlined'
 import PlaceOutlined from '@mui/icons-material/PlaceOutlined'
-import Check from '@mui/icons-material/Check'
-import InfoOutlined from '@mui/icons-material/InfoOutlined'
 import api from '../../services/api'
 import { calculateAge } from '../../utils/dateUtils'
 import { formatHourly } from '../../utils/formatters'
@@ -14,58 +12,15 @@ import { PageLoader, LoadingOverlay } from '../../components/Spinner'
 import VerifiedSeal from '../../components/VerifiedSeal'
 import { Field } from '../../components/ui'
 import { specialtyLabel } from '../../constants/specialties'
+import MatchMeter from '../../components/MatchMeter'
 import '../../design-system/feed.css'
 
 const MAX_TAGS = 4
-
-const LEVEL = {
-  EXCELENTE: { label: 'Excelente match', tone: 'ok' },
-  ALTA: { label: 'Alta compatibilidade', tone: 'brand' },
-  BOA: { label: 'Boa compatibilidade', tone: 'calm' },
-  POSSIVEL: { label: 'Compatibilidade possível', tone: 'muted' },
-}
 
 function initials(name = '') {
   const parts = String(name).trim().split(/\s+/).filter(Boolean)
   if (parts.length === 0) return '?'
   return `${parts[0][0]}${parts.length > 1 ? parts[parts.length - 1][0] : ''}`.toUpperCase()
-}
-
-/** Compatibilidade da solicitação escolhida: número, régua e os motivos. */
-function FeedMatch({ match }) {
-  if (!match || !Number.isFinite(Number(match.score))) return null
-  const score = Math.max(0, Math.min(100, Math.round(Number(match.score))))
-  const level = LEVEL[match.level] ?? { label: 'Compatibilidade calculada', tone: 'muted' }
-  const reasons = Array.isArray(match.reasons) ? match.reasons.slice(0, 4) : []
-  const attention = Array.isArray(match.attention) ? match.attention[0] : null
-  const isFallback = match.isFallback === true
-
-  return (
-    <section className={`vfd-match tone-${level.tone}`} aria-label={`Compatibilidade de ${score}%`}>
-      <div className="vfd-match-head">
-        <p className="vfd-match-score"><strong>{score}%</strong> compatível</p>
-        <span className="vfd-match-level">{isFallback ? 'Alternativa por baixa oferta' : level.label}</span>
-      </div>
-      <div className="vfd-meter" aria-hidden="true"><span style={{ width: `${score}%` }} /></div>
-      {reasons.length > 0 && (
-        <ul className="vfd-reasons">
-          {reasons.map((reason) => (
-            <li key={reason.code}>
-              <Check aria-hidden className="vfd-reason-icon" />
-              <span>{reason.label}</span>
-              <b>+{reason.points}</b>
-            </li>
-          ))}
-        </ul>
-      )}
-      {attention && (
-        <p className="vfd-attention"><InfoOutlined aria-hidden />{attention}</p>
-      )}
-      {isFallback && (
-        <p className="vfd-attention">Exibida porque há poucas opções com pelo menos 60% de compatibilidade.</p>
-      )}
-    </section>
-  )
 }
 
 function UserCard({ user, onOpenChat, viewerIsFamiliar, onVerMais }) {
@@ -117,7 +72,7 @@ function UserCard({ user, onOpenChat, viewerIsFamiliar, onVerMais }) {
         </ul>
       )}
 
-      <FeedMatch match={user.match} />
+      <MatchMeter match={user.match} />
 
       <button type="button" className="vfd-cta" onClick={() => onOpenChat(user.id)} aria-label={`Conversar com ${user.name}`}>
         <ChatBubbleOutlineOutlined aria-hidden />

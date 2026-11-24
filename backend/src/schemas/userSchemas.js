@@ -131,4 +131,9 @@ export const createUserBodySchema = z.object({
   city: z.string().max(80).optional().nullable(),
   state: z.string().max(2).optional().nullable(),
   zipCode: zipCodeSchema,
+  // Só cria conta quem leu e aceitou os Termos de Uso e a Política de Privacidade.
+  acceptedTerms: z.literal(true, {
+    errorMap: () => ({ message: 'Aceite os Termos de Uso e a Política de Privacidade para criar a conta.' }),
+  }),
+  termsVersion: z.string().min(1, 'Versão dos termos ausente.').max(20),
 }).superRefine(refineRegisterPair)

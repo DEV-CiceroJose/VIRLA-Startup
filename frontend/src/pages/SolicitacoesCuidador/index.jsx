@@ -1,49 +1,23 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import Inbox from '@mui/icons-material/Inbox'
+import { Link, useNavigate } from 'react-router-dom'
+import Inbox from '@mui/icons-material/InboxOutlined'
 import Visibility from '@mui/icons-material/Visibility'
-import LocationOn from '@mui/icons-material/LocationOn'
-import PriorityHigh from '@mui/icons-material/PriorityHigh'
 import Chat from '@mui/icons-material/Chat'
-import Person from '@mui/icons-material/Person'
 import AssignmentTurnedIn from '@mui/icons-material/AssignmentTurnedIn'
-import CalendarMonth from '@mui/icons-material/CalendarMonth'
-import Schedule from '@mui/icons-material/Schedule'
-import Repeat from '@mui/icons-material/Repeat'
-import Payments from '@mui/icons-material/Payments'
 import Assignment from '@mui/icons-material/Assignment'
+import VerifiedUserOutlined from '@mui/icons-material/VerifiedUserOutlined'
+import HourglassTopOutlined from '@mui/icons-material/HourglassTopOutlined'
 import api from '../../services/api'
 import { PageLoader } from '../../components/Spinner'
-import { Button, Card, Alert, Badge, EmptyState } from '../../components/ui'
-import { turnoLabel, frequenciaLabel, paymentRecurrenceLabel } from '../../constants/solicitacaoOptions'
-import { formatHourly, formatDateOnly } from '../../utils/formatters'
+import { Button, Alert } from '../../components/ui'
+import AnimatedTabs from '../../components/ui/AnimatedTabs'
+import RequestCard from '../../components/requests/RequestCard'
+import MatchMeter from '../../components/MatchMeter'
+import { formatDateOnly } from '../../utils/formatters'
 import { calculatePaymentDueDate, paymentCountdownLabel, todayDateOnly } from '../../utils/paymentSchedule'
 import ServiceReportModal from '../../components/ServiceReportModal'
 import StripeConnectCard from '../../components/StripeConnectCard'
-import MatchScore from '../../components/MatchScore'
-
-const URGENCIA_LABEL = { BAIXA: 'Baixa', MEDIA: 'Média', ALTA: 'Alta' }
-const URGENCIA_TONE = { BAIXA: 'gray', MEDIA: 'amber', ALTA: 'red' }
-
-const STATUS_LABEL = {
-  ABERTA: 'Aberta',
-  VISUALIZADA: 'Visualizada',
-  EM_ANDAMENTO: 'Em andamento',
-  CONCLUIDA: 'Concluída',
-  CANCELADA: 'Cancelada',
-}
-const STATUS_TONE = {
-  ABERTA: 'blue',
-  VISUALIZADA: 'violet',
-  EM_ANDAMENTO: 'amber',
-  CONCLUIDA: 'green',
-  CANCELADA: 'red',
-}
-
-function formatDate(iso) {
-  if (!iso) return ''
-  return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
-}
+import '../../design-system/requests.css'
 
 function SolicitacaoCard({ solicitacao, mode, onVisualizar, onAssumir, onConversar, onReport, busy }) {
   const local = [solicitacao.familiar?.city, solicitacao.familiar?.state].filter(Boolean).join(' - ')
@@ -57,118 +31,50 @@ function SolicitacaoCard({ solicitacao, mode, onVisualizar, onAssumir, onConvers
     : null
 
   return (
-    <Card className="p-5 space-y-3">
-      <div className="flex items-start justify-between gap-3">
-        <h3 className="font-bold text-virla-texto text-base leading-snug">{solicitacao.titulo}</h3>
-        <Badge tone={STATUS_TONE[solicitacao.status] ?? 'gray'}>
-          {STATUS_LABEL[solicitacao.status] ?? solicitacao.status}
-        </Badge>
-      </div>
-
-      <p className="text-sm text-virla-muted whitespace-pre-wrap">{solicitacao.descricao}</p>
-
-      {solicitacao.tipoCuidado?.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          {solicitacao.tipoCuidado.map((tag) => (
-            <Badge key={tag} tone="roxo">
-              {tag}
-            </Badge>
-          ))}
-        </div>
+    <RequestCard
+      solicitacao={solicitacao}
+      place={local}
+      highlight={mode === 'andamento'}
+      extraMeta={solicitacao.familiar?.name && showFamiliar && (
+        <span className="vs-foot-strong">Família: {solicitacao.familiar.name}</span>
       )}
-
-      <div className="flex items-center gap-3 text-xs text-virla-muted/80 pt-1 flex-wrap">
-        <Badge tone={URGENCIA_TONE[solicitacao.urgencia] ?? 'gray'} icon={PriorityHigh}>
-          Urgência {URGENCIA_LABEL[solicitacao.urgencia] ?? solicitacao.urgencia}
-        </Badge>
-        {local && (
-          <span className="flex items-center gap-1">
-            <LocationOn sx={{ fontSize: 14 }} /> {local}
-          </span>
-        )}
-        {solicitacao.dataInicio && (
-          <span className="flex items-center gap-1">
-            <CalendarMonth sx={{ fontSize: 14 }} /> Início {formatDateOnly(solicitacao.dataInicio)}
-          </span>
-        )}
-        {solicitacao.turno && (
-          <span className="flex items-center gap-1">
-            <Schedule sx={{ fontSize: 14 }} /> {turnoLabel(solicitacao.turno)}
-          </span>
-        )}
-        {solicitacao.frequencia && (
-          <span className="flex items-center gap-1">
-            <Repeat sx={{ fontSize: 14 }} /> {frequenciaLabel(solicitacao.frequencia)}
-          </span>
-        )}
-        {solicitacao.valorHora != null && (
-          <span className="flex items-center gap-1 text-virla-roxo font-semibold">
-            <Payments sx={{ fontSize: 14 }} /> {formatHourly(solicitacao.valorHora)}
-          </span>
-        )}
-        {solicitacao.paymentRecurrence && (
-          <span className="flex items-center gap-1 text-virla-roxo font-semibold">
-            <Payments sx={{ fontSize: 14 }} /> Pagamento {paymentRecurrenceLabel(solicitacao.paymentRecurrence).toLowerCase()}
-          </span>
-        )}
-        <span>Publicada em {formatDate(solicitacao.createdAt)}</span>
-      </div>
-
-      {solicitacao.familiar?.name && showFamiliar && (
-        <p className="flex items-center gap-1.5 text-xs text-virla-texto/70 pt-1 border-t border-virla-roxo/10">
-          <Person sx={{ fontSize: 14 }} className="text-virla-roxo/60" />
-          Família: <span className="font-semibold">{solicitacao.familiar.name}</span>
+      actions={(
+        <>
+          {mode === 'disponivel' && (
+            <Button size="sm" icon={Visibility} loading={busy} onClick={() => onVisualizar(solicitacao)}>
+              Ver detalhes
+            </Button>
+          )}
+          {mode === 'visualizada' && (
+            <>
+              <Button size="sm" icon={AssignmentTurnedIn} loading={busy} onClick={() => onAssumir(solicitacao)}>
+                Assumir solicitação
+              </Button>
+              <Button size="sm" variant="secondary" icon={Chat} onClick={() => onConversar(solicitacao.familiarId)}>
+                Conversar com a família
+              </Button>
+            </>
+          )}
+          {mode === 'andamento' && (
+            <>
+              <Button size="sm" icon={Assignment} onClick={() => onReport(solicitacao)}>
+                Enviar relatório do dia
+              </Button>
+              <Button size="sm" variant="secondary" icon={Chat} onClick={() => onConversar(solicitacao.familiarId)}>
+                Conversar com a família
+              </Button>
+            </>
+          )}
+        </>
+      )}
+    >
+      <MatchMeter match={solicitacao.match} />
+      {nextPaymentDate && (
+        <p className="vs-note">
+          Próximo recebimento previsto para {formatDateOnly(nextPaymentDate)} ({paymentCountdownLabel(nextPaymentDate)}), após o familiar assinar o relatório.
         </p>
       )}
-
-      <MatchScore match={solicitacao.match} />
-
-      {nextPaymentDate && (
-        <Alert tone="info">
-          Próximo recebimento previsto para {formatDateOnly(nextPaymentDate)} ({paymentCountdownLabel(nextPaymentDate)}), após o familiar assinar o relatório.
-        </Alert>
-      )}
-
-      <div className="pt-2 border-t border-virla-roxo/10 flex flex-wrap gap-2">
-        {mode === 'disponivel' && (
-          <Button size="sm" icon={Visibility} loading={busy} onClick={() => onVisualizar(solicitacao)}>
-            Ver detalhes
-          </Button>
-        )}
-        {mode === 'visualizada' && (
-          <>
-            <Button size="sm" icon={AssignmentTurnedIn} loading={busy} onClick={() => onAssumir(solicitacao)}>
-              Assumir solicitação
-            </Button>
-            <Button size="sm" variant="secondary" icon={Chat} onClick={() => onConversar(solicitacao.familiarId)}>
-              Conversar com a família
-            </Button>
-          </>
-        )}
-        {mode === 'andamento' && (
-          <>
-            <Button size="sm" variant="secondary" icon={Chat} onClick={() => onConversar(solicitacao.familiarId)}>
-              Conversar com a família
-            </Button>
-            <Button size="sm" icon={Assignment} onClick={() => onReport(solicitacao)}>
-              Enviar relatório do dia
-            </Button>
-          </>
-        )}
-      </div>
-    </Card>
-  )
-}
-
-function Skeleton() {
-  return (
-    <div className="max-w-2xl mx-auto px-6 py-10 space-y-4 animate-pulse">
-      <div className="h-9 bg-virla-roxo/15 rounded w-56" />
-      <div className="h-4 bg-virla-roxo/10 rounded w-72" />
-      {[1, 2, 3].map((i) => (
-        <div key={i} className="h-32 bg-virla-roxo/10 rounded-2xl" />
-      ))}
-    </div>
+    </RequestCard>
   )
 }
 
@@ -177,6 +83,12 @@ const TABS = [
   { key: 'visualizadas', label: 'Visualizadas' },
   { key: 'andamento', label: 'Em andamento' },
 ]
+
+const EMPTY = {
+  disponiveis: ['Nenhuma solicitação disponível', 'Quando uma família publicar uma solicitação compatível, ela aparece aqui.'],
+  visualizadas: ['Você ainda não abriu nenhuma', 'Abra uma solicitação em "Disponíveis" para ver os detalhes e decidir se quer assumir.'],
+  andamento: ['Nenhuma solicitação em andamento', 'Assuma uma solicitação em "Visualizadas" para acompanhá-la aqui.'],
+}
 
 export default function SolicitacoesCuidador() {
   const navigate = useNavigate()
@@ -187,6 +99,7 @@ export default function SolicitacoesCuidador() {
   const [busyId, setBusyId] = useState(null)
   const [reporting, setReporting] = useState(null)
   const [matchPolicy, setMatchPolicy] = useState(null)
+  const [verificationGate, setVerificationGate] = useState(null)
 
   const meuId = localStorage.getItem('meuId')
 
@@ -195,9 +108,14 @@ export default function SolicitacoesCuidador() {
       const res = await api.get('/solicitacoes/disponiveis')
       setSolicitacoes(res.data.solicitacoes ?? [])
       setMatchPolicy(res.data.matchPolicy ?? null)
+      setVerificationGate(null)
     } catch (err) {
-      const msg = err?.response?.data?.msg || 'Erro ao carregar solicitações.'
-      setMessage({ type: 'error', text: msg })
+      if (err?.response?.data?.code === 'VERIFICATION_REQUIRED') {
+        setVerificationGate(err.response.data.verificationStatus ?? 'NAO_ENVIADO')
+      } else {
+        const msg = err?.response?.data?.msg || 'Erro ao carregar solicitações.'
+        setMessage({ type: 'error', text: msg })
+      }
       setMatchPolicy(null)
     } finally {
       setLoading(false)
@@ -266,92 +184,83 @@ export default function SolicitacoesCuidador() {
   }
 
   if (loading) {
-    return (
-      <PageLoader label="Carregando solicitações…">
-        <Skeleton />
-      </PageLoader>
-    )
+    return <PageLoader label="Carregando solicitações…" />
   }
 
   const lista = buckets[tab]
   const modeForTab = { disponiveis: 'disponivel', visualizadas: 'visualizada', andamento: 'andamento' }
+  const [emptyTitle, emptyText] = EMPTY[tab]
+  const inReview = verificationGate === 'EM_ANALISE'
 
   return (
-    <div
-      className="min-h-screen pt-16 bg-virla-neve"
-      style={{
-        backgroundImage:
-          'radial-gradient(ellipse 70% 50% at 30% 0%, rgba(128,0,128,0.07), transparent)',
-      }}
-    >
-      <div className="max-w-2xl mx-auto px-6 py-10 space-y-6">
-        <div className="animate-fade-up">
-          <h1 className="text-3xl font-display font-black text-virla-roxo">Solicitações</h1>
-          <p className="text-virla-muted text-sm mt-1">
-            Famílias buscando cuidado — navegue pelas solicitações em vez de perfis
-          </p>
-        </div>
-
-        <StripeConnectCard />
-
-        {message.text && (
-          <Alert tone={message.type === 'success' ? 'success' : 'error'}>{message.text}</Alert>
-        )}
-
-        <div className="flex gap-1 bg-virla-roxo/8 rounded-xl p-1 w-fit flex-wrap">
-          {TABS.map((t) => (
-            <button
-              key={t.key}
-              type="button"
-              onClick={() => setTab(t.key)}
-              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-                tab === t.key ? 'bg-white text-virla-roxo shadow-sm' : 'text-virla-muted hover:text-virla-roxo'
-              }`}
-            >
-              {t.label} {buckets[t.key].length > 0 && `(${buckets[t.key].length})`}
-            </button>
-          ))}
-        </div>
-
-        {tab === 'disponiveis' && matchPolicy?.fallbackCount > 0 && (
-          <Alert tone="warning" title="Poucas solicitações com 60% ou mais">
-            Mostramos também {matchPolicy.fallbackCount} {matchPolicy.fallbackCount === 1 ? 'alternativa' : 'alternativas'} abaixo de 60%, priorizando as mais próximas do seu perfil.
-          </Alert>
-        )}
-
-        {lista.length === 0 ? (
-          <EmptyState
-            icon={Inbox}
-            title={
-              tab === 'disponiveis'
-                ? 'Nenhuma solicitação disponível'
-                : tab === 'visualizadas'
-                  ? 'Você ainda não visualizou nenhuma'
-                  : 'Nenhuma solicitação em andamento'
-            }
-            description={
-              tab === 'disponiveis'
-                ? 'Quando uma família publicar uma solicitação, ela aparecerá aqui.'
-                : tab === 'visualizadas'
-                  ? 'Abra uma solicitação na aba "Disponíveis" para conhecer os detalhes e decidir se quer assumi-la.'
-                  : 'Assuma uma solicitação na aba "Visualizadas" para acompanhá-la aqui.'
-            }
-          />
-        ) : (
-          <div className="space-y-4">
-            {lista.map((s) => (
-              <SolicitacaoCard
-                key={s.id}
-                solicitacao={s}
-                mode={modeForTab[tab]}
-                onVisualizar={handleVisualizar}
-                onAssumir={handleAssumir}
-                onConversar={handleConversar}
-                onReport={setReporting}
-                busy={busyId === s.id}
-              />
-            ))}
+    <div className="comfort-page min-h-screen pt-16">
+      <div className="vd-dash vs-page">
+        <header className="vs-header">
+          <div className="vd-greeting">
+            <h1>Solicitações</h1>
+            <p>Famílias procurando cuidado, ordenadas pela compatibilidade com o seu perfil.</p>
           </div>
+        </header>
+
+        {verificationGate ? (
+          <section className={`vs-gate${inReview ? ' is-wait' : ''}`} aria-labelledby="vs-gate-title">
+            <span className="vs-gate-icon">{inReview ? <HourglassTopOutlined aria-hidden /> : <VerifiedUserOutlined aria-hidden />}</span>
+            <div>
+              <h2 id="vs-gate-title">{inReview ? 'Seus documentos estão em análise' : 'Falta pouco para receber solicitações'}</h2>
+              <p>
+                {inReview
+                  ? 'Assim que a equipe aprovar sua verificação, as solicitações das famílias aparecem aqui. Avisamos por notificação.'
+                  : 'Para a segurança das famílias, só cuidadores com documentos e antecedentes conferidos veem e assumem solicitações.'}
+              </p>
+              <Link to="/verificacao" className="vs-gate-cta">{inReview ? 'Acompanhar verificação' : 'Fazer minha verificação'}</Link>
+            </div>
+          </section>
+        ) : (
+          <>
+            <StripeConnectCard />
+
+            {message.text && (
+              <Alert tone={message.type === 'success' ? 'success' : 'error'} className="vs-alert">{message.text}</Alert>
+            )}
+
+            <div className="vs-toolbar">
+              <AnimatedTabs
+                label="Filtrar solicitações"
+                value={tab}
+                onChange={setTab}
+                tabs={TABS.map((t) => ({ value: t.key, label: t.label, count: buckets[t.key].length }))}
+              />
+            </div>
+
+            {tab === 'disponiveis' && matchPolicy?.fallbackCount > 0 && (
+              <Alert tone="warning" title="Poucas solicitações com 60% ou mais" className="vs-alert">
+                Mostramos também {matchPolicy.fallbackCount} {matchPolicy.fallbackCount === 1 ? 'alternativa' : 'alternativas'} abaixo de 60%, priorizando as mais próximas do seu perfil.
+              </Alert>
+            )}
+
+            {lista.length === 0 ? (
+              <div className="vd-empty vs-empty">
+                <Inbox aria-hidden />
+                <strong>{emptyTitle}</strong>
+                <span>{emptyText}</span>
+              </div>
+            ) : (
+              <div className="vs-list">
+                {lista.map((s) => (
+                  <SolicitacaoCard
+                    key={s.id}
+                    solicitacao={s}
+                    mode={modeForTab[tab]}
+                    onVisualizar={handleVisualizar}
+                    onAssumir={handleAssumir}
+                    onConversar={handleConversar}
+                    onReport={setReporting}
+                    busy={busyId === s.id}
+                  />
+                ))}
+              </div>
+            )}
+          </>
         )}
       </div>
       {reporting && (
@@ -361,7 +270,6 @@ export default function SolicitacoesCuidador() {
           onCreated={() => setMessage({ type: 'success', text: 'Relatório enviado. O familiar precisa revisar e assinar antes do pagamento.' })}
         />
       )}
-
     </div>
   )
 }

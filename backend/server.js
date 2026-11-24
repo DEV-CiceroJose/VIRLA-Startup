@@ -14,6 +14,7 @@ import PaymentRoutes from './src/routes/paymentRoutes.js'
 import solicitacaoRoutes from './src/routes/solicitacaoRoutes.js'
 import notificationRoutes from './src/routes/notificationRoutes.js'
 import serviceReportRoutes from './src/routes/serviceReportRoutes.js'
+import verificationRoutes from './src/routes/verificationRoutes.js'
 
 import { logger, securityLogger } from './src/lib/logger.js'
 import { requestLogger } from './src/middlewares/requestLogger.js'
@@ -128,6 +129,7 @@ app.use(PaymentRoutes)
 app.use(solicitacaoRoutes)
 app.use(serviceReportRoutes)
 app.use(notificationRoutes)
+app.use(verificationRoutes)
 
 // ─── Global error handler ─────────────────────────────────────────
 // CORREÇÃO 5: Não retornar stack trace em produção (vaza informação interna).

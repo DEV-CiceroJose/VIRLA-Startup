@@ -107,6 +107,16 @@
   animation: va-rise 0.5s ease-out both;
 }
 .va-top { margin-bottom: 28px; }
+.va-legal-links {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 20px;
+  font-size: 12.5px;
+  color: var(--vd-ink-soft);
+}
+.va-legal-links a { color: var(--vd-ink-soft); text-decoration: underline; text-underline-offset: 3px; }
+.va-legal-links a:hover { color: var(--vd-ink); }
 
 .va-head h1 {
   margin: 0;

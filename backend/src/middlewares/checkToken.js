@@ -33,6 +33,7 @@ export function makeCheckToken(verifyIdToken, { requireVerified }) {
     req.userRole = decoded.role // custom claim; pode ser undefined até o perfil ser criado
     req.email = decoded.email
     req.emailVerified = decoded.email_verified === true
+    req.isAdmin = decoded.admin === true // custom claim da equipe VIRLA (scripts/set-admin.js)
 
     if (requireVerified && !req.emailVerified) {
       authLogger.warn('http:auth_email_unverified', { userId: req.userId, path: req.path })

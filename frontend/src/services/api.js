@@ -21,7 +21,9 @@ api.interceptors.response.use(
   (error) => {
     const status = error.response?.status
     const isLoginPage = window.location.pathname === '/login'
-    if ((status === 401 || status === 403) && !isLoginPage) {
+    // 403 de verificação pendente/acesso restrito é tratado pela própria tela.
+    const handledByPage = ['VERIFICATION_REQUIRED', 'ADMIN_ONLY'].includes(error.response?.data?.code)
+    if ((status === 401 || status === 403) && !isLoginPage && !handledByPage) {
       window.location.assign('/login')
     }
     return Promise.reject(error)

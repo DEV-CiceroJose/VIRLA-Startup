@@ -8,6 +8,7 @@ import { PAYMENT_ENABLED } from './utils/featureFlags'
 import { useAuth } from './context/AuthContext'
 import { usePresence } from './hooks/usePresence'
 import Menu from './components/Menu'
+import Topbar from './components/Topbar'
 import ThemeToggle from './design-system/theme/ThemeToggle'
 import RouteErrorBoundary from './components/RouteErrorBoundary'
 
@@ -31,11 +32,16 @@ const CompletarCadastro = lazy(() => import('./pages/CompletarCadastro'))
 const ReportDemo        = lazy(() => import('./pages/ReportDemo'))
 const MatchDemo         = lazy(() => import('./pages/MatchDemo'))
 const Financas          = lazy(() => import('./pages/Financas'))
+const Legal             = lazy(() => import('./pages/Legal'))
+const Verificacao       = lazy(() => import('./pages/Verificacao'))
+const AdminVerificacoes = lazy(() => import('./pages/AdminVerificacoes'))
 
 const REPORT_DEMO_ENABLED = import.meta.env.DEV && import.meta.env.VITE_ENABLE_REPORT_DEMO === 'true'
 
 // ── Rotas que não exibem o Menu de navegação ─────────────────────────────
-const HIDDEN_MENU_ROUTES = ['/', '/login', '/cadastro', '/completar-cadastro', '/demo-relatorio', '/demo-match']
+const HIDDEN_MENU_ROUTES = ['/', '/login', '/cadastro', '/completar-cadastro', '/termos', '/privacidade', '/demo-relatorio', '/demo-match']
+// Telas com botão de tema no próprio cabeçalho (sem o botão flutuante).
+const OWN_THEME_TOGGLE_ROUTES = ['/', '/login', '/cadastro', '/completar-cadastro', '/termos', '/privacidade']
 
 // ── Fallback exibido enquanto o chunk da página carrega ───────────────────
 function PageFallback() {
@@ -84,6 +90,16 @@ function FeedRoute({ children }) {
   if (profile?.role === 'CUIDADOR') {
     return <Navigate to="/solicitacoes-disponiveis" replace />
   }
+  return children
+}
+
+/** Equipe VIRLA: custom claim dmin (vem em /users/me como isAdmin). */
+function AdminRoute({ children }) {
+  const { firebaseUser, profile, needsProfile, loading } = useAuth()
+  if (loading) return <PageFallback />
+  if (!firebaseUser) return <Navigate to="/login" replace />
+  if (needsProfile) return <Navigate to="/completar-cadastro" replace />
+  if (!profile?.isAdmin) return <Navigate to="/home" replace />
   return children
 }
 
@@ -172,25 +188,52 @@ function PresenceManager() {
 export default function AppShell() {
   const location = useLocation()
   const showMenu = !HIDDEN_MENU_ROUTES.includes(location.pathname)
+  // Todas as telas logadas (inclusive o chat) ficam dentro da "folha" com a topbar.
+  const framed = showMenu
+
+  const routes = (
+    <Suspense fallback={<PageFallback />}>
+      <RouteErrorBoundary resetKey={location.pathname}>
+        <AppRoutes />
+      </RouteErrorBoundary>
+    </Suspense>
+  )
 
   return (
     <SocketProvider>
       <NotificationProvider>
       <Toaster position="top-right" richColors />
       <PresenceManager />
-      <ThemeToggle />
+      {/* Na área logada o botão de tema fica na topbar / cabeçalho mobile;
+          na landing, no login e no cadastro ele fica no cabeçalho da página. */}
+      {!framed && !OWN_THEME_TOGGLE_ROUTES.includes(location.pathname) && <ThemeToggle />}
       {showMenu && <Menu />}
 
-      {/* Suspense envolve todas as rotas: exibe PageLoader enquanto o chunk
-          da página lazy está sendo baixado. Erros de import ficam isolados
-          por rota graças ao lazy — não travam a aplicação inteira. */}
-      <Suspense fallback={<PageFallback />}>
-        <RouteErrorBoundary resetKey={location.pathname}>
+      {framed ? (
+        <div className="vd-main">
+          <div className="vd-main-panel">
+            <Topbar />
+            {routes}
+          </div>
+        </div>
+      ) : routes}
+      </NotificationProvider>
+    </SocketProvider>
+  )
+}
+
+/* Suspense (no AppShell) envolve todas as rotas: exibe PageLoader enquanto o
+   chunk da página lazy está sendo baixado. Erros de import ficam isolados por
+   rota graças ao lazy — não travam a aplicação inteira. */
+function AppRoutes() {
+  return (
         <Routes>
           {/* Rotas públicas */}
           <Route path="/"         element={<Landing />} />
           <Route path="/login"    element={<Login />} />
           <Route path="/cadastro" element={<Cadastro />} />
+          <Route path="/termos" element={<Legal />} />
+          <Route path="/privacidade" element={<Legal />} />
           {REPORT_DEMO_ENABLED && <Route path="/demo-relatorio" element={<ReportDemo />} />}
           {REPORT_DEMO_ENABLED && <Route path="/demo-match" element={<MatchDemo />} />}
 
@@ -199,6 +242,8 @@ export default function AppShell() {
           <Route path="/feed"   element={<FeedRoute><Feed /></FeedRoute>} />
           <Route path="/perfil" element={<ProtectedRoute><Perfil /></ProtectedRoute>} />
           <Route path="/financas" element={<CaregiverRoute><Financas /></CaregiverRoute>} />
+          <Route path="/verificacao" element={<CaregiverRoute><Verificacao /></CaregiverRoute>} />
+          <Route path="/admin/verificacoes" element={<AdminRoute><AdminVerificacoes /></AdminRoute>} />
           <Route path="/completar-cadastro" element={<ProfileSetupRoute><CompletarCadastro /></ProfileSetupRoute>} />
 
           {/* Solicitações — Familiar gerencia as próprias; Cuidador vê as disponíveis */}
@@ -229,9 +274,5 @@ export default function AppShell() {
           {/* Fallback 404 */}
           <Route path="*" element={<NotFound />} />
         </Routes>
-        </RouteErrorBoundary>
-      </Suspense>
-      </NotificationProvider>
-    </SocketProvider>
   )
 }

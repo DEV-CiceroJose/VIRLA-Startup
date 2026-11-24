@@ -9,9 +9,9 @@ describe('lookupCep', () => {
   it('devolve city/state em sucesso', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({ localidade: 'Recife', uf: 'PE' }),
+      json: async () => ({ logradouro: 'Rua da Aurora', bairro: 'Boa Vista', localidade: 'Recife', uf: 'PE' }),
     }))
-    expect(await lookupCep('50030-230')).toEqual({ city: 'Recife', state: 'PE' })
+    expect(await lookupCep('50030-230')).toEqual({ street: 'Rua da Aurora', neighborhood: 'Boa Vista', city: 'Recife', state: 'PE' })
   })
 
   it('devolve null quando o ViaCEP responde erro:true', async () => {

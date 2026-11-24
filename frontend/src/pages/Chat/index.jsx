@@ -3,9 +3,9 @@ import { useNavigate, useParams, Link } from 'react-router-dom'
 import { toast } from 'sonner'
 import ArrowBack from '@mui/icons-material/ArrowBack'
 import Send from '@mui/icons-material/Send'
-import Person from '@mui/icons-material/Person'
+import PersonOutlined from '@mui/icons-material/PersonOutlined'
 import Payments from '@mui/icons-material/Payments'
-import Receipt from '@mui/icons-material/Receipt'
+import ReceiptLongOutlined from '@mui/icons-material/ReceiptLongOutlined'
 import Mic from '@mui/icons-material/Mic'
 import StopCircle from '@mui/icons-material/StopCircle'
 import Delete from '@mui/icons-material/Delete'
@@ -14,10 +14,14 @@ import ExitToApp from '@mui/icons-material/ExitToApp'
 import AttachFile from '@mui/icons-material/AttachFile'
 import PictureAsPdf from '@mui/icons-material/PictureAsPdf'
 import InsertDriveFile from '@mui/icons-material/InsertDriveFile'
+import SearchOutlined from '@mui/icons-material/SearchOutlined'
+import AddCommentOutlined from '@mui/icons-material/AddCommentOutlined'
+import WifiOffOutlined from '@mui/icons-material/WifiOffOutlined'
 
 import api from '../../services/api'
 import EmojiPicker from '../../components/EmojiPicker'
-import { PageLoader, ButtonSpinner } from '../../components/Spinner'
+import Avatar from '../../components/Avatar'
+import { ButtonSpinner } from '../../components/Spinner'
 import GenerateChargeModal from '../../components/GenerateChargeModal'
 import { ConfirmDialog } from '../../components/ui'
 import { formatCentsBRL } from '../../utils/paymentFees'
@@ -39,12 +43,38 @@ function normalizeVirlaRole(role) {
   return String(role).trim().toUpperCase()
 }
 
+function sameDay(a, b) {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
+}
+
+/** Rótulo do separador de dia: Hoje, Ontem ou a data. */
+function dayLabel(date) {
+  const now = new Date()
+  const yesterday = new Date(now)
+  yesterday.setDate(now.getDate() - 1)
+  if (sameDay(date, now)) return 'Hoje'
+  if (sameDay(date, yesterday)) return 'Ontem'
+  return date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' })
+}
+
+/** Horário na lista de conversas: hora se for hoje, senão dd/mm. */
+function listTime(value) {
+  if (!value) return ''
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+  return sameDay(date, new Date())
+    ? date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+    : date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
+}
+
 export default function Chat() {
   const { userId: peerId } = useParams()
   const navigate = useNavigate()
   const meId = localStorage.getItem('meuId')
   const peerPresence = usePeerPresence(peerId)
-  const { markConversationRead } = useNotifications()
+  const { markConversationRead, notifications = [] } = useNotifications()
+  const [listFilter, setListFilter] = useState('todas')
+  const [listQuery, setListQuery] = useState('')
 
   const [peer, setPeer] = useState(null)
   const [conversations, setConversations] = useState([])
@@ -389,188 +419,239 @@ export default function Chat() {
     })
   }
 
-  if (loading) {
-    return (
-      <PageLoader label="Carregando conversa…">
-        <div className="w-full max-w-md space-y-3 mt-2">
-          <div className="h-12 rounded-xl bg-virla-roxo/10 animate-pulse" />
-          <div className="h-20 rounded-xl bg-virla-roxo/5 animate-pulse" />
-          <div className="h-20 rounded-xl bg-virla-roxo/5 animate-pulse ml-8" />
-        </div>
-      </PageLoader>
-    )
+  // Mensagens não lidas por conversa, a partir das notificações do tipo MESSAGE.
+  const unreadByPeer = {}
+  for (const n of notifications) {
+    if (n.type === 'MESSAGE' && !n.read && n.senderId) {
+      unreadByPeer[n.senderId] = (unreadByPeer[n.senderId] ?? 0) + (n.count ?? 1)
+    }
   }
+  const unreadConversations = conversations.filter((c) => unreadByPeer[c.peerId] && c.peerId !== peerId)
+  const term = listQuery.trim().toLowerCase()
+  const visibleConversations = (listFilter === 'naolidas' ? unreadConversations : conversations)
+    .filter((c) => !term || `${c.peerName ?? ''} ${c.lastMessage ?? ''}`.toLowerCase().includes(term))
+
+  const peerRoleLabel = peerRoleNorm === 'CUIDADOR' ? 'Cuidador' : peerRoleNorm === 'FAMILIAR' ? 'Familiar' : ''
 
   return (
-    <div className="comfort-page comfort-chat h-[100dvh] min-h-0 pt-16 bg-[#e8e4ec] flex flex-col">
-      <aside className="comfort-chat-list" aria-label="Conversas">
-        <div className="comfort-chat-list-heading"><span className="comfort-eyebrow">Mensagens</span><h2>Conversas</h2><p>Seu espaço para conversar com calma.</p></div>
-        <div className="comfort-chat-list-items">
-          {conversations.length === 0 && <p className="comfort-chat-list-empty">Suas conversas aparecerão aqui.</p>}
-          {conversations.map((conversation) => (
-            <Link key={conversation.peerId} to={`/chat/${conversation.peerId}`} aria-current={conversation.peerId === peerId ? 'page' : undefined} className={conversation.peerId === peerId ? 'active' : ''}>
-              <span className="comfort-chat-avatar"><Person fontSize="small" /></span>
-              <span><strong>{conversation.peerName}</strong><small>{conversation.lastMessage || 'Inicie a conversa'}</small></span>
-            </Link>
-          ))}
+    <div className="vc-chat">
+      <aside className="vc-list" aria-label="Conversas">
+        <div className="vc-list-head">
+          <h2>Conversas</h2>
+          <button
+            type="button"
+            className="vc-icon-btn brand"
+            onClick={() => navigate(isCaregiver ? '/solicitacoes-disponiveis' : '/feed')}
+            aria-label={isCaregiver ? 'Encontrar oportunidades' : 'Encontrar cuidadores'}
+            title={isCaregiver ? 'Encontrar oportunidades' : 'Encontrar cuidadores'}
+          >
+            <AddCommentOutlined sx={{ fontSize: 20 }} />
+          </button>
+        </div>
+        <label className="vc-list-search">
+          <SearchOutlined sx={{ fontSize: 18 }} aria-hidden />
+          <input
+            type="search"
+            value={listQuery}
+            onChange={(e) => setListQuery(e.target.value)}
+            placeholder="Buscar conversas…"
+            aria-label="Buscar conversas"
+          />
+        </label>
+        <div className="vc-tabs" role="tablist" aria-label="Filtrar conversas">
+          <button type="button" role="tab" className="vc-tab" aria-selected={listFilter === 'todas'} onClick={() => setListFilter('todas')}>
+            Todas <span className="vc-count muted">{conversations.length}</span>
+          </button>
+          <button type="button" role="tab" className="vc-tab" aria-selected={listFilter === 'naolidas'} onClick={() => setListFilter('naolidas')}>
+            Não lidas <span className={`vc-count ${unreadConversations.length ? '' : 'muted'}`}>{unreadConversations.length}</span>
+          </button>
+        </div>
+        <div className="vc-list-items">
+          {visibleConversations.length === 0 && (
+            <p className="vc-list-empty">
+              {conversations.length === 0 ? 'Suas conversas aparecerão aqui.' : 'Nenhuma conversa encontrada.'}
+            </p>
+          )}
+          {visibleConversations.map((conversation) => {
+            const active = conversation.peerId === peerId
+            const unread = active ? 0 : unreadByPeer[conversation.peerId] ?? 0
+            return (
+              <Link
+                key={conversation.peerId}
+                to={`/chat/${conversation.peerId}`}
+                aria-current={active ? 'page' : undefined}
+                className={`vc-item ${active ? 'active' : ''} ${unread ? 'unread' : ''}`}
+              >
+                <Avatar src={conversation.peerImage} name={conversation.peerName} size={44} radius={50} />
+                <span className="vc-item-body">
+                  <span className="vc-item-top">
+                    <strong>{conversation.peerName}</strong>
+                    <time>{listTime(conversation.lastMessageAt)}</time>
+                  </span>
+                  <span className="vc-item-bottom">
+                    <p>{conversation.lastMessage || 'Inicie a conversa'}</p>
+                    {unread > 0 && <span className="vc-count">{unread > 9 ? '9+' : unread}</span>}
+                  </span>
+                </span>
+              </Link>
+            )
+          })}
         </div>
       </aside>
-      {!isConnected && (
-        <div className="bg-amber-100 text-amber-800 text-xs text-center py-1 font-medium z-50">
-          Sem conexão. Reconectando ao servidor...
-        </div>
-      )}
 
-      <header className="flex-shrink-0 z-40 bg-virla-roxo text-white shadow-md px-4 py-3 flex items-center gap-3">
-        <button type="button" onClick={() => navigate(-1)} className="p-2 rounded-xl hover:bg-white/15 transition-colors" aria-label="Voltar">
-          <ArrowBack sx={{ fontSize: 24 }} />
-        </button>
-        <div className="w-10 h-10 rounded-full bg-white/20 overflow-hidden flex items-center justify-center flex-shrink-0">
-          {peer?.profileImage && !imgErr ? (
-            <img src={peer?.profileImage} alt="" className="w-full h-full object-cover" onError={() => setImgErr(true)} />
-          ) : (
-            <Person sx={{ fontSize: 22 }} className="text-white" />
-          )}
-        </div>
-        <div className="min-w-0 flex-1">
-          <h1 className="font-bold text-lg truncate">{peer?.name ?? 'Conversa'}</h1>
-          {peerPresence?.state === 'online' ? (
-            <p className="text-xs text-green-300 truncate flex items-center gap-1">
-              <span className="inline-block w-2 h-2 rounded-full bg-green-400" aria-hidden />
-              online
-            </p>
-          ) : peerPresence?.lastChanged ? (
-            <p className="text-xs text-white/70 truncate">
-              visto por último {formatLastSeen(peerPresence.lastChanged)}
-            </p>
-          ) : (
-            <p className="text-xs text-white/70 truncate">
-              {peer?.approach || (peerRoleNorm === 'CUIDADOR' ? 'Cuidador' : peerRoleNorm === 'FAMILIAR' ? 'Familiar' : '')}
-            </p>
-          )}
-        </div>
-
-        {canGenerateCharge && (
-          <button type="button" onClick={() => setShowChargeModal(true)} className="p-2 rounded-xl hover:bg-white/15 transition-colors flex-shrink-0" title="Gerar Cobrança">
-            <Receipt sx={{ fontSize: 24 }} />
+      <section className="vc-pane" aria-label="Conversa">
+        <header className="vc-head">
+          <button type="button" onClick={() => navigate('/home?tab=mensagens')} className="vc-icon-btn vc-back" aria-label="Voltar">
+            <ArrowBack sx={{ fontSize: 22 }} />
           </button>
+          <Avatar src={imgErr ? null : peer?.profileImage} name={peer?.name ?? ''} size={44} radius={50} />
+          {peer?.profileImage && !imgErr && (
+            <img src={peer.profileImage} alt="" hidden onError={() => setImgErr(true)} />
+          )}
+          <div className="vc-head-info">
+            <h1>{peer?.name ?? (loading ? 'Carregando…' : 'Conversa')}</h1>
+            {peerPresence?.state === 'online' ? (
+              <p><span className="vc-online-dot" aria-hidden />online</p>
+            ) : peerPresence?.lastChanged ? (
+              <p>visto por último {formatLastSeen(peerPresence.lastChanged)}</p>
+            ) : (
+              <p>{peer?.approach || peerRoleLabel}</p>
+            )}
+          </div>
+          {peer && peerRoleLabel && peer?.approach && <span className="vc-chip">{peerRoleLabel}</span>}
+
+          <div className="vc-head-actions">
+            {peer && (
+              <Link to={`/user/${peerId}`} className="vc-head-action" title="Ver perfil">
+                <PersonOutlined aria-hidden /><span className="label">Ver perfil</span>
+              </Link>
+            )}
+            {canGenerateCharge && (
+              <button type="button" onClick={() => setShowChargeModal(true)} className="vc-head-action" title="Gerar Cobrança">
+                <ReceiptLongOutlined aria-hidden /><span className="label">Cobrança</span>
+              </button>
+            )}
+            {canPay && (
+              <button type="button" onClick={goToPayment} className="vc-head-action" title={`Pagar ${formatCentsBRL(pendingCharge.totalAmount)}`}>
+                <Payments aria-hidden /><span className="label">Pagar</span>
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setConfirmLeave(true)}
+              className="vc-head-action"
+              title="Sair da conversa"
+              aria-label="Sair da conversa"
+            >
+              <ExitToApp aria-hidden /><span className="label">Sair</span>
+            </button>
+          </div>
+        </header>
+
+        {!isConnected && (
+          <div className="vc-banner warn" role="status">
+            <WifiOffOutlined sx={{ fontSize: 16, mr: 0.75, verticalAlign: '-3px' }} aria-hidden />
+            Sem conexão. Reconectando ao servidor...
+          </div>
         )}
 
         {canPay && (
-          <button type="button" onClick={goToPayment} className="p-2 rounded-xl hover:bg-white/15 transition-colors flex-shrink-0" title={`Pagar ${formatCentsBRL(pendingCharge.totalAmount)}`}>
-            <Payments sx={{ fontSize: 24 }} />
-          </button>
-        )}
-
-        <Link to="/home?tab=mensagens" className="text-xs font-semibold text-white/90 hover:underline hidden sm:inline">
-          Histórico
-        </Link>
-
-        <button
-          type="button"
-          onClick={() => setConfirmLeave(true)}
-          className="p-2 rounded-xl hover:bg-white/15 transition-colors flex-shrink-0"
-          title="Sair da conversa"
-          aria-label="Sair da conversa"
-        >
-          <ExitToApp sx={{ fontSize: 24 }} />
-        </button>
-      </header>
-
-      {canPay && (
-        <div className="flex-shrink-0 bg-amber-50 border-b border-amber-200 px-4 py-2 text-center text-sm text-amber-900">
-          Cobrança pendente: <strong>{formatCentsBRL(pendingCharge.totalAmount)}</strong>
-          <button type="button" onClick={goToPayment} className="ml-2 underline font-semibold">Pagar agora</button>
-        </div>
-      )}
-
-      <div ref={listRef} className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 py-6 space-y-3 max-w-3xl mx-auto w-full">
-        {messages.length === 0 && (
-          <p className="text-center text-sm text-virla-texto/50 py-8">Nenhuma mensagem ainda. Diga olá!</p>
-        )}
-        
-        {messages.map((m) => {
-          const mine = m.senderId === meId
-          const deletable = mine && canDeleteMessage(m, meId)
-          return (
-            <div key={m.id} className={`flex ${mine ? 'justify-end' : 'justify-start'} group`}>
-              <div
-                onClick={() => deletable && setActiveMsgId((cur) => (cur === m.id ? null : m.id))}
-                className={`relative max-w-[85%] sm:max-w-[70%] rounded-2xl px-4 py-2.5 text-sm shadow-sm transition-opacity duration-200
-                  ${mine ? 'bg-virla-roxo text-white rounded-br-md' : 'bg-white text-virla-texto border border-virla-roxo/10 rounded-bl-md'}
-                  ${m._optimistic ? 'opacity-70' : 'opacity-100'}
-                  ${deletable ? 'cursor-pointer' : ''}
-                `}
-              >
-                {m.deleted ? (
-                  <p className="italic opacity-70 flex items-center gap-1">🚫 Esta mensagem foi apagada</p>
-                ) : m.attachmentType === 'image' ? (
-                  <a href={`${API_URL}${m.attachmentUrl}`} target="_blank" rel="noreferrer">
-                    <img
-                      src={`${API_URL}${m.attachmentUrl}`}
-                      alt={m.attachmentName || 'imagem'}
-                      className="max-w-full max-h-64 rounded-lg"
-                    />
-                  </a>
-                ) : m.attachmentType === 'pdf' ? (
-                  <a
-                    href={`${API_URL}${m.attachmentUrl}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex items-center gap-2 underline"
-                  >
-                    <InsertDriveFile sx={{ fontSize: 20 }} />
-                    {m.attachmentName || 'documento.pdf'}
-                  </a>
-                ) : m.audioUrl ? (
-                  <audio src={`${API_URL}${m.audioUrl}`} controls className="max-w-full h-10 mt-1 rounded" />
-                ) : (
-                  <p className="whitespace-pre-wrap break-words leading-relaxed">{m.content}</p>
-                )}
-
-                {!m.deleted && (
-                  <p className={`text-[10px] mt-1.5 flex items-center gap-1 ${mine ? 'text-white/70 justify-end' : 'text-virla-texto/40 justify-start'}`}>
-                    {new Date(m.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                    {mine && !m._optimistic && (
-                      <span className={m.read ? 'text-blue-300' : 'text-white/50'}>
-                        {m.read ? '✓✓' : '✓'}
-                      </span>
-                    )}
-                  </p>
-                )}
-
-                {deletable && activeMsgId === m.id && (
-                  <button
-                    type="button"
-                    onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(m.id) }}
-                    className="absolute -top-2 -left-2 bg-white text-red-600 border border-red-200 rounded-full p-1 shadow-sm hover:bg-red-50"
-                    aria-label="Apagar mensagem"
-                  >
-                    <DeleteOutlined sx={{ fontSize: 16 }} />
-                  </button>
-                )}
-              </div>
-            </div>
-          )
-        })}
-
-        {peerTyping && (
-          <div className="flex justify-start">
-            <div className="bg-white border border-virla-roxo/10 rounded-2xl rounded-bl-md px-4 py-3 shadow-sm flex items-center gap-1">
-              <span className="w-1.5 h-1.5 bg-virla-roxo/60 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-              <span className="w-1.5 h-1.5 bg-virla-roxo/60 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-              <span className="w-1.5 h-1.5 bg-virla-roxo/60 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-            </div>
+          <div className="vc-banner warn">
+            Cobrança pendente: <strong>{formatCentsBRL(pendingCharge.totalAmount)}</strong>
+            <button type="button" onClick={goToPayment}>Pagar agora</button>
           </div>
         )}
-      </div>
 
-      <form onSubmit={handleSend} className="flex-shrink-0 bg-white/95 backdrop-blur border-t border-virla-roxo/15 px-4 py-3 shadow-[0_-4px_20px_rgba(128,0,128,0.08)]">
-        <div className="max-w-3xl mx-auto flex gap-2 items-end">
-          {!isRecording && !audioBlob && (
-            <EmojiPicker onSelect={(emoji) => setInput((v) => v + emoji)} />
-          )}
+        {loading ? (
+          <div className="vc-messages" aria-busy="true">
+            <div className="vc-skeleton" role="status" aria-label="Carregando conversa…">
+              <div /><div /><div /><div />
+            </div>
+          </div>
+        ) : (
+          <div ref={listRef} className="vc-messages">
+            {messages.length === 0 && (
+              <p className="vc-empty-msg">Nenhuma mensagem ainda. Diga olá!</p>
+            )}
 
+            {messages.map((m, index) => {
+              const mine = m.senderId === meId
+              const deletable = mine && canDeleteMessage(m, meId)
+              const created = new Date(m.createdAt)
+              const prev = index > 0 ? new Date(messages[index - 1].createdAt) : null
+              const showDay = !Number.isNaN(created.getTime()) && (!prev || !sameDay(prev, created))
+              return (
+                <div key={m.id}>
+                  {showDay && <div className="vc-day"><span>{dayLabel(created)}</span></div>}
+                  <div className={`vc-row ${mine ? 'mine' : ''}`}>
+                    <div
+                      onClick={() => deletable && setActiveMsgId((cur) => (cur === m.id ? null : m.id))}
+                      className={`vc-bubble ${m._optimistic ? 'optimistic' : ''} ${deletable ? 'clickable' : ''}`}
+                    >
+                      {m.deleted ? (
+                        <p className="italic opacity-70">🚫 Esta mensagem foi apagada</p>
+                      ) : m.attachmentType === 'image' ? (
+                        <a href={`${API_URL}${m.attachmentUrl}`} target="_blank" rel="noreferrer">
+                          <img
+                            src={`${API_URL}${m.attachmentUrl}`}
+                            alt={m.attachmentName || 'imagem'}
+                            className="max-w-full max-h-64 rounded-lg"
+                          />
+                        </a>
+                      ) : m.attachmentType === 'pdf' ? (
+                        <a
+                          href={`${API_URL}${m.attachmentUrl}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="flex items-center gap-2 underline"
+                        >
+                          <InsertDriveFile sx={{ fontSize: 20 }} />
+                          {m.attachmentName || 'documento.pdf'}
+                        </a>
+                      ) : m.audioUrl ? (
+                        <audio src={`${API_URL}${m.audioUrl}`} controls className="max-w-full h-10 mt-1 rounded" />
+                      ) : (
+                        <p className="whitespace-pre-wrap break-words">{m.content}</p>
+                      )}
+
+                      {!m.deleted && (
+                        <p className="vc-meta">
+                          {created.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                          {mine && !m._optimistic && (
+                            <span className={`vc-tick ${m.read ? 'read' : ''}`} aria-label={m.read ? 'Lida' : 'Enviada'}>
+                              {m.read ? '✓✓' : '✓'}
+                            </span>
+                          )}
+                        </p>
+                      )}
+
+                      {deletable && activeMsgId === m.id && (
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(m.id) }}
+                          className="vc-delete"
+                          aria-label="Apagar mensagem"
+                        >
+                          <DeleteOutlined sx={{ fontSize: 16 }} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+
+            {peerTyping && (
+              <div className="vc-row">
+                <div className="vc-bubble vc-typing" aria-label="Digitando">
+                  <span /><span /><span />
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        <form onSubmit={handleSend} className="vc-composer">
           {!isRecording && !audioBlob && !pendingFile && (
             <>
               <input
@@ -583,45 +664,46 @@ export default function Chat() {
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="h-11 w-11 sm:h-12 sm:w-12 flex-shrink-0 rounded-xl bg-gray-100 text-virla-roxo flex items-center justify-center hover:bg-gray-200 transition-all"
+                className="vc-icon-btn"
                 aria-label="Anexar arquivo"
               >
-                <AttachFile sx={{ fontSize: 24 }} />
+                <AttachFile sx={{ fontSize: 22 }} />
               </button>
             </>
           )}
 
+          {!isRecording && !audioBlob && (
+            <EmojiPicker buttonClassName="vc-icon-btn" onSelect={(emoji) => setInput((v) => v + emoji)} />
+          )}
+
           {isRecording ? (
-            <div className="flex-1 flex items-center justify-between bg-red-50 rounded-xl px-4 min-h-[44px] border border-red-200">
-              <div className="flex items-center gap-2 text-red-600 font-medium animate-pulse">
-                <div className="w-2.5 h-2.5 bg-red-600 rounded-full"></div>
+            <div className="vc-staged recording">
+              <span className="flex-1 flex items-center gap-2 font-medium animate-pulse">
+                <span className="w-2.5 h-2.5 rounded-full bg-current" aria-hidden />
                 A gravar áudio...
-              </div>
-              <button type="button" onClick={stopRecording} className="text-red-600 hover:text-red-700 p-2">
-                <StopCircle sx={{ fontSize: 28 }} />
+              </span>
+              <button type="button" onClick={stopRecording} className="p-1" aria-label="Parar gravação">
+                <StopCircle sx={{ fontSize: 26 }} />
               </button>
             </div>
           ) : audioBlob ? (
-            <div className="flex-1 flex items-center gap-2 bg-gray-50 rounded-xl px-2 min-h-[44px] border border-gray-200">
-              <button type="button" onClick={clearAudio} className="text-gray-500 hover:text-red-500 p-2" aria-label="Apagar áudio">
-                <Delete sx={{ fontSize: 22 }} />
+            <div className="vc-staged">
+              <button type="button" onClick={clearAudio} className="vc-icon-btn" aria-label="Apagar áudio">
+                <Delete sx={{ fontSize: 20 }} />
               </button>
               <audio src={URL.createObjectURL(audioBlob)} controls className="flex-1 h-10" />
             </div>
           ) : pendingFile ? (
-            <div className="flex-1 flex items-center gap-2 bg-gray-50 rounded-xl px-3 min-h-[44px] border border-gray-200">
-              <button type="button" onClick={() => setPendingFile(null)} className="text-gray-500 hover:text-red-500 p-1" aria-label="Cancelar anexo">
+            <div className="vc-staged">
+              <button type="button" onClick={() => setPendingFile(null)} className="vc-icon-btn" aria-label="Cancelar anexo">
                 <Delete sx={{ fontSize: 20 }} />
               </button>
               {pendingFile.type === 'application/pdf' ? (
-                <span className="flex items-center gap-2 text-sm text-virla-texto truncate">
-                  <PictureAsPdf sx={{ fontSize: 20 }} className="text-red-600" />
-                  {pendingFile.name}
-                </span>
+                <PictureAsPdf sx={{ fontSize: 22 }} className="text-red-600" />
               ) : (
                 <img src={URL.createObjectURL(pendingFile)} alt={pendingFile.name} className="h-9 w-9 object-cover rounded" />
               )}
-              <span className="text-xs text-virla-muted truncate flex-1">{pendingFile.name}</span>
+              <span className="truncate flex-1 text-[var(--vd-ink-soft)]">{pendingFile.name}</span>
             </div>
           ) : (
             <textarea
@@ -635,7 +717,7 @@ export default function Chat() {
                 }
               }}
               placeholder="Digite uma mensagem…"
-              className="flex-1 min-h-[44px] max-h-32 resize-y rounded-xl border border-virla-roxo/20 bg-white px-4 py-3 text-sm text-virla-texto placeholder-virla-texto/40 focus:outline-none focus:ring-2 focus:ring-virla-roxo/30 focus:border-virla-roxo"
+              className="vc-input"
             />
           )}
 
@@ -644,31 +726,32 @@ export default function Chat() {
               type="button"
               onClick={handleSendAttachment}
               disabled={sending}
-              className="h-11 w-11 sm:h-12 sm:w-12 flex-shrink-0 rounded-xl bg-virla-roxo text-white flex items-center justify-center hover:bg-virla-roxohighlight shadow-md disabled:opacity-50 transition-all"
+              className="vc-send"
               aria-label="Enviar anexo"
             >
-              {sending ? <ButtonSpinner size={22} /> : <Send sx={{ fontSize: 22 }} />}
+              {sending ? <ButtonSpinner size={20} /> : <Send sx={{ fontSize: 20 }} />}
             </button>
           ) : (!input.trim() && !audioBlob && !isRecording) ? (
             <button
               type="button"
               onClick={startRecording}
-              className="h-11 w-11 sm:h-12 sm:w-12 flex-shrink-0 rounded-xl bg-gray-100 text-virla-roxo flex items-center justify-center hover:bg-gray-200 transition-all"
+              className="vc-send"
+              aria-label="Gravar áudio"
             >
-              <Mic sx={{ fontSize: 24 }} />
+              <Mic sx={{ fontSize: 22 }} />
             </button>
           ) : (
             <button
               type="submit"
               disabled={sending || (!input.trim() && !audioBlob) || isRecording}
-              className="h-11 w-11 sm:h-12 sm:w-12 flex-shrink-0 rounded-xl bg-virla-roxo text-white flex items-center justify-center hover:bg-virla-roxohighlight shadow-md disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              className="vc-send"
               aria-label="Enviar"
             >
-              {sending ? <ButtonSpinner size={22} /> : <Send sx={{ fontSize: 22 }} />}
+              {sending ? <ButtonSpinner size={20} /> : <Send sx={{ fontSize: 20 }} />}
             </button>
           )}
-        </div>
-      </form>
+        </form>
+      </section>
 
       {showChargeModal && canGenerateCharge && (
         <GenerateChargeModal

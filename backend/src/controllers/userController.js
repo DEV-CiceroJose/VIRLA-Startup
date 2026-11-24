@@ -15,6 +15,8 @@ import { USER_PUBLIC_SELECT, USER_SELF_SELECT } from '../lib/userSelects.js'
 import * as solicitacaoRepo from '../repositories/solicitacaoRepository.js'
 import { objectIdSchema } from '../schemas/paymentSchemas.js'
 import { rankCaregiversForSolicitacao } from '../services/matchingService.js'
+import { isCaregiverVisible, VERIFICATION_STATUS } from '../services/verificationDomain.js'
+import { TERMS_VERSION, PRIVACY_VERSION } from '../utils/legal.js'
 
 function parseBirthDate(value) {
   if (value == null || value === '') return null
@@ -66,12 +68,17 @@ const createUsers = async (req, res) => {
     name, birthDate: birthDateRaw, role, bio, cpf,
     profileImage, council, hourlyRate: hourlyRateRaw, registerNumber,
     approach, specialties, availableShifts, serviceFrequencies, description, city, state, zipCode,
+    street, neighborhood,
   } = req.body
 
   const birthDate = parseBirthDate(birthDateRaw)
   const hourlyRate = parseHourlyRate(hourlyRateRaw)
   if (hourlyRateRaw != null && hourlyRateRaw !== '' && hourlyRate === null) {
     return res.status(422).json({ msg: 'Valor por hora inválido' })
+  }
+
+  if (req.body.termsVersion !== TERMS_VERSION) {
+    return res.status(409).json({ msg: 'Os Termos de Uso foram atualizados. Recarregue a página e leia a versão nova.' })
   }
 
   try {
@@ -110,6 +117,13 @@ const createUsers = async (req, res) => {
       city: emptyToNull(city),
       state: emptyToNull(state),
       zipCode: emptyToNull(zipCode),
+      street: emptyToNull(street),
+      neighborhood: emptyToNull(neighborhood),
+      // Aceite dos Termos de Uso e da Política de Privacidade (exigido pelo schema).
+      termsAcceptedAt: new Date(),
+      termsVersion: TERMS_VERSION,
+      privacyVersion: PRIVACY_VERSION,
+      ...(role === 'CUIDADOR' && { verificationStatus: VERIFICATION_STATUS.NAO_ENVIADO }),
     })
 
     // role em custom claim → checkToken/requireRole leem sem read extra no Firestore.
@@ -157,7 +171,8 @@ const getFeedUsers = async (req, res) => {
     // Paginação por offset emulada: o Firestore não tem offset eficiente, mas
     // o feed tem volume baixo no MVP — buscamos os usuários do papel oposto e
     // recortamos a página em memória. Mantém o contrato `?page=N` do frontend.
-    const allOfRole = await listByRole(oppositeRole)
+    // Cuidadores só aparecem depois que a equipe aprova documentos e antecedentes.
+    const allOfRole = (await listByRole(oppositeRole)).filter(isCaregiverVisible)
     const ranked = matchSolicitacao
       ? rankCaregiversForSolicitacao(allOfRole, matchSolicitacao)
       : allOfRole.map((caregiver) => ({ caregiver, match: null }))
@@ -234,6 +249,8 @@ const updateUsers = async (req, res) => {
     ...(req.body.city !== undefined && { city: req.body.city || null }),
     ...(req.body.state !== undefined && { state: req.body.state || null }),
     ...(req.body.zipCode !== undefined && { zipCode: req.body.zipCode || null }),
+    ...(req.body.street !== undefined && { street: req.body.street || null }),
+    ...(req.body.neighborhood !== undefined && { neighborhood: req.body.neighborhood || null }),
   }
 
   if (data.council && data.registerNumber && (await registerExists(data.council, data.registerNumber, req.params.id))) {

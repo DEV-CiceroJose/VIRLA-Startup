@@ -2,6 +2,8 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { createUserBodySchema, updateUserBodySchema, profileImageSchema } from '../src/schemas/userSchemas.js'
 
+const ACEITE = { acceptedTerms: true, termsVersion: '2026-11-24' }
+
 // helper: data de 30 anos atrás (adulto válido) no formato YYYY-MM-DD
 function adultoISO() {
   const d = new Date()
@@ -15,6 +17,7 @@ test('createUserBodySchema NÃO exige password (auth é do Firebase)', () => {
     role: 'FAMILIAR',
     cpf: '390.533.447-05', // CPF válido
     birthDate: adultoISO(),
+    ...ACEITE,
   })
   assert.equal(r.success, true, JSON.stringify(r.error?.issues))
   assert.equal('password' in r.data, false)
@@ -37,9 +40,18 @@ test('createUserBodySchema exige birthDate', () => {
 
 test('createUserBodySchema aceita birthDate de adulto', () => {
   const r = createUserBodySchema.safeParse({
-    name: 'Ana Silva', role: 'FAMILIAR', cpf: '390.533.447-05', birthDate: adultoISO(),
+    name: 'Ana Silva', role: 'FAMILIAR', cpf: '390.533.447-05', birthDate: adultoISO(), ...ACEITE,
   })
   assert.equal(r.success, true, JSON.stringify(r.error?.issues))
+})
+
+test('createUserBodySchema exige o aceite dos Termos e da Política', () => {
+  const base = { name: 'Ana Silva', role: 'FAMILIAR', cpf: '390.533.447-05', birthDate: adultoISO() }
+  const semAceite = createUserBodySchema.safeParse({ ...base, termsVersion: '2026-11-24' })
+  assert.equal(semAceite.success, false)
+  assert.match(semAceite.error.issues.map((i) => i.message).join(' '), /Termos de Uso/)
+  assert.equal(createUserBodySchema.safeParse({ ...base, acceptedTerms: false, termsVersion: '2026-11-24' }).success, false)
+  assert.equal(createUserBodySchema.safeParse({ ...base, acceptedTerms: true }).success, false)
 })
 
 test('createUserBodySchema rejeita menor de 18', () => {
@@ -61,7 +73,7 @@ test('updateUserBodySchema rejeita birthDate futura quando enviada', () => {
   assert.equal(r.success, false)
 })
 
-const baseCreate = { role: 'FAMILIAR', cpf: '390.533.447-05', birthDate: adultoISO() }
+const baseCreate = { role: 'FAMILIAR', cpf: '390.533.447-05', birthDate: adultoISO(), ...ACEITE }
 
 test('createUserBodySchema rejeita nome inválido', () => {
   assert.equal(createUserBodySchema.safeParse({ ...baseCreate, name: 'Ana123' }).success, false)
@@ -143,4 +155,11 @@ test('zipCode: aceita com/sem hífen e normaliza pra 8 dígitos; rejeita formato
 
   assert.equal(createUserBodySchema.safeParse({ ...base, zipCode: '123' }).success, false)
   assert.equal(createUserBodySchema.safeParse({ ...base }).success, true)
+})
+
+test('endereço do CEP: rua e bairro opcionais no cadastro e na edição', () => {
+  const ok = createUserBodySchema.safeParse({ ...baseCreate, name: 'Ana Souza', zipCode: '50030-230', street: 'Rua da Aurora', neighborhood: 'Boa Vista', city: 'Recife', state: 'PE' })
+  assert.equal(ok.success, true, JSON.stringify(ok.error?.issues))
+  assert.equal(updateUserBodySchema.safeParse({ street: 'Rua da Aurora', neighborhood: 'Boa Vista' }).success, true)
+  assert.equal(updateUserBodySchema.safeParse({ street: 'x'.repeat(161) }).success, false)
 })

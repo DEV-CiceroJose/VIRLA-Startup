@@ -1,0 +1,292 @@
+/*
+ * VIRLA — Feed "Encontre quem cuida" (prefixo vfd-)
+ * Cada profissional segue o cartão da ref 2: retrato à esquerda, nome em
+ * Playfair, chips de resumo, ação principal de ponta a ponta e, abaixo, a
+ * alternativa "Ver perfil completo". Busca e match ficam numa barra só.
+ */
+
+.vfd-page { position: relative; max-width: 1240px; margin-inline: auto; }
+
+.vfd-alert {
+  margin-top: 20px;
+  padding: 12px 16px;
+  border-radius: 14px;
+  background: var(--vd-risk-bg);
+  color: var(--vd-risk);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* ── Barra: busca + match ─────────────────────────────────────────────── */
+
+.vfd-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 380px);
+  align-items: end;
+  gap: 16px;
+  margin-top: 24px;
+  padding: 16px;
+  border-radius: 20px;
+  background: var(--vd-card);
+  border: 1px solid var(--vd-line);
+}
+.vfd-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 0 14px;
+  border-radius: 14px;
+  background: var(--vd-tint);
+  border: 1px solid transparent;
+  color: var(--vd-ink-soft);
+  cursor: text;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.vfd-search:focus-within { border-color: var(--virla-brand); box-shadow: 0 0 0 3px var(--virla-focus); }
+.vfd-search svg { flex: none; font-size: 20px; }
+.vfd-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font-size: 15px;
+  color: var(--vd-ink);
+}
+.vfd-search input::placeholder { color: var(--vd-ink-soft); opacity: 0.8; }
+.vfd-toolbar-hint { align-self: center; font-size: 13.5px; color: var(--vd-ink-soft); }
+
+.vfd-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px 24px;
+  margin: 22px 2px 14px;
+  font-size: 14px;
+  color: var(--vd-ink-soft);
+}
+.vfd-meta strong { color: var(--vd-ink); font-weight: 700; }
+.vfd-meta-note { max-width: 620px; font-size: 12.5px; }
+
+/* ── Lista e cartão ───────────────────────────────────────────────────── */
+
+.vfd-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 470px), 1fr));
+  gap: 20px;
+  align-items: start;
+}
+
+.vfd-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+  border-radius: 24px;
+  background: var(--vd-card);
+  border: 1px solid var(--vd-line);
+  box-shadow: 0 10px 34px rgba(62, 24, 62, 0.05);
+}
+
+.vfd-top { display: flex; gap: 18px; min-width: 0; }
+
+.vfd-photo {
+  flex: none;
+  width: 124px;
+  height: 140px;
+  border-radius: 18px;
+  overflow: hidden;
+  background: var(--vd-tint);
+}
+.vfd-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.vfd-photo.is-initials {
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(90% 80% at 20% 10%, rgba(255, 255, 255, 0.55), transparent 60%),
+    linear-gradient(160deg, var(--virla-brand-soft), #c79ad0);
+}
+.vfd-photo.is-initials span {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 44px;
+  font-weight: 800;
+  color: var(--virla-brand-deep);
+}
+:root[data-theme='dark'] .vfd-photo.is-initials {
+  background:
+    radial-gradient(90% 80% at 20% 10%, rgba(255, 255, 255, 0.08), transparent 60%),
+    linear-gradient(160deg, #4a1f52, #2b0b2f);
+}
+:root[data-theme='dark'] .vfd-photo.is-initials span { color: var(--vd-accent); }
+
+.vfd-id { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.vfd-name-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.vfd-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  margin: 0;
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 25px;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  color: var(--vd-ink);
+}
+.vfd-name > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vfd-card .vfd-seal { flex: none; color: var(--vd-ok); }
+.vfd-place {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  flex: none;
+  max-width: 45%;
+  padding-top: 6px;
+  font-size: 12.5px;
+  color: var(--vd-ink-soft);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.vfd-place svg { font-size: 15px; }
+
+.vfd-summary {
+  display: -webkit-box;
+  margin-top: 6px;
+  overflow: hidden;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--vd-ink-soft);
+}
+.vfd-summary.is-empty { font-style: italic; opacity: 0.8; }
+
+.vfd-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; padding-top: 12px; }
+.vfd-chips li {
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: var(--vd-tint);
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--vd-ink-soft);
+}
+.vfd-chips li.is-strong { font-weight: 700; color: var(--vd-ink); font-variant-numeric: tabular-nums; }
+
+.vfd-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.vfd-tags li {
+  padding: 5px 11px;
+  border-radius: 999px;
+  border: 1px solid var(--vd-line);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--virla-brand);
+}
+:root[data-theme='dark'] .vfd-tags li { color: var(--vd-accent); }
+.vfd-tags li.is-more { border-style: dashed; color: var(--vd-ink-soft); }
+
+/* Ações */
+.vfd-cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 14px 18px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--virla-brand);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.16s ease;
+}
+.vfd-cta:hover { background: var(--virla-brand-deep); }
+.vfd-cta:focus-visible { outline: 3px solid var(--virla-focus); outline-offset: 2px; }
+.vfd-cta svg { font-size: 20px; }
+
+.vfd-more {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin: 0 -20px -20px;
+  padding: 14px 20px 18px;
+  border-top: 1px solid var(--vd-line);
+}
+.vfd-more p { min-width: 0; font-size: 13px; line-height: 1.45; color: var(--vd-ink-soft); }
+.vfd-more strong { display: block; font-size: 14px; font-weight: 700; color: var(--vd-ink); }
+.vfd-more-btn {
+  flex: none;
+  padding: 10px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--vd-line);
+  background: var(--vd-card);
+  color: var(--vd-ink);
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+.vfd-more-btn:hover { border-color: var(--virla-brand); color: var(--virla-brand); }
+:root[data-theme='dark'] .vfd-more-btn:hover { border-color: var(--vd-accent); color: var(--vd-accent); }
+.vfd-more-btn:focus-visible { outline: 3px solid var(--virla-focus); outline-offset: 2px; }
+
+.vfd-empty { margin-top: 8px; }
+
+/* Paginação */
+.vfd-pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 32px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--vd-ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+.vfd-pager button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--vd-line);
+  background: var(--vd-card);
+  color: var(--vd-ink);
+  font-weight: 700;
+  cursor: pointer;
+}
+.vfd-pager button:not(:disabled):hover { border-color: var(--virla-brand); color: var(--virla-brand); }
+.vfd-pager button:disabled { opacity: 0.4; cursor: not-allowed; }
+.vfd-pager svg { font-size: 20px; }
+
+/* ── Responsivo ───────────────────────────────────────────────────────── */
+
+@media (max-width: 860px) {
+  .vfd-toolbar { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (max-width: 600px) {
+  .vfd-toolbar { padding: 12px; border-radius: 18px; }
+  .vfd-card { padding: 16px; border-radius: 20px; gap: 14px; }
+  .vfd-top { gap: 14px; }
+  .vfd-photo { width: 84px; height: 96px; border-radius: 14px; }
+  .vfd-photo.is-initials span { font-size: 32px; }
+  .vfd-name { font-size: 21px; }
+  .vfd-name-row { flex-direction: column; gap: 2px; }
+  .vfd-place { max-width: 100%; padding-top: 0; }
+  .vfd-more { flex-direction: column; align-items: stretch; margin: 0 -16px -16px; padding: 14px 16px 16px; }
+  .vfd-more-btn { width: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vfd-cta,
+  .vfd-more-btn,
+  .vfd-search { transition: none; }
+}

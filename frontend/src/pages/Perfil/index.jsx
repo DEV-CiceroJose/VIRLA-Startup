@@ -1,9 +1,8 @@
 import { useEffect, useState, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import Person from '@mui/icons-material/Person'
-import CalendarMonth from '@mui/icons-material/CalendarMonth'
-import Cake from '@mui/icons-material/Cake'
+import VerifiedUserOutlined from '@mui/icons-material/VerifiedUserOutlined'
 import Description from '@mui/icons-material/Description'
 import Save from '@mui/icons-material/Save'
 import DeleteForever from '@mui/icons-material/DeleteForever'
@@ -17,25 +16,28 @@ import LocationOn from '@mui/icons-material/LocationOn'
 import api from '../../services/api'
 import { calculateAge } from '../../utils/dateUtils'
 import ProfileImageUpload from '../../components/ProfileImageUpload'
-import ProfileCompleteness from '../../components/ProfileCompleteness'
-import { Field, Button, Card, Alert, ConfirmDialog, Badge as DSBadge, TagSelect } from '../../components/ui'
+import { computeCompleteness } from '../../components/ProfileCompleteness/completeness'
+import '../../design-system/own-profile.css'
+import { Field, Button, Alert, ConfirmDialog, TagSelect, DatePickerField } from '../../components/ui'
+import CepField from '../../components/ui/CepField'
 import { hasPasswordProvider, linkPassword, mapAuthError } from '../../services/auth'
 import { COUNCILS, isValidRegister } from '../../constants/councils'
-import { STATES } from '../../constants/states'
 import { SPECIALTIES, SPECIALTY_VALUES } from '../../constants/specialties'
 import { TURNOS, FREQUENCIAS, TURNO_VALUES, FREQUENCIA_VALUES } from '../../constants/solicitacaoOptions'
-import { lookupCep } from '../../services/viacep'
 import { maskCep, maskCurrencyInput, parseCurrencyInput } from '../../utils/formatters'
 
-function SectionTitle({ icon: Icon, children }) {
-  return (
-    <h2 className="flex items-center gap-2 font-bold text-virla-texto text-base mb-4">
-      <Icon sx={{ fontSize: 20 }} className="text-virla-roxo" />
-      {children}
-    </h2>
-  )
+function initials(name = '') {
+  const parts = String(name).trim().split(/\s+/).filter(Boolean)
+  if (parts.length === 0) return '?'
+  return `${parts[0][0]}${parts.length > 1 ? parts[parts.length - 1][0] : ''}`.toUpperCase()
 }
 
+const VERIFICATION = {
+  NAO_ENVIADO: { tone: 'brand', title: 'Verificação pendente', text: 'Envie seus documentos para aparecer às famílias.' },
+  EM_ANALISE: { tone: 'wait', title: 'Documentos em análise', text: 'Avisamos quando a equipe terminar.' },
+  APROVADO: { tone: 'ok', title: 'Perfil verificado', text: 'Documentos e antecedentes conferidos.' },
+  REPROVADO: { tone: 'risk', title: 'Verificação reprovada', text: 'Veja o motivo e envie de novo.' },
+}
 function emptyUserForm() {
   return {
     name: '',
@@ -53,6 +55,8 @@ function emptyUserForm() {
     serviceFrequencies: [],
     description: '',
     zipCode: '',
+    street: '',
+    neighborhood: '',
     city: '',
     state: '',
   }
@@ -87,28 +91,18 @@ function mapUserToForm(user) {
       ? user.serviceFrequencies.filter((value) => FREQUENCIA_VALUES.includes(value))
       : [],
     description: user.description ?? '',
-    zipCode: user.zipCode ?? '',
+    zipCode: user.zipCode ? maskCep(user.zipCode) : '',
+    street: user.street ?? '',
+    neighborhood: user.neighborhood ?? '',
     city: user.city ?? '',
     state: user.state ?? '',
   }
 }
 
-function PerfilFormSkeleton() {
-  return (
-    <div className="max-w-2xl mx-auto px-6 py-10 space-y-6 animate-pulse">
-      <div className="h-9 bg-virla-roxo/15 rounded w-48" />
-      <div className="h-4 bg-virla-roxo/10 rounded w-64" />
-      <div className="bg-white/80 rounded-2xl border border-virla-roxo/10 p-6 space-y-4">
-        {[1, 2, 3, 4, 5, 6].map((i) => (
-          <div key={i} className="h-12 bg-virla-roxo/10 rounded-xl" />
-        ))}
-      </div>
-    </div>
-  )
-}
-
 export default function Perfil() {
   const navigate = useNavigate()
+  // Status de verificação e data do aceite (só leitura; não entram no formulário).
+  const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -135,6 +129,7 @@ export default function Perfil() {
         const res = await api.get(`/users/${id}`)
         const user = res.data.user ?? res.data
         setUserData(mapUserToForm(user))
+        setProfile({ verificationStatus: user?.verificationStatus, termsAcceptedAt: user?.termsAcceptedAt })
       } catch {
         setMessage({ type: 'error', text: 'Erro ao carregar dados do perfil.' })
       } finally {
@@ -168,14 +163,17 @@ export default function Perfil() {
         birthDate: userData.birthDate ? new Date(userData.birthDate).toISOString() : undefined,
         bio: userData.bio,
         profileImage: userData.profileImage.trim() || null,
+        // Endereço vem do CEP (ViaCEP) para família e cuidador.
+        zipCode: userData.zipCode.trim() || null,
+        street: userData.street.trim() || null,
+        neighborhood: userData.neighborhood.trim() || null,
+        city: userData.city.trim() || null,
+        state: userData.state.trim() || null,
       }
       let payload = basePayload
       if (!isFamiliar) {
         payload = {
           ...basePayload,
-          zipCode: userData.zipCode.trim() || null,
-          city: userData.city.trim() || null,
-          state: userData.state.trim() || null,
           council: userData.council || null,
           registerNumber: userData.registerNumber.trim() || null,
           approach: userData.approach.trim() || null,
@@ -198,20 +196,15 @@ export default function Perfil() {
     }
   }
 
-  async function handleZipCodeChange(e) {
-    const masked = maskCep(e.target.value)
-    setUserData((prev) => ({ ...prev, zipCode: masked }))
-    const digits = masked.replace(/\D/g, '')
-    if (digits.length === 8) {
-      const result = await lookupCep(digits)
-      if (result) {
-        setUserData((prev) => ({
-          ...prev,
-          city: result.city || prev.city,
-          state: result.state || prev.state,
-        }))
-      }
-    }
+  // CEP único: o endereço (rua, bairro, cidade, UF) vem do ViaCEP.
+  function handleCepResolve(address) {
+    setUserData((prev) => ({
+      ...prev,
+      street: address?.street ?? '',
+      neighborhood: address?.neighborhood ?? '',
+      city: address?.city ?? '',
+      state: address?.state ?? '',
+    }))
   }
 
   async function handleCriarSenha(e) {
@@ -254,9 +247,7 @@ export default function Perfil() {
 
   if (loading) {
     return (
-      <PageLoader label="Carregando perfil…">
-        <PerfilFormSkeleton />
-      </PageLoader>
+      <PageLoader label="Carregando perfil…" />
     )
   }
 
@@ -264,255 +255,240 @@ export default function Perfil() {
   const isFamiliar = userData.role === 'FAMILIAR'
   const bioLength = (userData.bio ?? '').length
   const bioOverLimit = bioLength > 1900
+  const { percent, missing } = computeCompleteness(userData, userData.role)
+  const verification = VERIFICATION[profile?.verificationStatus ?? 'NAO_ENVIADO'] ?? VERIFICATION.NAO_ENVIADO
+  const sections = [
+    { id: 'pf-dados', label: 'Dados pessoais' },
+    { id: 'pf-foto', label: isFamiliar ? 'Foto de perfil' : 'Foto e valor' },
+    ...(!isFamiliar ? [{ id: 'pf-profissional', label: 'Perfil profissional' }] : []),
+    { id: 'pf-local', label: isFamiliar ? 'Onde você mora' : 'Onde você atende' },
+    { id: 'pf-conta', label: 'Conta e segurança' },
+  ]
 
   return (
-    <div
-      className="comfort-page comfort-own-profile min-h-screen pt-16 bg-virla-neve"
-      style={{
-        backgroundImage:
-          'radial-gradient(ellipse 70% 50% at 30% 0%, rgba(128,0,128,0.07), transparent)',
-      }}
-    >
-      <div className="comfort-content max-w-2xl mx-auto px-6 py-10 space-y-6">
-        <div className="animate-fade-up">
-          <h1 className="text-3xl font-display font-black text-virla-roxo">Meu Perfil</h1>
-          <p className="text-virla-muted text-sm mt-1">Gerencie suas informações pessoais e profissionais</p>
-        </div>
-
-        <ProfileCompleteness userData={userData} role={userData.role} />
+    <div className="comfort-page min-h-screen pt-16">
+      <div className="vd-dash pf-page">
+        <header className="vd-greeting">
+          <h1>Meu perfil</h1>
+          <p>{isFamiliar ? 'Seus dados e como você aparece para os cuidadores.' : 'Como as famílias veem você e o que usamos para o match.'}</p>
+        </header>
 
         {message.text && (
-          <Alert tone={message.type === 'success' ? 'success' : 'error'}>{message.text}</Alert>
+          <Alert tone={message.type === 'success' ? 'success' : 'error'} className="pf-alert">{message.text}</Alert>
         )}
 
-        <Card className="p-6">
-          <SectionTitle icon={Person}>Informações Pessoais</SectionTitle>
+        <div className="pf-layout">
+          <aside className="pf-aside">
+            <div className="pf-id">
+              <div className="pf-photo">
+                {userData.profileImage ? <img src={userData.profileImage} alt="" /> : <span aria-hidden>{initials(userData.name)}</span>}
+              </div>
+              <strong className="pf-name">{userData.name || 'Seu nome'}</strong>
+              <span className="pf-role">{isFamiliar ? 'Família' : 'Cuidador profissional'}{age !== null ? ` · ${age} anos` : ''}</span>
 
-          <form onSubmit={handleUpdate} className="space-y-4">
-            <div>
-              <label className="block text-xs font-semibold text-virla-muted uppercase tracking-wide mb-1.5">
-                Tipo de conta
-              </label>
-              <DSBadge tone="roxo">
-                {userData.role === 'CUIDADOR' ? 'Cuidador Profissional' : 'Familiar'}
-              </DSBadge>
+              <div className="pf-complete" aria-live="polite">
+                <div className="pf-complete-head">
+                  <span>Perfil {percent}% completo</span>
+                </div>
+                <div className="pf-bar" role="progressbar" aria-valuenow={percent} aria-valuemin={0} aria-valuemax={100} aria-label="Perfil completo">
+                  <span style={{ width: `${percent}%` }} />
+                </div>
+                {missing.length > 0 && <p>Faltam: {missing.join(', ')}</p>}
+              </div>
+
+              {!isFamiliar && (
+                <Link to="/verificacao" className={`pf-verify tone-${verification.tone}`}>
+                  <VerifiedUserOutlined aria-hidden />
+                  <span>
+                    <strong>{verification.title}</strong>
+                    <small>{verification.text}</small>
+                  </span>
+                </Link>
+              )}
             </div>
 
-            <Field
-              label="Nome completo"
-              icon={Person}
-              type="text"
-              value={userData.name}
-              onChange={(e) => setUserData({ ...userData, name: e.target.value })}
-            />
+            <nav className="pf-nav" aria-label="Seções do perfil">
+              {sections.map((s) => <a key={s.id} href={`#${s.id}`}>{s.label}</a>)}
+            </nav>
+          </aside>
 
-            <Field
-              label="E-mail (não editável)"
-              type="text"
-              value={userData.email}
-              disabled
-            />
-
-            <Field
-              label="Data de Nascimento"
-              icon={CalendarMonth}
-              type="date"
-              value={userData.birthDate ? userData.birthDate.split('T')[0] : ''}
-              onChange={(e) => setUserData({ ...userData, birthDate: e.target.value })}
-              max={new Date().toISOString().split('T')[0]}
-            />
-            {age !== null && (
-              <p className="!mt-1.5 flex items-center gap-1.5 text-xs text-virla-roxo/70 font-medium">
-                <Cake sx={{ fontSize: 14 }} />
-                {age} anos
-              </p>
-            )}
-
-            <Field
-              as="textarea"
-              label="Bio / Apresentação"
-              icon={Description}
-              rows={4}
-              value={userData.bio ?? ''}
-              onChange={(e) => setUserData({ ...userData, bio: e.target.value })}
-              placeholder="Resumo curto para o feed…"
-              hint={bioOverLimit ? undefined : `${bioLength}/2000`}
-              error={bioOverLimit ? `${bioLength}/2000` : undefined}
-            />
-
-            <div className="pt-2 border-t border-virla-roxo/10">
-              <SectionTitle icon={Image}>{isFamiliar ? 'Foto de perfil' : 'Imagem e valor'}</SectionTitle>
-            </div>
-
-            <ProfileImageUpload
-              value={userData.profileImage}
-              onChange={(v) => setUserData({ ...userData, profileImage: v })}
-            />
-
-            {!isFamiliar && (
-              <>
-                <Field
-                  label="Valor por hora (R$)"
-                  icon={Payments}
-                  type="text"
-                  inputMode="numeric"
-                  value={userData.hourlyRate}
-                  onChange={(e) => setUserData({ ...userData, hourlyRate: maskCurrencyInput(e.target.value) })}
-                  placeholder="R$ 0,00"
-                />
-
-                <Field
-                  as="select"
-                  label="Conselho profissional"
-                  icon={Badge}
-                  value={userData.council}
-                  onChange={(e) => setUserData({ ...userData, council: e.target.value })}
-                >
-                  <option value="">Selecione…</option>
-                  {COUNCILS.map((c) => (
-                    <option key={c.value} value={c.value}>
-                      {c.label}
-                    </option>
-                  ))}
-                </Field>
-
-                <Field
-                  label="Registro profissional (COREN, CRP, etc.)"
-                  icon={Badge}
-                  type="text"
-                  value={userData.registerNumber}
-                  onChange={(e) => setUserData({ ...userData, registerNumber: e.target.value })}
-                  placeholder="Número do conselho"
-                  error={fieldErrors.registerNumber}
-                />
-
-                <Field
-                  label="Abordagem (ex.: TCC, home care)"
-                  icon={Psychology}
-                  type="text"
-                  value={userData.approach}
-                  onChange={(e) => setUserData({ ...userData, approach: e.target.value })}
-                />
-
-                <TagSelect
-                  label="Especialidades"
-                  options={SPECIALTIES}
-                  value={userData.specialties}
-                  onChange={(specialties) => setUserData({ ...userData, specialties })}
-                  max={12}
-                />
-
-                <TagSelect
-                  label="Turnos disponíveis"
-                  options={TURNOS}
-                  value={userData.availableShifts}
-                  onChange={(availableShifts) => setUserData({ ...userData, availableShifts })}
-                  max={TURNOS.length}
-                />
-
-                <TagSelect
-                  label="Frequências de atendimento"
-                  options={FREQUENCIAS}
-                  value={userData.serviceFrequencies}
-                  onChange={(serviceFrequencies) => setUserData({ ...userData, serviceFrequencies })}
-                  max={FREQUENCIAS.length}
-                />
-
+          <div className="pf-main">
+            <form onSubmit={handleUpdate} className="pf-form">
+              <section id="pf-dados" className="pf-panel" aria-labelledby="pf-dados-t">
+                <h2 id="pf-dados-t"><Person aria-hidden /> Dados pessoais</h2>
+                <div className="pf-grid">
+                  <Field
+                    label="Nome completo"
+                    icon={Person}
+                    type="text"
+                    value={userData.name}
+                    onChange={(e) => setUserData({ ...userData, name: e.target.value })}
+                  />
+                  <Field label="E-mail (não editável)" type="text" value={userData.email} disabled />
+                </div>
+                <div className="pf-grid">
+                  <DatePickerField
+                    label="Data de Nascimento"
+                    shortcuts={false}
+                    placeholder="dd/mm/aaaa"
+                    value={userData.birthDate ? userData.birthDate.split('T')[0] : ''}
+                    onChange={(e) => setUserData({ ...userData, birthDate: e.target.value })}
+                    max={new Date().toISOString().split('T')[0]}
+                    hint={age !== null ? `${age} anos` : undefined}
+                  />
+                  <div className="pf-readonly">
+                    <span>Tipo de conta</span>
+                    <strong>{isFamiliar ? 'Família' : 'Cuidador profissional'}</strong>
+                  </div>
+                </div>
                 <Field
                   as="textarea"
-                  label="Descrição longa (opcional)"
+                  label="Bio / Apresentação"
+                  icon={Description}
                   rows={4}
-                  value={userData.description}
-                  onChange={(e) => setUserData({ ...userData, description: e.target.value })}
-                  placeholder="Currículo, experiência, formação…"
+                  value={userData.bio ?? ''}
+                  onChange={(e) => setUserData({ ...userData, bio: e.target.value })}
+                  placeholder="Resumo curto para o feed…"
+                  hint={bioOverLimit ? undefined : `${bioLength}/2000`}
+                  error={bioOverLimit ? `${bioLength}/2000` : undefined}
                 />
-              </>
-            )}
+              </section>
 
-            {!isFamiliar && (
-              <>
-                <Field
-                  label="CEP"
-                  icon={LocationOn}
-                  type="text"
-                  inputMode="numeric"
-                  value={userData.zipCode}
-                  onChange={handleZipCodeChange}
-                  maxLength={9}
-                  placeholder="00000-000"
+              <section id="pf-foto" className="pf-panel" aria-labelledby="pf-foto-t">
+                <h2 id="pf-foto-t"><Image aria-hidden /> {isFamiliar ? 'Foto de perfil' : 'Foto e valor'}</h2>
+                <ProfileImageUpload
+                  value={userData.profileImage}
+                  onChange={(v) => setUserData({ ...userData, profileImage: v })}
                 />
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {!isFamiliar && (
                   <Field
-                    label="Cidade"
-                    value={userData.city}
-                    onChange={(e) => setUserData({ ...userData, city: e.target.value })}
+                    label="Valor por hora (R$)"
+                    icon={Payments}
+                    type="text"
+                    inputMode="numeric"
+                    value={userData.hourlyRate}
+                    onChange={(e) => setUserData({ ...userData, hourlyRate: maskCurrencyInput(e.target.value) })}
+                    placeholder="R$ 0,00"
+                  />
+                )}
+              </section>
+
+              {!isFamiliar && (
+                <section id="pf-profissional" className="pf-panel" aria-labelledby="pf-prof-t">
+                  <h2 id="pf-prof-t"><Psychology aria-hidden /> Perfil profissional</h2>
+                  <div className="pf-grid">
+                    <Field
+                      as="select"
+                      label="Conselho profissional"
+                      icon={Badge}
+                      value={userData.council}
+                      onChange={(e) => setUserData({ ...userData, council: e.target.value })}
+                    >
+                      <option value="">Selecione…</option>
+                      {COUNCILS.map((c) => (
+                        <option key={c.value} value={c.value}>{c.label}</option>
+                      ))}
+                    </Field>
+                    <Field
+                      label="Registro profissional (COREN, CRP, etc.)"
+                      icon={Badge}
+                      type="text"
+                      value={userData.registerNumber}
+                      onChange={(e) => setUserData({ ...userData, registerNumber: e.target.value })}
+                      placeholder="Número do conselho"
+                      error={fieldErrors.registerNumber}
+                    />
+                  </div>
+                  <Field
+                    label="Abordagem (ex.: TCC, home care)"
+                    icon={Psychology}
+                    type="text"
+                    value={userData.approach}
+                    onChange={(e) => setUserData({ ...userData, approach: e.target.value })}
+                  />
+                  <TagSelect
+                    label="Especialidades"
+                    options={SPECIALTIES}
+                    value={userData.specialties}
+                    onChange={(specialties) => setUserData({ ...userData, specialties })}
+                    max={12}
+                  />
+                  <TagSelect
+                    label="Turnos disponíveis"
+                    options={TURNOS}
+                    value={userData.availableShifts}
+                    onChange={(availableShifts) => setUserData({ ...userData, availableShifts })}
+                    max={TURNOS.length}
+                  />
+                  <TagSelect
+                    label="Frequências de atendimento"
+                    options={FREQUENCIAS}
+                    value={userData.serviceFrequencies}
+                    onChange={(serviceFrequencies) => setUserData({ ...userData, serviceFrequencies })}
+                    max={FREQUENCIAS.length}
                   />
                   <Field
-                    as="select"
-                    label="Estado (UF)"
-                    value={userData.state}
-                    onChange={(e) => setUserData({ ...userData, state: e.target.value })}
-                  >
-                    <option value="">Selecione…</option>
-                    {STATES.map((s) => (
-                      <option key={s.value} value={s.value}>
-                        {s.label}
-                      </option>
-                    ))}
-                  </Field>
+                    as="textarea"
+                    label="Descrição longa (opcional)"
+                    rows={4}
+                    value={userData.description}
+                    onChange={(e) => setUserData({ ...userData, description: e.target.value })}
+                    placeholder="Currículo, experiência, formação…"
+                  />
+                </section>
+              )}
+
+              <section id="pf-local" className="pf-panel" aria-labelledby="pf-local-t">
+                <h2 id="pf-local-t"><LocationOn aria-hidden /> {isFamiliar ? 'Onde você mora' : 'Onde você atende'}</h2>
+                <CepField
+                  value={userData.zipCode}
+                  address={userData}
+                  onChange={(zipCode) => setUserData((prev) => ({ ...prev, zipCode }))}
+                  onResolve={handleCepResolve}
+                  hint={isFamiliar ? 'Usamos para mostrar cuidadores perto de você.' : 'Rua e bairro ficam só com você; as famílias veem a cidade.'}
+                />
+              </section>
+              <div className="pf-savebar">
+                <span>As alterações só valem depois de salvar.</span>
+                <Button type="submit" loading={saving} disabled={deleting} icon={Save}>
+                  {saving ? 'Salvando…' : 'Salvar alterações'}
+                </Button>
+              </div>
+            </form>
+
+            <section id="pf-conta" className="pf-panel" aria-labelledby="pf-conta-t">
+              <h2 id="pf-conta-t"><Shield aria-hidden /> Conta e segurança</h2>
+
+              {needsPassword && !passwordLinked && (
+                <form onSubmit={handleCriarSenha} className="pf-password">
+                  <div>
+                    <strong>Criar senha</strong>
+                    <p>Você entrou com o Google. Crie uma senha para também poder entrar com e-mail e senha.</p>
+                  </div>
+                  <div className="pf-grid">
+                    <input ref={novaSenha} type="password" placeholder="Nova senha (mín. 6 caracteres)" autoComplete="new-password" className="pf-input" aria-label="Nova senha" />
+                    <input ref={confirmaNovaSenha} type="password" placeholder="Confirmar nova senha" autoComplete="new-password" className="pf-input" aria-label="Confirmar nova senha" />
+                  </div>
+                  <Button type="submit" loading={linkingPwd} variant="secondary">Criar senha</Button>
+                </form>
+              )}
+
+              <div className="pf-legal">
+                <span>Você aceitou os <Link to="/termos">Termos de Uso</Link> e a <Link to="/privacidade">Política de Privacidade</Link>{profile?.termsAcceptedAt ? ` em ${new Date(profile.termsAcceptedAt).toLocaleDateString('pt-BR')}` : ''}.</span>
+              </div>
+
+              <div className="pf-danger">
+                <div>
+                  <strong>Excluir conta</strong>
+                  <p>Ação <b>permanente e irreversível</b>. Todos os seus dados são removidos do sistema.</p>
                 </div>
-              </>
-            )}
-
-            <Button type="submit" fullWidth loading={saving} disabled={deleting} icon={Save} className="mt-2">
-              {saving ? 'Salvando…' : 'Salvar alterações'}
-            </Button>
-          </form>
-        </Card>
-
-        {needsPassword && !passwordLinked && (
-          <Card as="form" onSubmit={handleCriarSenha} className="mt-6 p-6 space-y-4">
-            <h3 className="text-lg font-bold text-virla-texto">Criar senha</h3>
-            <p className="text-sm text-virla-muted">
-              Você entrou com o Google. Crie uma senha para também poder entrar com e-mail e senha.
-            </p>
-            <input
-              ref={novaSenha}
-              type="password"
-              placeholder="Nova senha (mín. 6 caracteres)"
-              autoComplete="new-password"
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-virla-texto text-sm focus:outline-none focus:ring-2 focus:ring-virla-roxo/30 focus:border-virla-roxo transition-all duration-200"
-            />
-            <input
-              ref={confirmaNovaSenha}
-              type="password"
-              placeholder="Confirmar nova senha"
-              autoComplete="new-password"
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-virla-texto text-sm focus:outline-none focus:ring-2 focus:ring-virla-roxo/30 focus:border-virla-roxo transition-all duration-200"
-            />
-            <Button type="submit" loading={linkingPwd}>Criar senha</Button>
-          </Card>
-        )}
-
-        <Card className="border-red-200 p-6">
-          <SectionTitle icon={Shield}>Zona de perigo</SectionTitle>
-
-          <p className="text-sm text-virla-muted mb-4">
-            Excluir sua conta é uma ação <strong>permanente e irreversível</strong>. Todos os seus dados serão removidos
-            do sistema.
-          </p>
-
-          <Button
-            variant="danger"
-            size="sm"
-            icon={DeleteForever}
-            onClick={() => setConfirmDelete(true)}
-            disabled={deleting || saving}
-          >
-            Excluir minha conta permanentemente
-          </Button>
-        </Card>
+                <Button variant="danger" size="sm" icon={DeleteForever} onClick={() => setConfirmDelete(true)} disabled={deleting || saving}>
+                  Excluir minha conta permanentemente
+                </Button>
+              </div>
+            </section>
+          </div>
+        </div>
       </div>
 
       <ConfirmDialog

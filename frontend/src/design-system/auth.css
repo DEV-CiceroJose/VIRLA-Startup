@@ -1,0 +1,382 @@
+/*
+ * VIRLA — Login e Cadastro (prefixo va-)
+ * Cartão translúcido no centro sobre as linhas animadas do Background Paths
+ * (Kokonut UI, 21st.dev). Cadastro em etapas com Stepper (Origin UI).
+ */
+
+.va-page {
+  --va-path: #800080;
+  position: relative;
+  isolation: isolate;
+  min-height: 100vh;
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: clamp(18px, 3vw, 36px);
+  background: var(--vd-canvas);
+  color: var(--vd-ink);
+}
+:root[data-theme='dark'] .va-page { --va-path: #e2bfe8; }
+
+/* ── Fundo animado (Background Paths) ─────────────────────────────────── */
+
+.va-bg {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  color: var(--va-path);
+}
+/* Véu no centro: as linhas somem atrás do cartão e ficam vivas nas bordas. */
+.va-bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 46% 60% at 50% 52%, var(--vd-canvas) 30%, transparent 100%);
+  opacity: 0.85;
+}
+.va-paths { position: absolute; inset: 0; width: 100%; height: 100%; }
+.va-paths path {
+  stroke: currentColor;
+  stroke-dasharray: 0.42 0.58;
+  stroke-linecap: round;
+  animation-name: va-flow;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+@keyframes va-flow {
+  from { stroke-dashoffset: 0; }
+  to { stroke-dashoffset: -1; }
+}
+
+/* ── Topo e cartão ────────────────────────────────────────────────────── */
+
+.va-top { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.va-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 24px;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+  color: var(--virla-brand);
+}
+.va-brand img { width: 32px; height: 32px; border-radius: 9px; }
+:root[data-theme='dark'] .va-brand { color: var(--vd-ink); }
+.va-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--vd-ink-soft);
+}
+.va-back svg { font-size: 17px; }
+.va-top-actions { display: flex; align-items: center; gap: 6px; }
+.va-theme {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--vd-line);
+  border-radius: 12px;
+  background: var(--vd-card);
+  color: var(--vd-ink-soft);
+  cursor: pointer;
+}
+.va-theme:hover { color: var(--virla-brand); border-color: var(--virla-brand); }
+:root[data-theme='dark'] .va-theme:hover { color: var(--vd-accent); border-color: var(--vd-accent); }
+.va-theme:focus-visible { outline: 3px solid var(--virla-focus); outline-offset: 2px; }
+.va-theme svg { font-size: 20px !important; }
+.va-back:hover { color: var(--virla-brand); }
+:root[data-theme='dark'] .va-back:hover { color: var(--vd-accent); }
+
+.va-card {
+  width: 100%;
+  max-width: 480px;
+  margin: auto;
+  padding: clamp(24px, 3vw, 36px);
+  border-radius: 28px;
+  border: 1px solid var(--vd-line);
+  background: color-mix(in srgb, var(--vd-card) 84%, transparent);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 30px 80px -40px rgba(62, 24, 62, 0.35);
+  animation: va-rise 0.5s ease-out both;
+}
+.va-top { margin-bottom: 28px; }
+.va-legal-links {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 20px;
+  font-size: 12.5px;
+  color: var(--vd-ink-soft);
+}
+.va-legal-links a { color: var(--vd-ink-soft); text-decoration: underline; text-underline-offset: 3px; }
+.va-legal-links a:hover { color: var(--vd-ink); }
+
+.va-head h1 {
+  margin: 0;
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: clamp(32px, 3vw, 40px);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: var(--vd-ink);
+}
+.va-head p { margin-top: 8px; font-size: 15px; line-height: 1.55; color: var(--vd-ink-soft); }
+
+.va-form { display: grid; gap: 16px; margin-top: 28px; }
+
+.va-panel { display: grid; gap: 16px; animation: va-in 0.32s ease-out; }
+.va-panel[hidden] { display: none !important; }
+.va-grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+
+.va-row-end { display: flex; justify-content: flex-end; margin-top: -6px; }
+.va-link {
+  border: 0;
+  background: none;
+  padding: 2px 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--virla-brand);
+  cursor: pointer;
+}
+.va-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+:root[data-theme='dark'] .va-link { color: var(--vd-accent); }
+
+/* Campos no tema escuro (Field, DatePickerField, SelectField e upload usam
+   classes claras do Tailwind; aqui seguem os tokens --vd-*). */
+:root[data-theme='dark'] .va-page :is(input:not([type='radio']):not([type='file']), button[role='combobox']) {
+  background-color: var(--vd-card) !important;
+  border-color: var(--vd-line) !important;
+  color: var(--vd-ink) !important;
+}
+:root[data-theme='dark'] .va-page :is(input, button[role='combobox']):focus { border-color: var(--vd-accent) !important; }
+:root[data-theme='dark'] .va-page input::placeholder { color: var(--vd-ink-soft) !important; }
+:root[data-theme='dark'] .va-page .relative > svg { color: var(--vd-accent) !important; opacity: 0.75; }
+:root[data-theme='dark'] .va-page button[role='combobox'] span { color: inherit; }
+:root[data-theme='dark'] .va-page button[role='combobox'] > span:first-child:not(.font-semibold) { color: var(--vd-ink-soft); }
+:root[data-theme='dark'] .va-page .va-panel label:not(.va-role) { color: var(--vd-ink-soft) !important; }
+:root[data-theme='dark'] .va-page button[class*='bg-virla-roxo/5'] {
+  background-color: var(--vd-tint) !important;
+  border-color: var(--vd-line) !important;
+  color: var(--vd-accent) !important;
+}
+:root[data-theme='dark'] .va-page .va-form > .space-y-1\.5 label,
+:root[data-theme='dark'] .va-page .va-password label { color: var(--vd-ink-soft) !important; }
+
+/* Senha com mostrar/ocultar */
+.va-password { position: relative; }
+.va-eye {
+  position: absolute;
+  right: 6px;
+  bottom: 5px;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: var(--vd-ink-soft);
+  cursor: pointer;
+}
+.va-eye:hover { background: var(--vd-tint); color: var(--virla-brand); }
+.va-eye svg { font-size: 19px; }
+
+/* Botões */
+.va-actions { display: flex; gap: 10px; margin-top: 6px; }
+.va-primary,
+.va-secondary,
+.va-google {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 50px;
+  padding: 0 20px;
+  border-radius: 14px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.16s ease, border-color 0.16s ease, transform 0.16s ease;
+}
+.va-primary { flex: 1; border: 0; background: var(--virla-brand); color: #fff; }
+.va-primary:hover:not(:disabled) { background: #5a0a5a; }
+.va-primary svg,
+.va-secondary svg { font-size: 19px; }
+.va-secondary { border: 1px solid var(--vd-line); background: var(--vd-card); color: var(--vd-ink); }
+.va-secondary:hover:not(:disabled) { border-color: var(--virla-brand); }
+.va-google { width: 100%; border: 1px solid var(--vd-line); background: var(--vd-card); color: var(--vd-ink); font-weight: 600; }
+.va-google:hover:not(:disabled) { background: var(--vd-tint); }
+.va-primary:disabled,
+.va-secondary:disabled,
+.va-google:disabled { opacity: 0.55; cursor: not-allowed; }
+.va-primary:focus-visible,
+.va-secondary:focus-visible,
+.va-google:focus-visible,
+.va-eye:focus-visible,
+.va-link:focus-visible { outline: 3px solid var(--virla-focus); outline-offset: 2px; }
+
+.va-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--vd-ink-soft);
+}
+.va-divider::before,
+.va-divider::after { content: ''; flex: 1; height: 1px; background: var(--vd-line); }
+
+.va-switch { margin-top: 26px; text-align: center; font-size: 14px; color: var(--vd-ink-soft); }
+.va-switch a { font-weight: 700; color: var(--virla-brand); }
+.va-switch a:hover { text-decoration: underline; text-underline-offset: 3px; }
+:root[data-theme='dark'] .va-switch a { color: var(--vd-accent); }
+
+/* ── Stepper (Origin UI) ──────────────────────────────────────────────── */
+
+.va-stepper { display: flex; margin: 26px 0 0; padding: 0; list-style: none; }
+.va-step { display: flex; align-items: flex-start; flex: 1; min-width: 0; }
+.va-step:last-child { flex: none; }
+.va-step-trigger {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+.va-step-trigger:disabled { cursor: default; }
+.va-step-trigger:focus-visible { outline: 3px solid var(--virla-focus); outline-offset: 3px; border-radius: 10px; }
+.va-step-dot {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  border: 1.5px solid var(--vd-line);
+  background: var(--vd-card);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--vd-ink-soft);
+  font-variant-numeric: tabular-nums;
+  transition: background-color 0.25s, border-color 0.25s, color 0.25s, box-shadow 0.25s;
+}
+.va-step-dot svg { font-size: 18px; }
+.va-step.is-current .va-step-dot {
+  border-color: var(--virla-brand);
+  background: var(--virla-brand);
+  color: #fff;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--virla-brand) 16%, transparent);
+}
+.va-step.is-done .va-step-dot { border-color: transparent; background: var(--vd-tint-strong); color: var(--virla-brand); }
+:root[data-theme='dark'] .va-step.is-done .va-step-dot { color: var(--vd-accent); }
+.va-step.is-done .va-step-trigger:hover .va-step-dot { border-color: var(--virla-brand); }
+.va-step-title { font-size: 12px; font-weight: 600; color: var(--vd-ink-soft); white-space: nowrap; }
+.va-step.is-current .va-step-title { color: var(--vd-ink); }
+.va-step-line {
+  flex: 1;
+  height: 2px;
+  margin: 15px 8px 0;
+  border-radius: 2px;
+  background: var(--vd-line);
+  overflow: hidden;
+}
+.va-step-line span { display: block; width: 0; height: 100%; background: var(--virla-brand); transition: width 0.4s ease; }
+.va-step.is-done .va-step-line span { width: 100%; }
+
+.va-step-head { animation: va-in 0.32s ease-out; }
+.va-step-count { font-size: 12.5px; font-weight: 700; color: var(--virla-brand); }
+:root[data-theme='dark'] .va-step-count { color: var(--vd-accent); }
+.va-step-head h2 {
+  margin: 4px 0 0;
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--vd-ink);
+  outline: none;
+}
+.va-step-head > p:last-child { margin-top: 4px; font-size: 14px; line-height: 1.5; color: var(--vd-ink-soft); }
+
+/* Tipo de conta */
+.va-roles { display: grid; gap: 12px; margin: 0; padding: 0; border: 0; min-width: 0; }
+.va-role {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  border-radius: 18px;
+  border: 1.5px solid var(--vd-line);
+  background: var(--vd-card);
+  cursor: pointer;
+  transition: border-color 0.18s, background-color 0.18s;
+}
+.va-role:hover { border-color: color-mix(in srgb, var(--virla-brand) 45%, var(--vd-line)); }
+.va-role input { position: absolute; opacity: 0; pointer-events: none; }
+.va-role:has(input:focus-visible) { outline: 3px solid var(--virla-focus); outline-offset: 2px; }
+.va-role.is-selected { border-color: var(--virla-brand); background: var(--vd-tint); }
+.va-role-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: var(--vd-tint);
+  color: var(--virla-brand);
+  transition: background-color 0.18s, color 0.18s;
+}
+:root[data-theme='dark'] .va-role-icon { color: var(--vd-accent); }
+.va-role.is-selected .va-role-icon { background: var(--virla-brand); color: #fff; }
+.va-role-icon svg { font-size: 26px; }
+.va-role-text { flex: 1; min-width: 0; }
+.va-role-text strong { display: block; font-size: 15.5px; font-weight: 700; color: var(--vd-ink); }
+.va-role-text small { display: block; margin-top: 2px; font-size: 13px; line-height: 1.45; color: var(--vd-ink-soft); }
+.va-role-check { flex: none; font-size: 22px !important; color: var(--virla-brand); opacity: 0; transform: scale(0.6); transition: opacity 0.18s, transform 0.18s; }
+:root[data-theme='dark'] .va-role-check { color: var(--vd-accent); }
+.va-role.is-selected .va-role-check { opacity: 1; transform: none; }
+
+@keyframes va-in {
+  from { opacity: 0; transform: translateX(10px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes va-rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* ── Responsivo ───────────────────────────────────────────────────────── */
+
+@media (max-width: 520px) {
+  .va-page { padding: 16px 12px 24px; }
+  .va-card { padding: 22px 18px; border-radius: 22px; }
+  .va-top { margin-bottom: 20px; }
+  .va-bg::after { background: radial-gradient(ellipse 80% 55% at 50% 55%, var(--vd-canvas) 35%, transparent 100%); }
+  .va-grid-2 { grid-template-columns: minmax(0, 1fr); }
+  .va-step-title { display: none; }
+  .va-step.is-current .va-step-title { display: block; }
+  .va-step-line { margin-inline: 6px; }
+  .va-back span { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .va-paths path,
+  .va-card,
+  .va-panel,
+  .va-step-head { animation: none; }
+  .va-step-dot,
+  .va-step-line span,
+  .va-role,
+  .va-role-icon,
+  .va-role-check { transition: none; }
+}

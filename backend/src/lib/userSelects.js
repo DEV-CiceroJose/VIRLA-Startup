@@ -26,6 +26,7 @@ export const USER_PUBLIC_SELECT = {
   description: true,
   city: true,
   state: true,
+  verificationStatus: true, // só o status; documentos ficam em `verifications/{uid}`
 }
 
 export const USER_SELF_SELECT = {
@@ -33,4 +34,8 @@ export const USER_SELF_SELECT = {
   email: true,
   cpf: true,
   zipCode: true,
+  street: true, // endereço só para o próprio usuário (perfil público mostra cidade/UF)
+  neighborhood: true,
+  termsAcceptedAt: true,
+  termsVersion: true,
 }

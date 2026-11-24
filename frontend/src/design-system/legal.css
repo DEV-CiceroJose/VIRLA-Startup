@@ -1,0 +1,172 @@
+/*
+ * VIRLA — Termos, Privacidade e aceite (prefixo vl-)
+ * Leitura confortável: coluna de ~70 caracteres, Playfair nos títulos.
+ */
+
+/* ── Documento ────────────────────────────────────────────────────────── */
+.vl-doc { color: var(--vd-ink); }
+.vl-intro { font-size: 16px; line-height: 1.7; color: var(--vd-ink); }
+.vl-section { margin-top: 28px; scroll-margin-top: 24px; }
+.vl-section h2,
+.vl-section h3 {
+  margin: 0 0 10px;
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 21px;
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--vd-ink);
+}
+.vl-section h3 { font-size: 18px; }
+.vl-section p,
+.vl-section li { font-size: 15px; line-height: 1.75; color: var(--vd-ink-soft); }
+.vl-section p + p { margin-top: 8px; }
+.vl-section ul { display: grid; gap: 6px; margin: 8px 0 0; padding-left: 20px; list-style: disc; }
+.vl-section li::marker { color: var(--virla-brand); }
+:root[data-theme='dark'] .vl-section li::marker { color: var(--vd-accent); }
+.vl-note {
+  margin-top: 12px !important;
+  padding: 12px 14px;
+  border-left: 3px solid var(--virla-brand);
+  border-radius: 0 12px 12px 0;
+  background: var(--vd-tint);
+  color: var(--vd-ink) !important;
+}
+:root[data-theme='dark'] .vl-note { border-left-color: var(--vd-accent); }
+
+/* ── Página pública ───────────────────────────────────────────────────── */
+.vl-page { min-height: 100vh; background: var(--vd-canvas); color: var(--vd-ink); padding: clamp(18px, 3vw, 36px); }
+.vl-top { display: flex; align-items: center; justify-content: space-between; gap: 16px; max-width: 1120px; margin: 0 auto; }
+.vl-brand { display: inline-flex; align-items: center; gap: 10px; font-family: 'Playfair Display', Georgia, serif; font-size: 23px; font-weight: 900; color: var(--virla-brand); }
+.vl-brand img { border-radius: 9px; }
+:root[data-theme='dark'] .vl-brand { color: var(--vd-ink); }
+.vl-top-actions { display: flex; align-items: center; gap: 6px; }
+.vl-back { display: inline-flex; align-items: center; gap: 4px; font-size: 13.5px; font-weight: 600; color: var(--vd-ink-soft); }
+.vl-back svg { font-size: 17px; }
+.vl-back:hover { color: var(--virla-brand); }
+.vl-theme { display: grid; place-items: center; width: 38px; height: 38px; border: 1px solid var(--vd-line); border-radius: 12px; background: var(--vd-card); color: var(--vd-ink-soft); cursor: pointer; }
+
+.vl-layout {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: clamp(28px, 5vw, 64px);
+  max-width: 1120px;
+  margin: 40px auto 0;
+  align-items: start;
+}
+.vl-aside { position: sticky; top: 24px; display: grid; gap: 24px; }
+.vl-switch { display: grid; gap: 4px; padding: 6px; border-radius: 16px; background: var(--vd-tint); }
+.vl-switch a { padding: 10px 12px; border-radius: 12px; font-size: 14px; font-weight: 600; color: var(--vd-ink-soft); }
+.vl-switch a.active { background: var(--vd-card); color: var(--vd-ink); box-shadow: 0 2px 10px rgba(62, 24, 62, 0.08); }
+.vl-toc p { margin-bottom: 8px; font-size: 12.5px; font-weight: 700; color: var(--vd-ink-soft); }
+.vl-toc ol { display: grid; gap: 2px; border-left: 1px solid var(--vd-line); }
+.vl-toc a { display: block; padding: 5px 0 5px 14px; margin-left: -1px; border-left: 2px solid transparent; font-size: 13.5px; color: var(--vd-ink-soft); }
+.vl-toc a:hover { border-left-color: var(--virla-brand); color: var(--vd-ink); }
+
+.vl-main { max-width: 720px; }
+.vl-main h1 { font-family: 'Playfair Display', Georgia, serif; font-size: clamp(34px, 4vw, 48px); font-weight: 700; line-height: 1.1; letter-spacing: -0.02em; }
+.vl-updated { margin: 8px 0 24px; font-size: 13.5px; color: var(--vd-ink-soft); }
+
+/* ── Diálogo "role até o fim" ─────────────────────────────────────────── */
+.vl-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(23, 10, 26, 0.55);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+  animation: vl-fade 0.18s ease-out;
+}
+.vl-dialog {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: min(680px, 100%);
+  max-height: min(86vh, 760px);
+  border-radius: 24px;
+  border: 1px solid var(--vd-line);
+  background: var(--vd-card);
+  color: var(--vd-ink);
+  box-shadow: 0 40px 100px -40px rgba(23, 10, 26, 0.6);
+  overflow: hidden;
+  animation: vl-pop 0.22s ease-out;
+}
+.vl-progress { position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--vd-tint); }
+.vl-progress span { display: block; height: 100%; background: linear-gradient(90deg, var(--virla-brand), #fe91fe); transform-origin: left; transition: transform 0.12s linear; }
+.vl-dialog-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 22px 22px 14px; border-bottom: 1px solid var(--vd-line); }
+.vl-dialog-head h2 { font-family: 'Playfair Display', Georgia, serif; font-size: 24px; font-weight: 700; }
+.vl-dialog-head p { margin-top: 2px; font-size: 12.5px; color: var(--vd-ink-soft); }
+.vl-icon-btn { display: grid; place-items: center; width: 38px; height: 38px; border: 0; border-radius: 12px; background: none; color: var(--vd-ink-soft); cursor: pointer; }
+.vl-icon-btn:hover { background: var(--vd-tint); color: var(--vd-ink); }
+.vl-dialog-body { flex: 1; overflow-y: auto; padding: 6px 22px 24px; overscroll-behavior: contain; }
+.vl-dialog-body:focus-visible { outline: 3px solid var(--virla-focus); outline-offset: -3px; }
+.vl-dialog-body .vl-section { margin-top: 22px; }
+.vl-dialog-body .vl-intro { margin-top: 16px; font-size: 15px; }
+.vl-dialog-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; padding: 14px 22px 18px; border-top: 1px solid var(--vd-line); }
+.vl-dialog-foot p { font-size: 13px; color: var(--vd-ink-soft); }
+.vl-dialog-actions { display: flex; gap: 8px; }
+.vl-btn,
+.vl-btn-ghost { min-height: 44px; padding: 0 18px; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; }
+.vl-btn { border: 0; background: var(--virla-brand); color: #fff; }
+.vl-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.vl-btn-ghost { border: 1px solid var(--vd-line); background: var(--vd-card); color: var(--vd-ink); }
+.vl-btn:focus-visible,
+.vl-btn-ghost:focus-visible,
+.vl-icon-btn:focus-visible { outline: 3px solid var(--virla-focus); outline-offset: 2px; }
+
+/* ── Aceite no cadastro ───────────────────────────────────────────────── */
+.vl-consent { padding: 14px; border-radius: 18px; border: 1px dashed var(--vd-line); background: var(--vd-tint); }
+.vl-consent.is-done { border-style: solid; border-color: color-mix(in srgb, var(--vd-ok) 40%, var(--vd-line)); background: var(--vd-ok-bg); }
+.vl-consent-title { margin-bottom: 10px; font-size: 13.5px; font-weight: 600; color: var(--vd-ink); }
+.vl-consent ul { display: grid; gap: 8px; }
+.vl-consent-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid var(--vd-line);
+  background: var(--vd-card);
+  color: var(--vd-ink);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.vl-consent-row:hover { border-color: var(--virla-brand); }
+.vl-consent-row:focus-visible { outline: 3px solid var(--virla-focus); outline-offset: 2px; }
+.vl-consent-icon { display: grid; place-items: center; flex: none; width: 36px; height: 36px; border-radius: 10px; background: var(--vd-tint); color: var(--virla-brand); }
+:root[data-theme='dark'] .vl-consent-icon { color: var(--vd-accent); }
+.vl-consent-icon svg { font-size: 20px; }
+.vl-consent-text { flex: 1; min-width: 0; }
+.vl-consent-text strong { display: block; font-size: 14px; font-weight: 700; }
+.vl-consent-text small { display: block; font-size: 12.5px; color: var(--vd-ink-soft); }
+.vl-consent-row > svg { flex: none; color: var(--vd-ink-soft); }
+.vl-consent-row .vl-consent-check { color: var(--vd-ok); }
+
+@keyframes vl-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes vl-pop { from { opacity: 0; transform: translateY(10px) scale(0.98); } to { opacity: 1; transform: none; } }
+
+@media (max-width: 860px) {
+  .vl-layout { grid-template-columns: minmax(0, 1fr); margin-top: 24px; }
+  .vl-aside { position: static; }
+  .vl-toc { display: none; }
+  .vl-switch { grid-template-columns: 1fr 1fr; }
+  .vl-switch a { text-align: center; }
+}
+@media (max-width: 520px) {
+  .vl-back span { display: none; }
+  .vl-dialog { max-height: 92vh; border-radius: 20px; }
+  .vl-dialog-head,
+  .vl-dialog-body,
+  .vl-dialog-foot { padding-inline: 16px; }
+  .vl-dialog-actions { width: 100%; }
+  .vl-dialog-actions button { flex: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .vl-overlay,
+  .vl-dialog { animation: none; }
+  .vl-progress span { transition: none; }
+}

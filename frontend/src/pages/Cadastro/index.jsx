@@ -1,21 +1,47 @@
 import { toast } from 'sonner'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import Person from '@mui/icons-material/Person'
-import Work from '@mui/icons-material/Work'
 import Email from '@mui/icons-material/Email'
-import Lock from '@mui/icons-material/Lock'
-import PersonAdd from '@mui/icons-material/PersonAdd'
-import ArrowBack from '@mui/icons-material/ArrowBack'
 import Badge from '@mui/icons-material/Badge'
 import VerifiedUser from '@mui/icons-material/VerifiedUser'
-import CalendarMonth from '@mui/icons-material/CalendarMonth'
+import ArrowBack from '@mui/icons-material/ArrowBack'
+import ArrowForward from '@mui/icons-material/ArrowForward'
+import FamilyRestroomOutlined from '@mui/icons-material/FamilyRestroomOutlined'
+import VolunteerActivismOutlined from '@mui/icons-material/VolunteerActivismOutlined'
+import CheckCircle from '@mui/icons-material/CheckCircle'
 import api from '../../services/api'
-import { Field, Button, Card } from '../../components/ui'
+import { Field, DatePickerField } from '../../components/ui'
+import CepField from '../../components/ui/CepField'
 import ProfileImageUpload from '../../components/ProfileImageUpload'
+import AuthLayout from '../../components/auth/AuthLayout'
+import Stepper from '../../components/auth/Stepper'
+import PasswordField from '../../components/auth/PasswordField'
+import GoogleIcon from '../../components/auth/GoogleIcon'
+import LegalConsent from '../../components/legal/LegalConsent'
+import { TERMS_VERSION } from '../../constants/legal'
 import { isValidCpf, isValidEmail, maskCpf, stripCpf } from '../../utils/validators'
-import { registerWithEmail, loginWithGoogle, mapAuthError, getIdToken } from '../../services/auth'
+import { registerWithEmail, loginWithGoogle, mapAuthError, getIdToken, logout } from '../../services/auth'
 import { COUNCILS, isValidRegister } from '../../constants/councils'
+
+const ALL_STEPS = [
+  { id: 'conta', title: 'Conta', heading: 'Como você vai usar a VIRLA?', lede: 'Escolha o tipo de conta. Se preferir, comece pelo Google.' },
+  { id: 'dados', title: 'Seus dados', heading: 'Conte quem você é', lede: 'Usamos estes dados para confirmar sua identidade.' },
+  { id: 'registro', title: 'Registro', heading: 'Registro profissional', lede: 'Opcional. Com o conselho e o número informados, seu perfil ganha o selo de verificado.', onlyFor: 'CUIDADOR' },
+  { id: 'acesso', title: 'Acesso', heading: 'Crie seu acesso', lede: 'Depois enviamos um e-mail para você confirmar o endereço.' },
+]
+
+const ROLES = [
+  { value: 'FAMILIAR', Icon: FamilyRestroomOutlined, title: 'Sou da família', text: 'Procuro alguém para cuidar de quem eu amo.' },
+  { value: 'CUIDADOR', Icon: VolunteerActivismOutlined, title: 'Sou cuidador', text: 'Quero oferecer meu trabalho e receber solicitações.' },
+]
+
+function isValidPersonName(name) {
+  const okChars = /^[\p{L}][\p{L} .'-]*$/u.test(name) && name.length >= 2
+  const letters = name.replace(/[^\p{L}]/gu, '')
+  const notRepeated = !(letters.length >= 2 && /^(.)\1+$/u.test(letters))
+  return okChars && notRepeated
+}
 
 export default function Cadastro() {
   const navigate = useNavigate()
@@ -24,6 +50,10 @@ export default function Cadastro() {
   const [cpf, setCpf] = useState('')
   const [profileImage, setProfileImage] = useState('')
   const [council, setCouncil] = useState('')
+  const [stepIndex, setStepIndex] = useState(0)
+  const [legal, setLegal] = useState({ terms: false, privacy: false })
+  const [cep, setCep] = useState('')
+  const [address, setAddress] = useState(null)
 
   const inputName = useRef()
   const inputEmail = useRef()
@@ -31,6 +61,21 @@ export default function Cadastro() {
   const inputConfirmPassword = useRef()
   const inputRegister = useRef()
   const inputBirthDate = useRef()
+  const headingRef = useRef(null)
+  const firstRender = useRef(true)
+
+  const steps = ALL_STEPS.filter((step) => !step.onlyFor || step.onlyFor === role)
+  const current = steps[Math.min(stepIndex, steps.length - 1)]
+  const isLast = stepIndex >= steps.length - 1
+
+  // A cada troca de etapa o foco vai para o título (leitores de tela anunciam).
+  useEffect(() => {
+    if (firstRender.current) {
+      firstRender.current = false
+      return
+    }
+    headingRef.current?.focus()
+  }, [stepIndex])
 
   async function createUser(e) {
     e?.preventDefault()
@@ -67,11 +112,12 @@ export default function Cadastro() {
       toast.warning('Informe sua data de nascimento.')
       return
     }
-    const okChars = /^[\p{L}][\p{L} .'-]*$/u.test(name) && name.length >= 2
-    const letters = name.replace(/[^\p{L}]/gu, '')
-    const notRepeated = !(letters.length >= 2 && /^(.)\1+$/u.test(letters))
-    if (!okChars || !notRepeated) {
+    if (!isValidPersonName(name)) {
       toast.warning('Informe um nome válido (apenas letras).')
+      return
+    }
+    if (!legal.terms || !legal.privacy) {
+      toast.warning('Leia e aceite os Termos de Uso e a Política de Privacidade para criar a conta.')
       return
     }
 
@@ -83,9 +129,19 @@ export default function Cadastro() {
         bio: '',
         cpf: cpfDigits,
         birthDate,
+        acceptedTerms: true,
+        termsVersion: TERMS_VERSION,
       }
 
       if (profileImage) payload.profileImage = profileImage
+      // CEP opcional: o endereço (rua, bairro, cidade, UF) vem do ViaCEP.
+      if (address) {
+        payload.zipCode = cep
+        payload.street = address.street || null
+        payload.neighborhood = address.neighborhood || null
+        payload.city = address.city || null
+        payload.state = address.state || null
+      }
 
       if (role === 'CUIDADOR') {
         const registerNumber = inputRegister.current?.value?.trim()
@@ -107,6 +163,9 @@ export default function Cadastro() {
       await registerWithEmail(email, password)
       await api.post('/users', payload)
       await getIdToken(true)
+      // Sai da sessão criada pelo cadastro: o perfil foi checado antes de existir
+      // e o login seguinte precisa recarregá-lo (senão cai em completar cadastro).
+      await logout().catch(() => {})
       toast.success('Conta criada! Confirme seu e-mail para entrar.')
       navigate('/login')
     } catch (err) {
@@ -116,6 +175,41 @@ export default function Cadastro() {
     } finally {
       setSubmitting(false)
     }
+  }
+
+  /** Confere só os campos da etapa atual, com as mesmas mensagens do envio final. */
+  function stepProblem(id) {
+    if (id === 'dados') {
+      const name = inputName.current?.value?.trim()
+      if (!name) return 'Informe seu nome.'
+      if (!isValidPersonName(name)) return 'Informe um nome válido (apenas letras).'
+      if (!isValidCpf(stripCpf(cpf))) return 'CPF inválido. Verifique os dígitos.'
+      if (!inputBirthDate.current?.value) return 'Informe sua data de nascimento.'
+    }
+    if (id === 'registro') {
+      const registerNumber = inputRegister.current?.value?.trim()
+      if (council && registerNumber && !isValidRegister(council, registerNumber)) {
+        return 'Número de registro inválido para o conselho informado.'
+      }
+      if (Boolean(council) !== Boolean(registerNumber)) {
+        return 'Informe o conselho e o número do registro (ou deixe ambos em branco).'
+      }
+    }
+    return ''
+  }
+
+  function handleSubmit(e) {
+    e.preventDefault()
+    if (isLast) {
+      createUser()
+      return
+    }
+    const problem = stepProblem(current.id)
+    if (problem) {
+      toast.warning(problem)
+      return
+    }
+    setStepIndex((index) => index + 1)
   }
 
   async function handleGoogle() {
@@ -133,147 +227,119 @@ export default function Cadastro() {
   }
 
   return (
-    <div
-      className="min-h-screen bg-virla-neve flex items-center justify-center px-4 py-12"
-      style={{
-        backgroundImage:
-          'radial-gradient(ellipse 80% 60% at 50% -10%, rgba(128,0,128,0.12), transparent)',
-      }}
-    >
-      <div className="w-full max-w-md animate-fade-up">
-        <div className="flex flex-col items-center mb-8">
-          <img src="/favicon.ico" alt="" className="w-12 h-12 object-contain mb-3" aria-hidden />
-          <h1 className="text-3xl font-display font-black text-virla-roxo tracking-tight">VIRLA</h1>
-          <p className="text-virla-muted text-sm mt-1">Crie sua conta gratuita</p>
+    <AuthLayout>
+      <div className="va-head">
+        <h1>Crie sua conta</h1>
+        <p>É grátis e leva poucos minutos.</p>
+      </div>
+
+      <Stepper steps={steps} current={stepIndex} onSelect={setStepIndex} label="Etapas do cadastro" />
+
+      <form className="va-form" onSubmit={handleSubmit} noValidate>
+        <div className="va-step-head" key={current.id}>
+          <p className="va-step-count">Passo {stepIndex + 1} de {steps.length}</p>
+          <h2 ref={headingRef} tabIndex={-1}>{current.heading}</h2>
+          <p>{current.lede}</p>
         </div>
 
-        <Card as="form" onSubmit={createUser} className="p-8 space-y-4">
-          <h2 className="text-xl font-bold text-virla-texto mb-1">Cadastro</h2>
+        {/* Todas as etapas ficam montadas (só a atual aparece) para os campos
+            não controlados manterem o que foi digitado. */}
+        <section className="va-panel" hidden={current.id !== 'conta'}>
+          <fieldset className="va-roles">
+            <legend className="sr-only">Tipo de conta</legend>
+            {ROLES.map(({ value, Icon, title, text }) => (
+              <label key={value} className={`va-role${role === value ? ' is-selected' : ''}`}>
+                <input type="radio" name="role" value={value} checked={role === value} onChange={() => setRole(value)} />
+                <span className="va-role-icon"><Icon aria-hidden /></span>
+                <span className="va-role-text">
+                  <strong>{title}</strong>
+                  <small>{text}</small>
+                </span>
+                <CheckCircle aria-hidden className="va-role-check" />
+              </label>
+            ))}
+          </fieldset>
+        </section>
 
-          <Field
-            as="select"
-            label="Tipo de conta"
-            icon={Work}
-            value={role}
-            onChange={(e) => setRole(e.target.value)}
-          >
-            <option value="CUIDADOR">Cuidador</option>
-            <option value="FAMILIAR">Familiar</option>
-          </Field>
-
+        <section className="va-panel" hidden={current.id !== 'dados'}>
           <ProfileImageUpload value={profileImage} onChange={setProfileImage} />
-
-          <Field
-            ref={inputName}
-            label="Nome completo"
-            required
-            icon={Person}
-            type="text"
-            placeholder="Nome completo"
+          <Field ref={inputName} label="Nome completo" required icon={Person} type="text" placeholder="Nome completo" autoComplete="name" />
+          <div className="va-grid-2">
+            <Field
+              label="CPF"
+              required
+              icon={VerifiedUser}
+              type="text"
+              inputMode="numeric"
+              placeholder="000.000.000-00"
+              value={cpf}
+              onChange={(e) => setCpf(maskCpf(e.target.value))}
+              maxLength={14}
+            />
+            <DatePickerField
+              ref={inputBirthDate}
+              label="Data de nascimento"
+              required
+              shortcuts={false}
+              placeholder="dd/mm/aaaa"
+              max={new Date().toISOString().split('T')[0]}
+            />
+          </div>
+          <CepField
+            label="CEP (opcional)"
+            value={cep}
+            address={address}
+            onChange={setCep}
+            onResolve={setAddress}
+            hint={role === 'CUIDADOR' ? 'Mostra às famílias a cidade onde você atende.' : 'Ajuda a encontrar cuidadores perto de você.'}
           />
+        </section>
 
-          <Field
-            label="CPF"
-            required
-            icon={VerifiedUser}
-            type="text"
-            inputMode="numeric"
-            placeholder="000.000.000-00"
-            value={cpf}
-            onChange={(e) => setCpf(maskCpf(e.target.value))}
-            maxLength={14}
-          />
+        {role === 'CUIDADOR' && (
+          <section className="va-panel" hidden={current.id !== 'registro'}>
+            <Field as="select" label="Conselho" icon={Badge} value={council} onChange={(e) => setCouncil(e.target.value)}>
+              <option value="">Conselho (opcional)</option>
+              {COUNCILS.map((c) => (
+                <option key={c.value} value={c.value}>{c.label}</option>
+              ))}
+            </Field>
+            <Field ref={inputRegister} label="Número do registro" icon={Badge} type="text" placeholder="Número do registro" />
+          </section>
+        )}
 
-          <Field
-            ref={inputBirthDate}
-            label="Data de nascimento"
-            required
-            icon={CalendarMonth}
-            type="date"
-            max={new Date().toISOString().split('T')[0]}
-          />
+        <section className="va-panel" hidden={current.id !== 'acesso'}>
+          <Field ref={inputEmail} label="E-mail" required icon={Email} type="email" placeholder="seu@email.com" autoComplete="email" />
+          <PasswordField ref={inputPassword} label="Senha" required placeholder="Senha (mín. 6 caracteres)" autoComplete="new-password" />
+          <PasswordField ref={inputConfirmPassword} label="Confirmar senha" required placeholder="Repita a senha" autoComplete="new-password" />
+          <LegalConsent value={legal} onChange={setLegal} />
+        </section>
 
-          {role === 'CUIDADOR' && (
-            <>
-              <Field
-                as="select"
-                label="Conselho"
-                icon={Badge}
-                value={council}
-                onChange={(e) => setCouncil(e.target.value)}
-              >
-                <option value="">Conselho (opcional)</option>
-                {COUNCILS.map((c) => (
-                  <option key={c.value} value={c.value}>
-                    {c.label}
-                  </option>
-                ))}
-              </Field>
-
-              <Field
-                ref={inputRegister}
-                label="Número do registro"
-                icon={Badge}
-                type="text"
-                placeholder="Número do registro"
-              />
-            </>
+        <div className="va-actions">
+          {stepIndex > 0 && (
+            <button type="button" className="va-secondary" onClick={() => setStepIndex((index) => index - 1)} disabled={submitting}>
+              <ArrowBack aria-hidden />
+              Voltar
+            </button>
           )}
+          <button type="submit" className="va-primary" disabled={submitting}>
+            {isLast ? (submitting ? 'Criando conta…' : 'Criar conta') : <>Continuar <ArrowForward aria-hidden /></>}
+          </button>
+        </div>
 
-          <Field
-            ref={inputEmail}
-            label="E-mail"
-            required
-            icon={Email}
-            type="email"
-            placeholder="seu@email.com"
-            autoComplete="email"
-          />
+        {current.id === 'conta' && (
+          <>
+            <div className="va-divider"><span>ou</span></div>
+            <button type="button" className="va-google" onClick={handleGoogle} disabled={submitting}>
+              <GoogleIcon />
+              Cadastrar com Google
+            </button>
+          </>
+        )}
+      </form>
 
-          <Field
-            ref={inputPassword}
-            label="Senha"
-            required
-            icon={Lock}
-            type="password"
-            placeholder="Senha (mín. 6 caracteres)"
-            autoComplete="new-password"
-          />
-
-          <Field
-            ref={inputConfirmPassword}
-            label="Confirmar senha"
-            required
-            icon={Lock}
-            type="password"
-            placeholder="Repita a senha"
-            autoComplete="new-password"
-          />
-
-          <Button type="submit" fullWidth loading={submitting} icon={PersonAdd} className="mt-2">
-            {submitting ? 'Criando conta…' : 'Criar conta'}
-          </Button>
-
-          <Button type="button" fullWidth variant="secondary" onClick={handleGoogle} disabled={submitting}>
-            Cadastrar com Google
-          </Button>
-
-          <p className="text-center text-sm text-virla-muted pt-1">
-            Já tem conta?{' '}
-            <Link to="/login" className="text-virla-roxo font-semibold hover:underline">
-              Entrar
-            </Link>
-          </p>
-        </Card>
-
-        <Link
-          to="/"
-          className="flex items-center justify-center gap-1 mt-6 text-sm text-virla-muted hover:text-virla-roxo transition-colors"
-        >
-          <ArrowBack sx={{ fontSize: 16 }} aria-hidden />
-          Voltar à página inicial
-        </Link>
-      </div>
-    </div>
+      <p className="va-switch">
+        Já tem conta? <Link to="/login">Entrar</Link>
+      </p>
+    </AuthLayout>
   )
 }

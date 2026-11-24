@@ -39,7 +39,8 @@ export const getCurrentUser = async (req, res) => {
     if (!fullUser) {
       return res.status(404).json({ msg: 'Perfil não encontrado.' })
     }
-    res.status(200).json({ user: project(fullUser, USER_SELF_SELECT) })
+    // isAdmin vem do custom claim do token (equipe VIRLA), nunca do Firestore.
+    res.status(200).json({ user: { ...project(fullUser, USER_SELF_SELECT), isAdmin: req.isAdmin === true } })
   } catch (error) {
     logger.error('user:get_me_failed', { error: error.message, stack: error.stack, userId: req.userId })
     res.status(500).json({ error: 'Erro interno ao buscar perfil' })

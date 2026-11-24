@@ -108,6 +108,8 @@ export const updateUserBodySchema = z
     city: z.string().max(80).optional().nullable(),
     state: z.string().max(2).optional().nullable(),
     zipCode: zipCodeSchema,
+    street: z.string().max(160).optional().nullable(),
+    neighborhood: z.string().max(120).optional().nullable(),
   })
   // Bloqueia campos sensíveis/imutáveis que não podem ser alterados por update.
   .strict()
@@ -131,4 +133,12 @@ export const createUserBodySchema = z.object({
   city: z.string().max(80).optional().nullable(),
   state: z.string().max(2).optional().nullable(),
   zipCode: zipCodeSchema,
+  // Endereço completado pelo CEP (ViaCEP); fica só no perfil próprio.
+  street: z.string().max(160).optional().nullable(),
+  neighborhood: z.string().max(120).optional().nullable(),
+  // Só cria conta quem leu e aceitou os Termos de Uso e a Política de Privacidade.
+  acceptedTerms: z.literal(true, {
+    errorMap: () => ({ message: 'Aceite os Termos de Uso e a Política de Privacidade para criar a conta.' }),
+  }),
+  termsVersion: z.string().min(1, 'Versão dos termos ausente.').max(20),
 }).superRefine(refineRegisterPair)

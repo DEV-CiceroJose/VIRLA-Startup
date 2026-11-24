@@ -1,0 +1,262 @@
+/*
+ * VIRLA — Perfil público (prefixo vp-)
+ * Estrutura da ref 2: cartão de identidade com retrato, chips de resumo,
+ * verificação, ação principal e alternativa; seções de conteúdo ao lado.
+ * Desktop: identidade fixa à esquerda. Celular: retrato de ponta a ponta
+ * com o cartão subindo por cima.
+ */
+
+/* Centralizado na folha: em telas largas o perfil não fica colado à esquerda. */
+.vp-page { max-width: 1180px; margin-inline: auto; }
+
+.vp-crumbs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 14px;
+  color: var(--vd-ink-soft);
+}
+.vp-crumbs a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  font-weight: 500;
+  color: var(--vd-ink-soft);
+}
+.vp-crumbs a:hover { color: var(--virla-brand); }
+.vp-crumbs a:focus-visible { outline: 2px solid var(--virla-brand); outline-offset: 3px; border-radius: 6px; }
+.vp-crumbs-back { display: none !important; font-size: 18px !important; }
+.vp-crumbs-sep { flex: none; font-size: 18px !important; opacity: 0.6; }
+.vp-crumbs span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; color: var(--virla-brand); }
+:root[data-theme='dark'] .vp-crumbs span { color: var(--vd-accent); }
+
+.vp-layout {
+  display: grid;
+  grid-template-columns: 380px minmax(0, 1fr);
+  gap: 32px;
+  margin-top: 24px;
+  align-items: start;
+}
+
+/* ── Identidade ───────────────────────────────────────────────────────── */
+
+.vp-identity {
+  border-radius: 24px;
+  background: var(--vd-card);
+  border: 1px solid var(--vd-line);
+  box-shadow: 0 10px 34px rgba(62, 24, 62, 0.06);
+  overflow: hidden;
+}
+
+.vp-portrait {
+  aspect-ratio: 4 / 4.2;
+  background: var(--vd-tint);
+}
+.vp-portrait img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.vp-portrait.is-initials {
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(90% 80% at 20% 10%, rgba(255, 255, 255, 0.55), transparent 60%),
+    linear-gradient(160deg, var(--virla-brand-soft), #c79ad0);
+}
+.vp-portrait.is-initials span {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 104px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--virla-brand-deep);
+}
+:root[data-theme='dark'] .vp-portrait.is-initials {
+  background:
+    radial-gradient(90% 80% at 20% 10%, rgba(255, 255, 255, 0.08), transparent 60%),
+    linear-gradient(160deg, #4a1f52, #2b0b2f);
+}
+:root[data-theme='dark'] .vp-portrait.is-initials span { color: var(--vd-accent); }
+
+.vp-card { padding: 22px 24px 24px; }
+
+.vp-name {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  color: var(--vd-ink);
+  overflow-wrap: anywhere;
+}
+.vp-role { margin-top: 4px; font-size: 14px; color: var(--vd-ink-soft); }
+
+.vp-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.vp-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 11px;
+  border-radius: 8px;
+  background: var(--vd-tint);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--vd-ink-soft);
+}
+.vp-chip svg { font-size: 16px; }
+.vp-chip-strong { font-weight: 700; color: var(--vd-ink); font-variant-numeric: tabular-nums; }
+
+.vp-checks { margin-top: 18px; border-top: 1px solid var(--vd-line); }
+.vp-checks li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--vd-line);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--vd-ink);
+}
+.vp-checks small { display: block; margin-top: 1px; font-size: 12.5px; font-weight: 400; color: var(--vd-ink-soft); }
+.vp-checks .is-missing { color: var(--vd-ink-soft); font-weight: 500; }
+.vp-check-ok { flex: none; font-size: 20px !important; color: var(--vd-ok); }
+
+.vp-cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  margin-top: 20px;
+  padding: 14px 18px;
+  border-radius: 14px;
+  background: var(--virla-brand);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  transition: background-color 160ms ease;
+}
+.vp-cta:hover { background: var(--virla-brand-deep); }
+.vp-cta:focus-visible { outline: 3px solid var(--virla-focus); outline-offset: 2px; }
+.vp-cta svg { font-size: 20px; }
+
+.vp-alt {
+  margin: 22px -24px -24px;
+  padding: 18px 24px 22px;
+  border-top: 1px solid var(--vd-line);
+  background: var(--vd-tint);
+}
+.vp-alt p { font-size: 13.5px; line-height: 1.45; color: var(--vd-ink-soft); }
+.vp-alt strong { display: block; font-size: 14px; color: var(--vd-ink); }
+.vp-alt-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  margin-top: 12px;
+  padding: 11px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--vd-line);
+  background: var(--vd-card);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--vd-ink);
+  transition: border-color 160ms ease, color 160ms ease;
+}
+.vp-alt-btn:hover { border-color: var(--virla-brand); color: var(--virla-brand); }
+.vp-alt-btn:focus-visible { outline: 3px solid var(--virla-focus); outline-offset: 2px; }
+.vp-alt-btn svg { font-size: 19px; }
+
+@media (min-width: 768px) and (min-height: 920px) {
+  .vp-identity { position: sticky; top: 96px; }
+}
+
+/* ── Seções ───────────────────────────────────────────────────────────── */
+
+.vp-sections { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+.vp-section { padding: 24px 26px; }
+.vp-section h2 { font-size: 18px; font-weight: 700; color: var(--vd-ink); }
+.vp-prose {
+  max-width: 68ch;
+  margin-top: 12px;
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--vd-ink-soft);
+  white-space: pre-wrap;
+}
+.vp-muted { margin-top: 10px; font-size: 14px; color: var(--vd-ink-soft); }
+
+.vp-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.vp-tags li {
+  padding: 7px 13px;
+  border-radius: 999px;
+  background: var(--vd-tint);
+  border: 1px solid var(--vd-tint-strong);
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--vd-accent-ink);
+}
+:root[data-theme='dark'] .vp-tags li { color: var(--vd-accent); }
+.vp-tags.is-quiet { margin-top: 0; }
+.vp-tags.is-quiet li { background: transparent; border-color: var(--vd-line); color: var(--vd-ink); font-weight: 500; }
+
+.vp-availability { display: grid; gap: 14px; margin-top: 14px; }
+.vp-availability > div { display: grid; grid-template-columns: 96px minmax(0, 1fr); align-items: center; gap: 12px; }
+.vp-availability dt { font-size: 13.5px; font-weight: 600; color: var(--vd-ink-soft); }
+
+.vp-missing { display: flex; flex-direction: column; align-items: center; gap: 6px; max-width: 520px; margin: 40px auto 0; }
+.vp-missing strong { font-size: 16px; color: var(--vd-ink); }
+.vp-missing-link { margin-top: 8px; font-weight: 600; color: var(--virla-brand); }
+
+/* ── Responsivo ───────────────────────────────────────────────────────── */
+
+@media (max-width: 1023px) {
+  .vp-layout { grid-template-columns: 300px minmax(0, 1fr); gap: 20px; }
+  .vp-portrait.is-initials span { font-size: 84px; }
+}
+
+@media (max-width: 767px) {
+  .vp-page.vd-dash { padding-top: 0; }
+  .vp-crumbs {
+    position: relative;
+    z-index: 2;
+    margin: 0 -16px;
+    padding: 14px 16px;
+  }
+  .vp-crumbs-sep,
+  .vp-crumbs span { display: none; }
+  .vp-crumbs-back { display: inline-block !important; }
+
+  .vp-layout { grid-template-columns: minmax(0, 1fr); gap: 16px; margin-top: 0; }
+  .vp-identity {
+    position: static;
+    margin: 0 -16px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    overflow: visible;
+  }
+  .vp-portrait { aspect-ratio: auto; height: min(92vw, 380px); }
+  .vp-portrait.is-initials { height: 240px; }
+  .vp-card {
+    position: relative;
+    margin: -44px 16px 0;
+    border-radius: 22px;
+    background: var(--vd-card);
+    border: 1px solid var(--vd-line);
+    box-shadow: 0 14px 36px rgba(62, 24, 62, 0.1);
+    overflow: hidden;
+  }
+  .vp-name { font-size: 27px; }
+  .vp-section { padding: 20px; }
+  .vp-availability > div { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vp-cta,
+  .vp-alt-btn { transition: none; }
+}
+
+:root[data-theme='dark'] .vp-missing-link,
+:root[data-theme='dark'] .vp-crumbs a:hover { color: var(--vd-accent); }

@@ -119,6 +119,12 @@ As imagens de referência estão em [`referencias/`](./referencias):
 - Busca e "Match inteligente para" numa barra só; contagem de perfis e página logo abaixo. Paginação com botões no padrão das outras telas.
 - Duas colunas quando cabem cartões de ~470px; uma coluna larga no resto; no celular o retrato encolhe para 84px e a alternativa empilha. Estilos em `design-system/feed.css` (`vfd-*`).
 
+### 10. Login `/login` e Cadastro `/cadastro`
+- **Cartão translúcido no centro sobre linhas animadas** (`components/auth/AuthLayout.jsx` + `BackgroundPaths.jsx`, adaptado do "Background Paths" da Kokonut UI no 21st.dev): dois feixes de curvas finas em roxo (lilás no escuro) correm devagar ao fundo, com um véu no centro para o formulário ficar limpo. A versão com foto e cartões de vidro saiu por excesso de informação. Animação só em CSS (`stroke-dashoffset`), parada com movimento reduzido. Logo, "Página inicial" e botão de tema no topo (o botão flutuante não aparece nessas duas rotas).
+- **Login:** rótulos visíveis, senha com mostrar/ocultar (`PasswordField`), "Esqueci minha senha", divisor "ou" e botão do Google com o "G". Lógica igual.
+- **Cadastro em etapas** com `Stepper` (Origin UI): Conta (cartões "Sou da família" / "Sou cuidador" + Google) → Seus dados (foto, nome, CPF, nascimento) → Registro (só cuidador, opcional) → Acesso (e-mail e senhas). Cada "Continuar" confere só a etapa atual com as mesmas mensagens de antes; o envio final (`createUser`) não mudou. Todas as etapas ficam montadas (só a atual aparece), então "Voltar" mantém o que foi digitado. Etapas feitas viram ✓ e podem ser revisitadas; o foco vai para o título de cada etapa.
+- Campos (`Field`, `DatePickerField`, `SelectField`, upload) acompanham o tema escuro nessas telas. Estilos em `design-system/auth.css` (`va-*`).
+
 ### 📁 Arquivos principais
 
 | Arquivo | O quê |
@@ -135,6 +141,8 @@ As imagens de referência estão em [`referencias/`](./referencias):
 | `frontend/src/components/EmojiPicker.jsx` | Prop `buttonClassName` |
 | `frontend/src/pages/Feed/index.jsx` | Feed (importa `feed.css`; lê `?busca=`) |
 | `frontend/src/design-system/feed.css` | Estilos do Feed (`vfd-*`) |
+| `frontend/src/components/auth/` | `AuthLayout`, `BackgroundPaths`, `Stepper`, `PasswordField`, `GoogleIcon` (login e cadastro) |
+| `frontend/src/design-system/auth.css` | Estilos de login e cadastro (`va-*`) |
 | `frontend/src/pages/Financas/index.jsx` | Finanças (importa `finance.css`) |
 | `frontend/src/design-system/finance.css` | Estilos de Finanças (`vf-*`) |
 | `frontend/src/pages/User/index.jsx` | Perfil público (importa `profile.css`) |
@@ -163,7 +171,7 @@ Convenção de nomes CSS: `vd-` = shell/painel, `vc-` = chat. Para telas novas, 
    npm test
    npm run build
    ```
-   Estado atual: **165/165 testes passando** e build ok.
+   Estado atual: **167/167 testes passando** e build ok.
 4. **Ver no navegador:** `npm run dev` (precisa do backend + Firebase para logar).
    *Sem backend?* Dá para montar um "harness" temporário (não commitado): um `vite.config` extra com um plugin que troca `AuthContext`, `NotificationContext`, `SocketContext`, `services/api`, `services/auth` e os hooks `usePresence`, `useFirebaseChat`, `useSocket`, `useAudioRecorder` por mocks com dados falsos. Atenção: rode o Vite com `cwd` = `frontend/`, senão o Tailwind não gera as classes.
 
@@ -197,4 +205,4 @@ e atualize o mapa "Onde estamos na jornada" deste README.
 
 ---
 
-*Última atualização: 24/11/2026 — painel (ref 5), chat (ref 4), finanças (ref 3), perfil público (ref 2), landing, calendário e Feed concluídos.*
+*Última atualização: 24/11/2026 — painel (ref 5), chat (ref 4), finanças (ref 3), perfil público (ref 2), landing, calendário, Feed, login e cadastro concluídos.*

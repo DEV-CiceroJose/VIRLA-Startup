@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
+import { ThemeProvider } from '../../design-system/theme/ThemeProvider'
 
 const navigateMock = vi.fn()
 vi.mock('react-router-dom', async (orig) => {
@@ -26,17 +27,16 @@ import { toast } from 'sonner'
 
 function renderCadastro() {
   return render(
-    <MemoryRouter>
-      <Cadastro />
-    </MemoryRouter>,
+    <ThemeProvider>
+      <MemoryRouter>
+        <Cadastro />
+      </MemoryRouter>
+    </ThemeProvider>,
   )
 }
 
-async function fillValidFormExceptPasswords(user) {
-  await user.type(screen.getByPlaceholderText('Nome completo'), 'Ana Souza')
-  await user.type(screen.getByPlaceholderText('seu@email.com'), 'ana@provedor.com')
-  await user.type(screen.getByPlaceholderText('000.000.000-00'), '52998224725')
-}
+const stepHeading = () => screen.getByRole('heading', { level: 2 })
+const next = (user) => user.click(screen.getByRole('button', { name: /continuar/i }))
 
 async function pickBirthDate(user) {
   await user.click(screen.getByLabelText(/^Data de nascimento/))
@@ -44,12 +44,26 @@ async function pickBirthDate(user) {
   await user.click(screen.getByRole('button', { name: '1994' }))
   await user.click(screen.getByRole('button', { name: 'maio' }))
   await user.click(screen.getByRole('button', { name: '10 de maio de 1994' }))
-  expect(screen.getByText('10', { selector: '.gc-readout span' })).toBeInTheDocument()
   await user.click(screen.getByRole('button', { name: /aplicar data/i }))
   expect(screen.getByLabelText(/^Data de nascimento/)).toHaveTextContent('10/05/1994')
 }
 
-describe('Página de Cadastro', () => {
+/** Etapa "Seus dados" preenchida e avançada. */
+async function fillDados(user, { cpf = '52998224725' } = {}) {
+  await user.type(screen.getByPlaceholderText('Nome completo'), 'Ana Souza')
+  await user.type(screen.getByPlaceholderText('000.000.000-00'), cpf)
+  await pickBirthDate(user)
+  await next(user)
+}
+
+async function fillAcesso(user, { confirm = 'segredo1' } = {}) {
+  await user.type(screen.getByPlaceholderText('seu@email.com'), 'ana@provedor.com')
+  await user.type(screen.getByPlaceholderText('Senha (mín. 6 caracteres)'), 'segredo1')
+  await user.type(screen.getByPlaceholderText('Repita a senha'), confirm)
+  await user.click(screen.getByRole('button', { name: /criar conta/i }))
+}
+
+describe('Página de Cadastro (em etapas)', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     localStorage.clear()
@@ -57,59 +71,52 @@ describe('Página de Cadastro', () => {
 
   // Guarda anti-regressão da TELA BRANCA: se o componente quebrar ao montar
   // (ex.: erro de hook por React duplicado), este render falha.
-  it('renderiza o formulário completo sem quebrar', () => {
+  it('abre na primeira etapa com o tipo de conta, o Google e o stepper', () => {
     renderCadastro()
-    expect(screen.getByRole('heading', { name: 'Cadastro' })).toBeInTheDocument()
-    expect(screen.getByPlaceholderText('Nome completo')).toBeInTheDocument()
-    expect(screen.getByPlaceholderText('000.000.000-00')).toBeInTheDocument()
-    expect(screen.getByPlaceholderText('seu@email.com')).toBeInTheDocument()
-    expect(screen.getByPlaceholderText('Repita a senha')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /criar conta/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'Crie sua conta' })).toBeInTheDocument()
+    expect(stepHeading()).toHaveTextContent('Como você vai usar a VIRLA?')
+    expect(screen.getByText('Passo 1 de 4')).toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: /sou cuidador/i })).toBeChecked()
     expect(screen.getByRole('button', { name: /cadastrar com google/i })).toBeInTheDocument()
+    expect(screen.getByRole('list', { name: 'Etapas do cadastro' }).children).toHaveLength(4)
   })
 
-  it('mostra o select de Conselho e o número do registro só para Cuidador', async () => {
+  it('família pula a etapa de registro profissional', async () => {
     const user = userEvent.setup()
     renderCadastro()
-    // padrão = CUIDADOR → campos de conselho presentes
-    expect(screen.getByLabelText('Conselho')).toBeInTheDocument()
-    expect(screen.getByPlaceholderText('Número do registro')).toBeInTheDocument()
-    // troca para FAMILIAR → campos somem
-    await user.click(screen.getByLabelText('Tipo de conta'))
-    await user.click(screen.getByRole('option', { name: 'Familiar' }))
+    await user.click(screen.getByRole('radio', { name: /sou da família/i }))
+    expect(screen.getByRole('list', { name: 'Etapas do cadastro' }).children).toHaveLength(3)
     expect(screen.queryByLabelText('Conselho')).not.toBeInTheDocument()
-    expect(screen.queryByPlaceholderText('Número do registro')).not.toBeInTheDocument()
+    await next(user)
+    await fillDados(user)
+    expect(stepHeading()).toHaveTextContent('Crie seu acesso')
+    expect(screen.getByText('Passo 3 de 3')).toBeInTheDocument()
   })
 
-  it('bloqueia envio quando só o conselho ou só o número do registro for preenchido', async () => {
+  it('não avança com CPF inválido e avisa', async () => {
     const user = userEvent.setup()
     renderCadastro()
-    await fillValidFormExceptPasswords(user)
-    await user.type(screen.getByPlaceholderText('Senha (mín. 6 caracteres)'), 'segredo1')
-    await user.type(screen.getByPlaceholderText('Repita a senha'), 'segredo1')
-    await pickBirthDate(user)
+    await next(user)
+    await fillDados(user, { cpf: '11111111111' })
+    expect(toast.warning).toHaveBeenCalledWith('CPF inválido. Verifique os dígitos.')
+    expect(stepHeading()).toHaveTextContent('Conte quem você é')
+    expect(registerWithEmail).not.toHaveBeenCalled()
+  })
+
+  it('não avança quando só o conselho ou só o número do registro for preenchido', async () => {
+    const user = userEvent.setup()
+    renderCadastro()
+    await next(user)
+    await fillDados(user)
+    expect(stepHeading()).toHaveTextContent('Registro profissional')
     await user.click(screen.getByLabelText('Conselho'))
     await user.click(screen.getByRole('option', { name: /COREN/ }))
-    await user.click(screen.getByRole('button', { name: /criar conta/i }))
+    await next(user)
 
     expect(toast.warning).toHaveBeenCalledWith(
       'Informe o conselho e o número do registro (ou deixe ambos em branco).',
     )
-    expect(registerWithEmail).not.toHaveBeenCalled()
-    expect(api.post).not.toHaveBeenCalled()
-  })
-
-  it('bloqueia envio com CPF inválido e avisa', async () => {
-    const user = userEvent.setup()
-    renderCadastro()
-    await user.type(screen.getByPlaceholderText('Nome completo'), 'Ana Souza')
-    await user.type(screen.getByPlaceholderText('seu@email.com'), 'ana@provedor.com')
-    await user.type(screen.getByPlaceholderText('000.000.000-00'), '11111111111')
-    await user.type(screen.getByPlaceholderText('Senha (mín. 6 caracteres)'), 'segredo1')
-    await user.type(screen.getByPlaceholderText('Repita a senha'), 'segredo1')
-    await pickBirthDate(user)
-    await user.click(screen.getByRole('button', { name: /criar conta/i }))
-    expect(toast.warning).toHaveBeenCalled()
+    expect(stepHeading()).toHaveTextContent('Registro profissional')
     expect(registerWithEmail).not.toHaveBeenCalled()
     expect(api.post).not.toHaveBeenCalled()
   })
@@ -117,15 +124,25 @@ describe('Página de Cadastro', () => {
   it('bloqueia envio com senhas divergentes e avisa', async () => {
     const user = userEvent.setup()
     renderCadastro()
-    await fillValidFormExceptPasswords(user)
-    await user.type(screen.getByPlaceholderText('Senha (mín. 6 caracteres)'), 'segredo1')
-    await user.type(screen.getByPlaceholderText('Repita a senha'), 'segredo2')
-    await pickBirthDate(user)
-    await user.click(screen.getByRole('button', { name: /criar conta/i }))
+    await next(user)
+    await fillDados(user)
+    await next(user)
+    await fillAcesso(user, { confirm: 'segredo2' })
 
     expect(toast.warning).toHaveBeenCalledWith('As senhas não conferem.')
     expect(registerWithEmail).not.toHaveBeenCalled()
     expect(api.post).not.toHaveBeenCalled()
+  })
+
+  it('voltar mantém o que já foi digitado', async () => {
+    const user = userEvent.setup()
+    renderCadastro()
+    await next(user)
+    await fillDados(user)
+    await user.click(screen.getByRole('button', { name: /^voltar$/i }))
+    expect(stepHeading()).toHaveTextContent('Conte quem você é')
+    expect(screen.getByPlaceholderText('Nome completo')).toHaveValue('Ana Souza')
+    expect(screen.getByPlaceholderText('000.000.000-00')).toHaveValue('529.982.247-25')
   })
 
   it('cadastro válido cria credencial no Firebase, envia perfil sem senha e navega para /login', async () => {
@@ -134,12 +151,10 @@ describe('Página de Cadastro', () => {
     getIdToken.mockResolvedValue('token')
     const user = userEvent.setup()
     renderCadastro()
-    await fillValidFormExceptPasswords(user)
-    await user.type(screen.getByPlaceholderText('Senha (mín. 6 caracteres)'), 'segredo1')
-    await user.type(screen.getByPlaceholderText('Repita a senha'), 'segredo1')
-    // data de nascimento (adulto) escolhida pelo calendário: ano → mês → dia
-    await pickBirthDate(user)
-    await user.click(screen.getByRole('button', { name: /criar conta/i }))
+    await next(user)
+    await fillDados(user)
+    await next(user)
+    await fillAcesso(user)
 
     await waitFor(() => expect(registerWithEmail).toHaveBeenCalledWith('ana@provedor.com', 'segredo1'))
     await waitFor(() => expect(api.post).toHaveBeenCalledTimes(1))

@@ -9,7 +9,7 @@
 
 ```
  Landing ──── Painel ──── Chat ──── Finanças ──── Perfil cuidador ──── Feed ──── Solicitações ──── Perfil/Pagamento
-  (ref 1)    ✅ (ref 5)  ✅ (ref 4)   ⏳ (ref 3)       ⏳ (ref 2)          ⏳          ⏳                  ⏳
+  (ref 1)    ✅ (ref 5)  ✅ (ref 4)   ✅ (ref 3)       ✅ (ref 2)          ⏳          ⏳                  ⏳
 ```
 
 ✅ feito · ⏳ falta
@@ -19,8 +19,8 @@ As imagens de referência estão em [`referencias/`](./referencias):
 | Ref | Arquivo | Usar em |
 |---|---|---|
 | 1 | `ref-1-landing.webp` | Landing page (`/`) |
-| 2 | `ref-2-perfil-cuidador.webp` | Perfil público do cuidador (`/user/:id`) e cards do Feed |
-| 3 | `ref-3-financas-transacoes.webp` | Finanças do cuidador (`/financas`) — histórico tipo "transaction history" |
+| 2 | `ref-2-perfil-cuidador.webp` | Perfil público do cuidador (`/user/:id`) ✅ e cards do Feed |
+| 3 | `ref-3-financas-transacoes.webp` | Finanças do cuidador (`/financas`) — histórico tipo "transaction history" ✅ |
 | 4 | `ref-4-chat.webp` | Chat (`/chat/:id`) ✅ |
 | 5 | `ref-5-painel.webp` | Painel inicial (`/home`) ✅ — **a mais fiel** |
 
@@ -65,6 +65,30 @@ As imagens de referência estão em [`referencias/`](./referencias):
 - No celular só a conversa aparece, com botão voltar.
 - **Toda a lógica (Firebase, socket, áudio, anexos, cobrança, apagar, sair) ficou intacta.**
 
+### 4. Finanças `/financas` (ref 3)
+- Resumo: cartão escuro "Recebido" (valor grande em Playfair) + "A receber" e "Seu valor por hora". No celular os dois secundários ficam lado a lado.
+- Histórico com abas **Todos / Recebidos / A receber** (com contadores) e filtros de **período** e **situação**.
+- Linhas **agrupadas por mês**, com o total recebido e a receber do mês no cabeçalho do grupo.
+- Cada linha: ícone por tom (entrada verde, relógio âmbar, devolução/análise vermelho), "Atendimento de 18 de novembro", explicação curta, badge de status em texto normal (sem caixa alta), data e valor à direita (`+` quando recebido, riscado quando reembolsado). No celular a coluna de data some (já está no título).
+- **Diferença consciente da ref:** sem busca por remetente — `GET /payments/caregiver/summary` não traz o nome da família, então a busca ficaria vazia. Também sem botão de download (ainda não existe comprovante por atendimento).
+- Estados: carregando, erro, sem atendimentos (leva a `/solicitacoes-disponiveis`) e "nenhum atendimento com esses filtros" (com Limpar filtros).
+- Tons de status usam os tokens compartilhados `--vd-ok`, `--vd-wait`, `--vd-risk` (+ `-bg`) de `dashboard.css`, com variante escura. Use-os em qualquer badge de status (Solicitações, Pagamento…).
+- Testes em `pages/Financas/Financas.test.jsx` (resumo, agrupamento, abas, filtros, vazio, erro).
+
+### 5. Perfil público `/user/:id` (ref 2)
+- **Desktop:** cartão de identidade à esquerda (fixo na rolagem só em telas com 920px+ de altura) e seções à direita. **Celular:** retrato de ponta a ponta com o cartão subindo por cima, como na ref mobile.
+- Retrato grande; sem foto, as **iniciais em Playfair sobre lilás** (vira o destaque visual em vez de um ícone genérico).
+- Nome em Playfair, linha "Profissional de cuidado, 37 anos", chips de valor/hora e cidade.
+- Verificação: "Registro profissional" com conselho + número e ✓ verde; se não houver, "Ainda não informado" (sem ✓).
+- Ação principal **"Conversar com {primeiro nome}"** → `/chat/:id`. Bloco alternativo da ref virou **"Prefere descrever o que precisa? → Publicar solicitação"** (só para quem visita como familiar), porque a contratação na VIRLA acontece pelas solicitações.
+- Seções: Sobre, Especialidades, Disponibilidade (turnos + frequência), Como {nome} trabalha.
+- **Diferenças conscientes da ref:** sem "anos de experiência" e sem "a partir de" — a API (`USER_PUBLIC_SELECT`) não tem esse campo e o valor/hora é fixo.
+- Navegação: "Buscar cuidadores › Nome" para familiar; "Início › Nome" para cuidador; no celular vira só "← Buscar cuidadores".
+- Testes em `pages/User/User.test.jsx`.
+
+### 6. Correção no shell
+- `comfort.css` força `.comfort-page { background:#faf7f8 !important }`; o override só existia no desktop. No **celular com tema escuro** o texto ficava claro sobre fundo claro (Painel, Finanças, Perfil). Agora `.vd-main .comfort-page` usa `--vd-canvas` em qualquer largura.
+
 ### 📁 Arquivos principais
 
 | Arquivo | O quê |
@@ -80,6 +104,10 @@ As imagens de referência estão em [`referencias/`](./referencias):
 | `frontend/src/design-system/theme/ThemeToggle.jsx` | Variante `inline` |
 | `frontend/src/components/EmojiPicker.jsx` | Prop `buttonClassName` |
 | `frontend/src/pages/Feed/index.jsx` | Lê `?busca=` |
+| `frontend/src/pages/Financas/index.jsx` | Finanças (importa `finance.css`) |
+| `frontend/src/design-system/finance.css` | Estilos de Finanças (`vf-*`) |
+| `frontend/src/pages/User/index.jsx` | Perfil público (importa `profile.css`) |
+| `frontend/src/design-system/profile.css` | Estilos do perfil público (`vp-*`) |
 
 Convenção de nomes CSS: `vd-` = shell/painel, `vc-` = chat. Para telas novas, siga o padrão (ex.: `vf-` finanças, `vp-` perfil).
 
@@ -104,7 +132,7 @@ Convenção de nomes CSS: `vd-` = shell/painel, `vc-` = chat. Para telas novas, 
    npm test
    npm run build
    ```
-   Estado atual: **145/145 testes passando** e build ok.
+   Estado atual: **154/154 testes passando** e build ok.
 4. **Ver no navegador:** `npm run dev` (precisa do backend + Firebase para logar).
    *Sem backend?* Dá para montar um "harness" temporário (não commitado): um `vite.config` extra com um plugin que troca `AuthContext`, `NotificationContext`, `SocketContext`, `services/api`, `services/auth` e os hooks `usePresence`, `useFirebaseChat`, `useSocket`, `useAudioRecorder` por mocks com dados falsos. Atenção: rode o Vite com `cwd` = `frontend/`, senão o Tailwind não gera as classes.
 
@@ -112,13 +140,11 @@ Convenção de nomes CSS: `vd-` = shell/painel, `vc-` = chat. Para telas novas, 
 
 ## ⏳ O que falta (em ordem sugerida)
 
-1. **Finanças `/financas` (ref 3)** — virar "histórico de transações": abas (Todos / Recebidos / A receber), filtros (busca, período, status), linhas com ícone de entrada/saída, descrição, **badge de status colorido** (Recebido verde, Aguardando âmbar, Reembolsado vermelho…), data e valor alinhado à direita. Cards de resumo no topo no estilo dos cartões do painel. Dados: `GET /payments/caregiver/summary` (`entries[]`, `status`, `amountCents`, `serviceDate`).
-2. **Perfil público do cuidador `/user/:id` (ref 2)** — card com foto grande (ou iniciais), nome em Playfair, chips "A partir de R$ X/h · N anos de experiência", checklist "Verificado (CRM/COREN) ✓", botão principal "Conversar"/"Contratar", bloco "Prefere conversar antes?" com botão secundário, seções Sobre e Especialidades.
-3. **Feed `/feed`** — cards de cuidador no mesmo idioma da ref 2 (foto, nome, preço/h, selos, botão).
-4. **Solicitações `/solicitacoes` e `/solicitacoes-disponiveis`** — listas/cards com o visual do painel (pílulas de data, badges de status).
-5. **Perfil próprio `/perfil` e Pagamento** — formulários com cartões `vd-panel`, inputs com o estilo da busca (borda `--vd-line`, foco roxo).
-6. **Landing `/` (ref 1)** — hero com foto + título Playfair, seções de serviços alternando imagem/texto, "Por que a VIRLA", depoimentos, "Como funciona", CTA final e rodapé roxo-escuro (no lugar do verde da ref).
-7. **Faxina final** — remover regras órfãs de `comfort.css` (sidebar antiga `comfort-sidebar`, `comfort-chat*`, `comfort-home*`), revisar acessibilidade (contraste no escuro, foco visível), conferir tudo a 375px.
+1. **Feed `/feed`** — cards de cuidador no mesmo idioma do perfil público (`vp-*`): retrato ou iniciais em Playfair sobre lilás, nome, chips de valor/hora e cidade, ✓ de registro, botões "Ver perfil" e "Conversar". Mantenha o seletor de solicitação e o MatchScore.
+2. **Solicitações `/solicitacoes` e `/solicitacoes-disponiveis`** — listas/cards com o visual do painel (pílulas de data, badges de status com `--vd-ok/wait/risk`).
+3. **Perfil próprio `/perfil` e Pagamento** — formulários com cartões `vd-panel`, inputs com o estilo da busca (borda `--vd-line`, foco roxo).
+4. **Landing `/` (ref 1)** — hero com foto + título Playfair, seções de serviços alternando imagem/texto, "Por que a VIRLA", depoimentos, "Como funciona", CTA final e rodapé roxo-escuro (no lugar do verde da ref).
+5. **Faxina final** — remover regras órfãs de `comfort.css` (sidebar antiga `comfort-sidebar`, `comfort-chat*`, `comfort-home*`, `comfort-finance*`, `comfort-page-heading`, `comfort-info-note`, `comfort-public-profile`), revisar acessibilidade (contraste no escuro, foco visível), conferir tudo a 375px. O cabeçalho do celular continua branco no tema escuro.
 
 ### ⚠️ Pendências conhecidas (já existiam antes do redesign)
 - Lint: `react-hooks/set-state-in-effect` em `Menu` (linha do "fechar drawer ao trocar de rota") e no `Chat` (efeito de carregamento), e 2 `no-unused-vars` (`e`, `err`) no `Chat`.
@@ -134,7 +160,7 @@ Cole isto no Claude Code, na raiz do repositório, já na branch `redesingv2`:
 Estamos continuando o redesign da VIRLA na branch redesingv2.
 Leia docs/redesign-v2/README.md e DESIGN_SYSTEM_VIRLA.md antes de tudo.
 As referências estão em docs/redesign-v2/referencias/.
-Próxima tela: Finanças (/financas) seguindo a ref-3, mantendo a identidade VIRLA
+Próxima tela: Feed (/feed), com cards no mesmo idioma do perfil público (ref-2), mantendo a identidade VIRLA
 (roxo/lilás, Playfair Display + DM Sans, tokens --vd-*, tema claro/escuro, responsivo).
 Não altere lógica de negócio. Ao final rode npm test e npm run build no frontend
 e atualize o mapa "Onde estamos na jornada" deste README.
@@ -142,4 +168,4 @@ e atualize o mapa "Onde estamos na jornada" deste README.
 
 ---
 
-*Última atualização: 23/11/2026 — painel (ref 5) e chat (ref 4) concluídos.*
+*Última atualização: 24/11/2026 — painel (ref 5), chat (ref 4), finanças (ref 3) e perfil público (ref 2) concluídos.*

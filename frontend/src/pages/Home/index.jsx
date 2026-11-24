@@ -200,7 +200,7 @@ export default function Home() {
       <div className="vd-dash">
         <header className="vd-greeting">
           <h1>
-            Olá, {firstName} <span aria-hidden>👋</span>
+            Olá, {firstName}
             <VerifiedSeal user={userData} iconSize={22} className="!text-[#9932CC]" />
           </h1>
           <p>

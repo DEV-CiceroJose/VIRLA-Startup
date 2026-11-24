@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, waitFor, fireEvent } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 
@@ -36,6 +36,17 @@ async function fillValidFormExceptPasswords(user) {
   await user.type(screen.getByPlaceholderText('Nome completo'), 'Ana Souza')
   await user.type(screen.getByPlaceholderText('seu@email.com'), 'ana@provedor.com')
   await user.type(screen.getByPlaceholderText('000.000.000-00'), '52998224725')
+}
+
+async function pickBirthDate(user) {
+  await user.click(screen.getByLabelText(/^Data de nascimento/))
+  await user.click(screen.getByRole('button', { name: /escolher ano/i }))
+  await user.click(screen.getByRole('button', { name: '1994' }))
+  await user.click(screen.getByRole('button', { name: 'maio' }))
+  await user.click(screen.getByRole('button', { name: '10 de maio de 1994' }))
+  expect(screen.getByText('10', { selector: '.gc-readout span' })).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: /aplicar data/i }))
+  expect(screen.getByLabelText(/^Data de nascimento/)).toHaveTextContent('10/05/1994')
 }
 
 describe('Página de Cadastro', () => {
@@ -76,7 +87,7 @@ describe('Página de Cadastro', () => {
     await fillValidFormExceptPasswords(user)
     await user.type(screen.getByPlaceholderText('Senha (mín. 6 caracteres)'), 'segredo1')
     await user.type(screen.getByPlaceholderText('Repita a senha'), 'segredo1')
-    fireEvent.change(document.querySelector('input[type="date"]'), { target: { value: '1994-05-10' } })
+    await pickBirthDate(user)
     await user.click(screen.getByLabelText('Conselho'))
     await user.click(screen.getByRole('option', { name: /COREN/ }))
     await user.click(screen.getByRole('button', { name: /criar conta/i }))
@@ -96,7 +107,7 @@ describe('Página de Cadastro', () => {
     await user.type(screen.getByPlaceholderText('000.000.000-00'), '11111111111')
     await user.type(screen.getByPlaceholderText('Senha (mín. 6 caracteres)'), 'segredo1')
     await user.type(screen.getByPlaceholderText('Repita a senha'), 'segredo1')
-    fireEvent.change(document.querySelector('input[type="date"]'), { target: { value: '1994-05-10' } })
+    await pickBirthDate(user)
     await user.click(screen.getByRole('button', { name: /criar conta/i }))
     expect(toast.warning).toHaveBeenCalled()
     expect(registerWithEmail).not.toHaveBeenCalled()
@@ -109,7 +120,7 @@ describe('Página de Cadastro', () => {
     await fillValidFormExceptPasswords(user)
     await user.type(screen.getByPlaceholderText('Senha (mín. 6 caracteres)'), 'segredo1')
     await user.type(screen.getByPlaceholderText('Repita a senha'), 'segredo2')
-    fireEvent.change(document.querySelector('input[type="date"]'), { target: { value: '1994-05-10' } })
+    await pickBirthDate(user)
     await user.click(screen.getByRole('button', { name: /criar conta/i }))
 
     expect(toast.warning).toHaveBeenCalledWith('As senhas não conferem.')
@@ -126,9 +137,8 @@ describe('Página de Cadastro', () => {
     await fillValidFormExceptPasswords(user)
     await user.type(screen.getByPlaceholderText('Senha (mín. 6 caracteres)'), 'segredo1')
     await user.type(screen.getByPlaceholderText('Repita a senha'), 'segredo1')
-    // data de nascimento (adulto) — o campo type="date" aceita 'YYYY-MM-DD'
-    const dateInput = document.querySelector('input[type="date"]')
-    fireEvent.change(dateInput, { target: { value: '1994-05-10' } })
+    // data de nascimento (adulto) escolhida pelo calendário: ano → mês → dia
+    await pickBirthDate(user)
     await user.click(screen.getByRole('button', { name: /criar conta/i }))
 
     await waitFor(() => expect(registerWithEmail).toHaveBeenCalledWith('ana@provedor.com', 'segredo1'))

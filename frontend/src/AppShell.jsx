@@ -189,8 +189,9 @@ export default function AppShell() {
       <NotificationProvider>
       <Toaster position="top-right" richColors />
       <PresenceManager />
-      {/* Na área logada o botão de tema fica na topbar / cabeçalho mobile */}
-      {!framed && <ThemeToggle />}
+      {/* Na área logada o botão de tema fica na topbar / cabeçalho mobile;
+          na landing ele fica no cabeçalho, com o efeito de tinta. */}
+      {!framed && location.pathname !== '/' && <ThemeToggle />}
       {showMenu && <Menu />}
 
       {framed ? (

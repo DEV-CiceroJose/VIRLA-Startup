@@ -27,6 +27,7 @@ import NumberTicker from './components/NumberTicker'
 import HoverCards from './components/HoverCards'
 import { BentoGrid, BentoCell } from './components/BentoGrid'
 import ScrollTimeline from './components/ScrollTimeline'
+import InkThemeToggle from './components/InkThemeToggle'
 import './landing.css'
 
 const FORM_FAMILIAS = 'https://docs.google.com/forms/d/e/1FAIpQLSdg2-oStG8HFtxq_pqtrWM2AxX7SM19qb-XRSLSdjZjOJEjHA/viewform?usp=header'
@@ -108,6 +109,7 @@ export default function Landing() {
           <Link to="/login" onClick={closeMenu}>Entrar</Link>
           <Link className="landing-nav-cta" to="/cadastro" onClick={closeMenu}>Começar <ArrowForward fontSize="small" /></Link>
         </nav>
+        <InkThemeToggle />
       </header>
 
       <main>

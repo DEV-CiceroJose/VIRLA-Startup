@@ -87,7 +87,39 @@
   color: #fff;
   font-size: 19px;
 }
-.landing-nav { display: flex; align-items: center; gap: clamp(16px, 2.4vw, 34px); }
+.landing-nav { display: flex; align-items: center; gap: clamp(16px, 2.4vw, 34px); margin-left: auto; }
+
+/* Tema com tinta (Ink Spill Theme Switch, 21st.dev) — só na landing */
+.landing-ink-toggle {
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  margin-left: -12px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, currentColor 22%, transparent);
+  background: none;
+  color: var(--l-ink);
+  cursor: pointer;
+  transition: transform 0.15s ease, background-color 0.15s ease;
+}
+.landing-ink-toggle:hover { transform: scale(1.06); background: color-mix(in srgb, var(--l-purple) 9%, transparent); }
+.landing-ink-toggle:active { transform: scale(0.95); }
+.landing-ink-toggle:focus-visible { outline: 2px solid var(--l-purple); outline-offset: 3px; }
+
+/* Durante a troca: a foto do tema antigo fica parada e o tema novo aparece
+   recortado pela mancha (--ink-clip é atualizado a cada quadro). */
+html.ink-spilling::view-transition-old(root),
+html.ink-spilling::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+html.ink-spilling::view-transition-new(root) {
+  clip-path: var(--ink-clip);
+  animation: ink-hold calc(var(--ink-duration, 1200ms) + 80ms) linear both;
+}
+@keyframes ink-hold { from { opacity: 1; } to { opacity: 1; } }
 .landing-nav a { color: var(--l-ink); font-size: 14px; font-weight: 600; text-decoration: none; }
 .landing-nav a:hover { color: var(--l-link); }
 .landing-menu-button { display: none; background: none; border: 0; color: var(--l-link); }
@@ -718,8 +750,9 @@
 }
 
 @media (max-width: 860px) {
-  .landing-header { min-height: 68px; }
-  .landing-menu-button { display: block; }
+  .landing-header { min-height: 68px; gap: 10px; }
+  .landing-menu-button { display: block; order: 3; }
+  .landing-ink-toggle { order: 2; margin-left: auto; }
   .landing-nav {
     display: none;
     position: absolute;
@@ -797,6 +830,7 @@
   .o-btn,
   .o-social a,
   .landing-button,
+  .landing-ink-toggle,
   .landing-nav .landing-nav-cta { transition: none; }
   .bento-cell:hover,
   .o-team li:hover,

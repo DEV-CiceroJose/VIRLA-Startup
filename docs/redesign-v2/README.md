@@ -9,7 +9,7 @@
 
 ```
  Landing ──── Painel ──── Chat ──── Finanças ──── Perfil cuidador ──── Feed ──── Solicitações ──── Perfil/Pagamento
-  (ref 1)    ✅ (ref 5)  ✅ (ref 4)   ✅ (ref 3)       ✅ (ref 2)          ⏳          ⏳                  ⏳
+ ✅ (ref 1)  ✅ (ref 5)  ✅ (ref 4)   ✅ (ref 3)       ✅ (ref 2)          ⏳          ⏳                  ⏳
 ```
 
 ✅ feito · ⏳ falta
@@ -89,6 +89,21 @@ As imagens de referência estão em [`referencias/`](./referencias):
 ### 6. Correção no shell
 - `comfort.css` força `.comfort-page { background:#faf7f8 !important }`; o override só existia no desktop. No **celular com tema escuro** o texto ficava claro sobre fundo claro (Painel, Finanças, Perfil). Agora `.vd-main .comfort-page` usa `--vd-canvas` em qualquer largura.
 
+### 7. Landing `/`
+- **Hero mantida** do modelo novo (aprovada): título serifado grande, arco com foto. Corrigido o enquadramento — a foto é paisagem (~2:1) e o arco alto cortava o rosto da filha; agora o arco é `5:5.4` com `object-position: 92% 40%` e os dois rostos aparecem (desktop e celular).
+- **Resto da página no ar do site original (virla.com.br):** títulos Playfair 900, etiquetas em pílula lilás, roxo `#7B128A` + rosa neon `#FE91FE`, cartões com borda lilás, faixa roxa em gradiente com pontos, caixa de chamada com brilhos. Todo o conteúdo do site em produção voltou: Márcia + realidade do mercado, barreira da contratação, porto seguro (com o aviso de pagamento fora da plataforma), Por que a VIRLA + números, trajetória (10 marcos com fotos), time, formulários de validação e rodapé.
+- **Componentes do 21st.dev** (reproduzidos a partir das demos públicas — o código-fonte lá exige conta; sem dependências novas, só React + CSS, com `prefers-reduced-motion`), em `pages/Landing/components/`:
+  - `Marquee` (Magic UI) → faixa "Por onde a VIRLA já passou" abaixo da hero; pausa no hover.
+  - `NumberTicker` (Magic UI) → 33 milhões, 1 em cada 3, R$ 12,3 bi, 300 mil, 840 mil contam ao aparecer (leitor de tela ouve o valor final).
+  - `HoverCards` (Aceternity "Card Hover Effect") → destaque que desliza entre os cartões da barreira da contratação.
+  - `BentoGrid` (Magic UI) → porto seguro; pagamento ocupa a coluna inteira, chat ocupa duas colunas.
+  - `ScrollTimeline` (Aceternity "Timeline") → trajetória com título fixo à esquerda e feixe roxo→rosa que acompanha a rolagem; no celular a linha vai para a esquerda.
+- O link "Entenda como funciona" da hero leva para "O porto seguro da Márcia".
+- Imagens otimizadas em `public/landing/*.jpg` (≈7 MB → ≈1 MB; hero 2,4 MB → 171 KB). Originais intocadas em `public/`.
+- Tema escuro com tokens `--l-*` (hero) e `--o-*` (seções) em `pages/Landing/landing.css` (substitui `comfort-landing.css`). `style.css` da landing antiga não é mais importado — pode sair na faxina.
+- O rodapé trocou a coluna "Legal" (links `#` sem destino) por "Plataforma" (entrar, criar conta, como funciona). Quando houver páginas de Privacidade/Termos/FAQ, volte com a coluna.
+- Testes em `pages/Landing/Landing.test.jsx`.
+
 ### 📁 Arquivos principais
 
 | Arquivo | O quê |
@@ -132,7 +147,7 @@ Convenção de nomes CSS: `vd-` = shell/painel, `vc-` = chat. Para telas novas, 
    npm test
    npm run build
    ```
-   Estado atual: **154/154 testes passando** e build ok.
+   Estado atual: **160/160 testes passando** e build ok.
 4. **Ver no navegador:** `npm run dev` (precisa do backend + Firebase para logar).
    *Sem backend?* Dá para montar um "harness" temporário (não commitado): um `vite.config` extra com um plugin que troca `AuthContext`, `NotificationContext`, `SocketContext`, `services/api`, `services/auth` e os hooks `usePresence`, `useFirebaseChat`, `useSocket`, `useAudioRecorder` por mocks com dados falsos. Atenção: rode o Vite com `cwd` = `frontend/`, senão o Tailwind não gera as classes.
 
@@ -143,8 +158,7 @@ Convenção de nomes CSS: `vd-` = shell/painel, `vc-` = chat. Para telas novas, 
 1. **Feed `/feed`** — cards de cuidador no mesmo idioma do perfil público (`vp-*`): retrato ou iniciais em Playfair sobre lilás, nome, chips de valor/hora e cidade, ✓ de registro, botões "Ver perfil" e "Conversar". Mantenha o seletor de solicitação e o MatchScore.
 2. **Solicitações `/solicitacoes` e `/solicitacoes-disponiveis`** — listas/cards com o visual do painel (pílulas de data, badges de status com `--vd-ok/wait/risk`).
 3. **Perfil próprio `/perfil` e Pagamento** — formulários com cartões `vd-panel`, inputs com o estilo da busca (borda `--vd-line`, foco roxo).
-4. **Landing `/` (ref 1)** — hero com foto + título Playfair, seções de serviços alternando imagem/texto, "Por que a VIRLA", depoimentos, "Como funciona", CTA final e rodapé roxo-escuro (no lugar do verde da ref).
-5. **Faxina final** — remover regras órfãs de `comfort.css` (sidebar antiga `comfort-sidebar`, `comfort-chat*`, `comfort-home*`, `comfort-finance*`, `comfort-page-heading`, `comfort-info-note`, `comfort-public-profile`), revisar acessibilidade (contraste no escuro, foco visível), conferir tudo a 375px. O cabeçalho do celular continua branco no tema escuro.
+4. **Faxina final** — remover regras órfãs de `comfort.css` (sidebar antiga `comfort-sidebar`, `comfort-chat*`, `comfort-home*`, `comfort-finance*`, `comfort-page-heading`, `comfort-info-note`, `comfort-public-profile`) e `pages/Landing/style.css`, revisar acessibilidade (contraste no escuro, foco visível), conferir tudo a 375px. O cabeçalho do celular continua branco no tema escuro.
 
 ### ⚠️ Pendências conhecidas (já existiam antes do redesign)
 - Lint: `react-hooks/set-state-in-effect` em `Menu` (linha do "fechar drawer ao trocar de rota") e no `Chat` (efeito de carregamento), e 2 `no-unused-vars` (`e`, `err`) no `Chat`.
@@ -168,4 +182,4 @@ e atualize o mapa "Onde estamos na jornada" deste README.
 
 ---
 
-*Última atualização: 24/11/2026 — painel (ref 5), chat (ref 4), finanças (ref 3) e perfil público (ref 2) concluídos.*
+*Última atualização: 24/11/2026 — painel (ref 5), chat (ref 4), finanças (ref 3), perfil público (ref 2) e landing concluídos.*

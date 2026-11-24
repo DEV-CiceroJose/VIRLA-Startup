@@ -47,6 +47,7 @@ export default function Chat() {
   const { markConversationRead } = useNotifications()
 
   const [peer, setPeer] = useState(null)
+  const [conversations, setConversations] = useState([])
   const [myRole, setMyRole] = useState(localStorage.getItem('meuRole') ?? '')
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
@@ -65,6 +66,14 @@ export default function Chat() {
 
   const listRef = useRef(null)
   const fileInputRef = useRef(null)
+
+  useEffect(() => {
+    let active = true
+    api.get('/conversations').then(({ data }) => {
+      if (active) setConversations(data.conversations ?? [])
+    }).catch(() => {})
+    return () => { active = false }
+  }, [peerId, messages.length])
 
   const { isRecording, startRecording, stopRecording, audioBlob, clearAudio } = useAudioRecorder()
 
@@ -393,7 +402,19 @@ export default function Chat() {
   }
 
   return (
-    <div className="h-[100dvh] min-h-0 pt-16 bg-[#e8e4ec] flex flex-col">
+    <div className="comfort-page comfort-chat h-[100dvh] min-h-0 pt-16 bg-[#e8e4ec] flex flex-col">
+      <aside className="comfort-chat-list" aria-label="Conversas">
+        <div className="comfort-chat-list-heading"><span className="comfort-eyebrow">Mensagens</span><h2>Conversas</h2><p>Seu espaço para conversar com calma.</p></div>
+        <div className="comfort-chat-list-items">
+          {conversations.length === 0 && <p className="comfort-chat-list-empty">Suas conversas aparecerão aqui.</p>}
+          {conversations.map((conversation) => (
+            <Link key={conversation.peerId} to={`/chat/${conversation.peerId}`} aria-current={conversation.peerId === peerId ? 'page' : undefined} className={conversation.peerId === peerId ? 'active' : ''}>
+              <span className="comfort-chat-avatar"><Person fontSize="small" /></span>
+              <span><strong>{conversation.peerName}</strong><small>{conversation.lastMessage || 'Inicie a conversa'}</small></span>
+            </Link>
+          ))}
+        </div>
+      </aside>
       {!isConnected && (
         <div className="bg-amber-100 text-amber-800 text-xs text-center py-1 font-medium z-50">
           Sem conexão. Reconectando ao servidor...

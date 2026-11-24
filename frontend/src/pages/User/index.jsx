@@ -82,13 +82,13 @@ export default function User() {
 
   return (
     <div
-      className="min-h-screen pt-16 bg-virla-neve pb-10"
+      className="comfort-page comfort-public-profile min-h-screen pt-16 bg-virla-neve pb-10"
       style={{
         backgroundImage:
           'radial-gradient(ellipse 60% 40% at 80% 10%, rgba(128,0,128,0.08), transparent)',
       }}
     >
-      <div className="max-w-2xl mx-auto px-6 py-8">
+      <div className="comfort-content max-w-2xl mx-auto px-6 py-8">
         <Link
           to="/feed"
           className="inline-flex items-center gap-1 text-sm text-virla-texto/60 hover:text-virla-roxo mb-6"

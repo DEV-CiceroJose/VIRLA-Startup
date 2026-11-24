@@ -39,6 +39,7 @@ const IS_PROD = NODE_ENV === 'production'
 //
 const allowedOriginsSet = new Set([
   'http://localhost:5173', // Vite dev
+  'http://127.0.0.1:5173', // Vite dev via loopback IPv4
   'http://localhost:3000',
   'https://virla-app.onrender.com', // Frontend na Render
 ])

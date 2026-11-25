@@ -141,3 +141,20 @@ test('mantém acessível uma solicitação já visualizada mesmo abaixo do limia
   assert.ok(retained)
   assert.equal(retained.match.isFallback, undefined)
 })
+
+test('limita as oportunidades novas por resposta e mantém as já visualizadas', () => {
+  const caregiverId = 'caregiver-completo'
+  const scored = Array.from({ length: 80 }, (_, index) => ({
+    id: `nova-${index}`,
+    viewedByIds: [],
+    match: { score: 99 - (index % 30) },
+  }))
+  scored.push({ id: 'ja-visualizada', viewedByIds: [caregiverId], match: { score: 61 } })
+
+  const result = selectSolicitacoesForCaregiver(scored, caregiverId)
+
+  assert.equal(result.solicitacoes.filter((item) => item.id.startsWith('nova-')).length, 30)
+  assert.ok(result.solicitacoes.some((item) => item.id === 'ja-visualizada'))
+  assert.equal(result.policy.truncatedCount, 50)
+  assert.equal(result.policy.maxDiscovery, 30)
+})

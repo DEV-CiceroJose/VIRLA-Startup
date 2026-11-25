@@ -302,17 +302,14 @@ export const listAvailableSolicitacoes = async (req, res) => {
     ])
     if (!caregiver) return res.status(404).json({ msg: 'Cuidador não encontrado.' })
 
-    // Enriququece com os dados do familiar (substitui o join do Prisma),
-    // buscando os usuários em lote.
+    // Pontua e seleciona primeiro; só depois busca os familiares das
+    // solicitações que vão de fato na resposta (menos leituras).
+    const scored = base.map((s) => ({ ...s, match: scoreCaregiverForSolicitacao(caregiver, s) }))
+    const { solicitacoes: selected, policy: matchPolicy } = selectSolicitacoesForCaregiver(scored, caregiverId)
     const familiarById = new Map(
-      (await listByIds([...new Set(base.map((s) => s.familiarId))])).map((u) => [u.id, u])
+      (await listByIds([...new Set(selected.map((s) => s.familiarId))])).map((u) => [u.id, u])
     )
-    const scored = base.map((s) => ({
-      ...s,
-      familiar: pickFamiliar(familiarById.get(s.familiarId)),
-      match: scoreCaregiverForSolicitacao(caregiver, s),
-    }))
-    const { solicitacoes, policy: matchPolicy } = selectSolicitacoesForCaregiver(scored, caregiverId)
+    const solicitacoes = selected.map((s) => ({ ...s, familiar: pickFamiliar(familiarById.get(s.familiarId)) }))
     return res.status(200).json({ solicitacoes, matchPolicy })
   } catch (err) {
     logger.error('solicitacao:list_available_failed', {

@@ -65,6 +65,10 @@ npm run deploy:firestore
 O que o `firestore.indexes.json` declara:
 - **Índice composto `users (council, registerNumber)`** — usado ao checar se o
   registro profissional (COREN/CRM…) já está em uso por outro cuidador.
+- **Índices `users (role, verificationStatus)` e `(role, verificationStatus, state)`** —
+  a busca de cuidadores filtra e pagina no próprio Firestore (lê só a página pedida).
+- **Índice `solicitacoes (status, createdAt desc)`** — as solicitações disponíveis
+  analisam só as 300 abertas mais recentes (mais as que o cuidador já abriu ou assumiu).
 - **Sem indexação em `chunks.data`** — os pedaços cifrados dos documentos da
   verificação são binários grandes; indexá-los só gasta escrita e espaço.
 

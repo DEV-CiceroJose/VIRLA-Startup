@@ -14,7 +14,7 @@ export default function AuthLayout({ children }) {
       <BackgroundPaths />
       <header className="va-top">
         <Link to="/" className="va-brand" aria-label="VIRLA, página inicial">
-          <img src="/icon-192.png" alt="" width="32" height="32" />
+          <img src="/logo.png" alt="" width="32" height="32" />
           VIRLA
         </Link>
         <div className="va-top-actions">

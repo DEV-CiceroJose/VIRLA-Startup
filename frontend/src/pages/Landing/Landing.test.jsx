@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { ThemeProvider } from '../../design-system/theme/ThemeProvider'
@@ -33,14 +33,36 @@ describe('Landing', () => {
     expect(screen.getByLabelText('840 mil')).toBeInTheDocument()
   })
 
-  it('lista a trajetória completa com o marco atual e o time', () => {
+  it('mostra a trajetória em baralho com índice de todos os marcos', async () => {
     renderLanding()
-    expect(screen.getAllByRole('heading', { level: 3, name: 'O Nascimento' }).length).toBeGreaterThan(0)
-    expect(screen.getAllByRole('heading', { level: 3, name: 'Pré-Incubação na FOZ' }).length).toBeGreaterThan(0)
+    const deck = screen.getByRole('region', { name: /marcos da trajetória/i })
+    expect(within(deck).getByRole('button', { name: /O Nascimento.*No topo/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 3, name: 'O Nascimento' })).toBeInTheDocument()
+
+    const index = screen.getByRole('navigation', { name: /todos os marcos/i })
+    expect(within(index).getAllByRole('button')).toHaveLength(15)
+
+    fireEvent.click(within(index).getByRole('button', { name: /Pré-Incubação Sertão Inovador/i }))
+    expect(screen.getByRole('heading', { level: 3, name: 'Pré-Incubação Sertão Inovador' })).toBeInTheDocument()
     expect(screen.getByText('Agora')).toBeInTheDocument()
+
+    fireEvent.click(within(deck).getByRole('button', { name: /próxima carta/i }))
+    expect(await screen.findByRole('heading', { level: 3, name: 'Próximos passos' })).toBeInTheDocument()
+    expect(screen.getByText('Em breve')).toBeInTheDocument()
+
     for (const name of ['Fabio Henrique', 'Cicero José', 'Joéverton Paulo']) {
       expect(screen.getByText(name)).toBeInTheDocument()
     }
+  })
+
+  it('mostra os cargos atualizados dos sócios e Joéverton fora dos colaboradores', () => {
+    renderLanding()
+    const role = (name) => screen.getByText(name).closest('li').querySelector('span').textContent
+    expect(role('Joéverton Paulo')).toBe('CFO')
+    expect(role('Alissomberg Domingos')).toBe('COO')
+    expect(role('Cicero José')).toBe('CTO')
+    expect(role('Miguel Alves')).toBe('CBO')
+    expect(screen.getAllByText('Colaborador')).toHaveLength(2)
   })
 
   it('mantém o aviso sobre pagamentos fora da plataforma e os formulários de validação', () => {

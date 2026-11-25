@@ -14,7 +14,7 @@ export default function LegalPage() {
     <div className="vl-page">
       <header className="vl-top">
         <Link to="/" className="vl-brand" aria-label="VIRLA, página inicial">
-          <img src="/icon-192.png" alt="" width="30" height="30" />
+          <img src="/logo.png" alt="" width="30" height="30" />
           VIRLA
         </Link>
         <div className="vl-top-actions">

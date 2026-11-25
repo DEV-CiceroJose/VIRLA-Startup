@@ -120,14 +120,27 @@ export async function listByFamiliar(familiarId) {
  * mesmo assumiu. Duas consultas (evita índice composto status+assignedCaregiver)
  * mescladas por id.
  */
-export async function listAvailableForCaregiver(caregiverId) {
-  const [openSnap, mineSnap] = await Promise.all([
-    col().where('status', 'in', ['ABERTA', 'VISUALIZADA']).get(),
+/**
+ * Quantas solicitações abertas, das mais recentes, entram na análise de
+ * compatibilidade do cuidador. Teto de leituras por acesso: antes a rota lia
+ * todas as abertas (2.000 abertas = 2.000 leituras e ~1,8 MB por resposta).
+ */
+export const AVAILABLE_SCAN_LIMIT = 300
+
+export async function listAvailableForCaregiver(caregiverId, scanLimit = AVAILABLE_SCAN_LIMIT) {
+  const [openSnap, viewedSnap, mineSnap] = await Promise.all([
+    col().where('status', 'in', ['ABERTA', 'VISUALIZADA']).orderBy('createdAt', 'desc').limit(scanLimit).get(),
+    // As que o cuidador já abriu continuam aparecendo, mesmo fora da janela recente.
+    col().where('viewedByIds', 'array-contains', caregiverId).get(),
     col().where('assignedCaregiverId', '==', caregiverId).get(),
   ])
 
   const byId = new Map()
   openSnap.docs.forEach((d) => byId.set(d.id, mapDoc(d)))
+  viewedSnap.docs.forEach((d) => {
+    const s = mapDoc(d)
+    if (s.status === 'ABERTA' || s.status === 'VISUALIZADA') byId.set(d.id, s)
+  })
   mineSnap.docs.forEach((d) => {
     const s = mapDoc(d)
     if (s.status === 'EM_ANDAMENTO') byId.set(d.id, s)

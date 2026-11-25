@@ -54,13 +54,35 @@ Necessário para o chat em tempo real (o backend emite custom tokens).
 > a cada 4s). Com eles, passa a **tempo real instantâneo** automaticamente.
 
 ### 2.3 Regras e índices do Firestore
-A partir da pasta `backend/` (onde estão `firestore.rules` e `firestore.indexes.json`):
+A partir da pasta `backend/` (o `.firebaserc` já aponta `default` → `virla-app` e `test` → `virla-startap`):
 ```bash
-firebase deploy --only firestore:rules,firestore:indexes
+npm run deploy:firestore
+# equivale a: firebase deploy --only firestore:rules,firestore:indexes --project default
 ```
 > As regras são **deny-all para clientes** — o frontend não acessa o Firestore
-> diretamente, só o backend (via Admin SDK). Os repositórios usam consultas de
-> campo único, então `firestore.indexes.json` está vazio por ora.
+> diretamente, só o backend (via Admin SDK).
+
+O que o `firestore.indexes.json` declara:
+- **Índice composto `users (council, registerNumber)`** — usado ao checar se o
+  registro profissional (COREN/CRM…) já está em uso por outro cuidador.
+- **Índices `users (role, verificationStatus)` e `(role, verificationStatus, state)`** —
+  a busca de cuidadores filtra e pagina no próprio Firestore (lê só a página pedida).
+- **Índice `solicitacoes (status, createdAt desc)`** — as solicitações disponíveis
+  analisam só as 300 abertas mais recentes (mais as que o cuidador já abriu ou assumiu).
+- **Sem indexação em `chunks.data`** — os pedaços cifrados dos documentos da
+  verificação são binários grandes; indexá-los só gasta escrita e espaço.
+
+#### Estrutura atual do banco
+| Coleção | Conteúdo |
+| --- | --- |
+| `users/{uid}` | Perfil. Campos novos: `verificationStatus`, `street`, `neighborhood`, `acceptedTerms`, `termsVersion`. |
+| `verifications/{uid}` | Dados da verificação do cuidador (status, documentos, revisão da equipe). |
+| `verificationFiles/{id}` + `chunks/{nnnn}` | Documentos cifrados (AES-256-GCM) divididos em pedaços de ~700 KB. |
+| `solicitacoes`, `serviceReports`, `chargeRequests`, `notifications` | Fluxo de atendimento. |
+| `payments`, `stripePayments`, `escrows` (+ `auditLogs`), `escrowIdempotencyKeys` | Pagamentos e custódia. |
+
+> Cuidadores que já existiam não têm `verificationStatus` e ficam **fora do Feed**
+> até enviarem os documentos e serem aprovados — não há migração de dados a fazer.
 
 ---
 

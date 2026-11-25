@@ -6,7 +6,9 @@ import {
   createUserWithId,
   updateUser,
   deleteUser,
-  listByRole,
+  countVisibleCaregivers,
+  listVisibleCaregiversPage,
+  listCaregiverMatchPool,
 } from '../repositories/userRepository.js'
 import { firebaseAdmin } from '../lib/firebase.js'
 import { project } from '../repositories/_helpers.js'
@@ -155,7 +157,7 @@ const getFeedUsers = async (req, res) => {
       return res.status(404).json({ msg: 'Usuário não encontrado' })
     }
 
-    const oppositeRole = loggedUser.role === 'CUIDADOR' ? 'FAMILIAR' : 'CUIDADOR'
+    // A rota só aceita FAMILIAR, então o feed é sempre de cuidadores.
     let matchSolicitacao = null
     if (req.query.solicitacaoId) {
       const parsedId = objectIdSchema.safeParse(req.query.solicitacaoId)
@@ -168,21 +170,28 @@ const getFeedUsers = async (req, res) => {
       }
     }
 
-    // Paginação por offset emulada: o Firestore não tem offset eficiente, mas
-    // o feed tem volume baixo no MVP — buscamos os usuários do papel oposto e
-    // recortamos a página em memória. Mantém o contrato `?page=N` do frontend.
-    // Cuidadores só aparecem depois que a equipe aprova documentos e antecedentes.
-    const allOfRole = (await listByRole(oppositeRole)).filter(isCaregiverVisible)
-    const ranked = matchSolicitacao
-      ? rankCaregiversForSolicitacao(allOfRole, matchSolicitacao)
-      : allOfRole.map((caregiver) => ({ caregiver, match: null }))
-    const total = ranked.length
-    const feedUsers = ranked
-      .slice(skip, skip + limit)
-      .map(({ caregiver, match }) => ({
+    // Cuidadores só aparecem depois que a equipe aprova documentos e antecedentes
+    // (filtro feito no próprio Firestore; isCaregiverVisible fica como garantia).
+    let total
+    let feedUsers
+    if (matchSolicitacao) {
+      // Match: ranqueia um grupo limitado de candidatos (mesmo estado primeiro).
+      const pool = (await listCaregiverMatchPool(matchSolicitacao.estado)).filter(isCaregiverVisible)
+      const ranked = rankCaregiversForSolicitacao(pool, matchSolicitacao)
+      total = ranked.length
+      feedUsers = ranked.slice(skip, skip + limit).map(({ caregiver, match }) => ({
         ...project(caregiver, USER_PUBLIC_SELECT),
-        ...(match && { match }),
+        match,
       }))
+    } else {
+      // Sem match: lê só a página pedida, e o total vem de uma agregação.
+      const [count, pageUsers] = await Promise.all([
+        countVisibleCaregivers(),
+        listVisibleCaregiversPage({ offset: skip, limit }),
+      ])
+      total = count
+      feedUsers = pageUsers.filter(isCaregiverVisible).map((caregiver) => project(caregiver, USER_PUBLIC_SELECT))
+    }
 
     const totalPages = Math.max(1, Math.ceil(total / limit))
 

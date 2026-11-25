@@ -16,6 +16,8 @@ const CARE_TYPE_TO_SPECIALTY = {
 export const CAREGIVER_MATCH_VISIBILITY = Object.freeze({
   threshold: 60,
   minimumVisible: 5,
+  // Teto de oportunidades novas por resposta (as já abertas/assumidas sempre vêm).
+  maxDiscovery: 30,
 })
 
 function normalize(value) {
@@ -200,6 +202,7 @@ export function selectSolicitacoesForCaregiver(
 ) {
   const threshold = Number(policy?.threshold ?? CAREGIVER_MATCH_VISIBILITY.threshold)
   const minimumVisible = Math.max(0, Number(policy?.minimumVisible ?? CAREGIVER_MATCH_VISIBILITY.minimumVisible))
+  const maxDiscovery = Math.max(minimumVisible, Number(policy?.maxDiscovery ?? CAREGIVER_MATCH_VISIBILITY.maxDiscovery))
   const sorted = [...(Array.isArray(scoredSolicitacoes) ? scoredSolicitacoes : [])]
     .sort((a, b) => Number(b?.match?.score ?? 0) - Number(a?.match?.score ?? 0))
 
@@ -213,7 +216,8 @@ export function selectSolicitacoesForCaregiver(
     else discovery.push(solicitacao)
   }
 
-  const preferred = discovery.filter((item) => Number(item?.match?.score ?? 0) >= threshold)
+  const allPreferred = discovery.filter((item) => Number(item?.match?.score ?? 0) >= threshold)
+  const preferred = allPreferred.slice(0, maxDiscovery)
   const belowThreshold = discovery.filter((item) => Number(item?.match?.score ?? 0) < threshold)
   const fallbackCount = Math.min(
     belowThreshold.length,
@@ -232,6 +236,8 @@ export function selectSolicitacoesForCaregiver(
       threshold,
       minimumVisible,
       preferredCount: preferred.length,
+      truncatedCount: allPreferred.length - preferred.length,
+      maxDiscovery,
       fallbackCount,
       hiddenCount: belowThreshold.length - fallbackCount,
     },

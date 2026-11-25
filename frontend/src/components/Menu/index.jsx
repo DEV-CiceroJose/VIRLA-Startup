@@ -199,7 +199,7 @@ export default function Menu() {
     <>
       <div className="vd-backdrop" aria-hidden="true" />
       <aside className="vd-sidebar" aria-label="Navegação da VIRLA">
-        <Link to="/home" className="vd-sidebar-logo"><img src="/favicon.ico" alt="" /><span>VIRLA</span></Link>
+        <Link to="/home" className="vd-sidebar-logo"><img src="/logo.png" alt="" /><span>VIRLA</span></Link>
         <p className="vd-sidebar-caption">Cuidar conecta.</p>
         <nav aria-label="Áreas da plataforma" className="vd-sidebar-nav">
           {LINKS.map(({ to, label }) => {
@@ -268,7 +268,7 @@ export default function Menu() {
             to="/home"
             className="flex items-center gap-2 flex-shrink-0 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-virla-roxo/40"
           >
-            <img src="/favicon.ico" alt="" className="w-9 h-9 object-contain shrink-0" aria-hidden />
+            <img src="/logo.png" alt="" className="w-9 h-9 object-contain shrink-0" aria-hidden />
             <span className="font-display font-black text-xl tracking-wide text-virla-roxodark">VIRLA</span>
           </Link>
 

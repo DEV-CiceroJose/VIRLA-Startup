@@ -26,7 +26,7 @@ import Marquee from './components/Marquee'
 import NumberTicker from './components/NumberTicker'
 import HoverCards from './components/HoverCards'
 import { BentoGrid, BentoCell } from './components/BentoGrid'
-import ScrollTimeline from './components/ScrollTimeline'
+import JourneyDeck from './components/JourneyDeck'
 import InkThemeToggle from './components/InkThemeToggle'
 import './landing.css'
 
@@ -232,7 +232,7 @@ export default function Landing() {
           </div>
         </section>
 
-        {/* Trajetória — Timeline (21st.dev) */}
+        {/* Trajetória — Fan Deck (21st.dev) */}
         <section id="trajetoria" className="o-section o-white" aria-labelledby="journey-title">
           <div className="o-container">
             <div className="o-head is-center">
@@ -240,7 +240,7 @@ export default function Landing() {
               <h2 id="journey-title" className="o-title">Uma jornada de conquistas.</h2>
               <p className="o-subtitle">Cada marco nos aproximou de transformar o cuidado no Brasil.</p>
             </div>
-            <ScrollTimeline items={JOURNEY} />
+            <JourneyDeck items={JOURNEY} />
           </div>
         </section>
 

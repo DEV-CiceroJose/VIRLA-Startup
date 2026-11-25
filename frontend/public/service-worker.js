@@ -11,10 +11,10 @@
 //  - Navegação (rotas do SPA) → network-first com fallback pro cache, pra
 //    funcionar minimamente offline mas sempre preferir a versão mais nova.
 
-const CACHE_VERSION = 'virla-v2'
+const CACHE_VERSION = 'virla-v3'
 const STATIC_CACHE = `${CACHE_VERSION}-static`
 
-const PRECACHE_URLS = ['/', '/manifest.json', '/icon-192.png', '/icon-512.png']
+const PRECACHE_URLS = ['/', '/manifest.json', '/icon-192.png', '/icon-512.png', '/logo.png']
 
 self.addEventListener('install', (event) => {
   event.waitUntil(

@@ -558,6 +558,9 @@
   font-weight: 700;
 }
 .tl-now::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #fff; }
+.tl-now.is-next { background: transparent; color: var(--o-purple); box-shadow: inset 0 0 0 1.5px var(--o-purple); }
+.tl-now.is-next::before { background: var(--o-purple); }
+.tl-item.is-next .tl-dot span { background: transparent; border-style: dashed; }
 .tl-content p { font-size: 16px; line-height: 1.75; color: var(--o-muted); }
 .tl-content img {
   display: block;
@@ -583,8 +586,9 @@
 }
 .o-team-group.is-pink { border-bottom-color: #fce7f3; color: #ec4899 !important; }
 :root[data-theme='dark'] .o-team-group { border-bottom-color: var(--o-border); }
-.o-team { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; margin-bottom: 56px; }
-.o-team.is-small { grid-template-columns: repeat(4, minmax(0, 1fr)); margin-bottom: 0; }
+.o-team { --cols: 4; display: flex; flex-wrap: wrap; justify-content: center; gap: 24px; margin-bottom: 56px; }
+.o-team > li { flex: 0 1 calc((100% - (var(--cols) - 1) * 24px) / var(--cols)); }
+.o-team.is-small { --cols: 4; margin-bottom: 0; }
 .o-team li {
   display: flex;
   flex-direction: column;
@@ -610,6 +614,7 @@
 .o-team strong { font-weight: 700; color: var(--o-text); }
 .o-team li > span { margin-top: 4px; font-size: 14px; font-weight: 500; color: var(--o-purple); }
 .o-team.is-small li > span { color: #ec4899; }
+.o-team li > small { margin-top: 2px; font-size: 13px; color: var(--o-muted); }
 
 /* ── Chamada final ────────────────────────────────────────────────────── */
 
@@ -709,7 +714,8 @@
   .bento { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .bento-cell.is-tall { grid-column: span 2; grid-row: auto; grid-row-start: auto; }
   .bento-cell.is-wide { grid-column: span 2; }
-  .o-team.is-small { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .o-team { --cols: 3; }
+  .o-team.is-small { --cols: 3; }
 }
 
 @media (max-width: 860px) {
@@ -743,8 +749,9 @@
   .o-market > div { padding: 18px 0; }
   .o-market > div + div { border-left: 0; border-top: 1px solid #e5e7eb; }
   :root[data-theme='dark'] .o-market > div + div { border-top-color: #3a2e3e; }
-  .o-team { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
-  .o-team.is-small { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .o-team { --cols: 2; gap: 16px; }
+  .o-team > li { flex-basis: calc((100% - 16px) / 2); }
+  .o-team.is-small { --cols: 2; }
 
   /* Timeline no celular: linha à esquerda, título acima do conteúdo */
   .tl-line { left: 15px; }

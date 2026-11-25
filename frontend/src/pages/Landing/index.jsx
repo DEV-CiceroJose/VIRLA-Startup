@@ -39,7 +39,8 @@ const img = (name) => `/landing/${name}.jpg`
 const PATH = [
   'Hackathon', 'IgaraLOL', 'Semana de Tecnologia', 'Projeto Centelha', 'Startup Day na TV Globo',
   'Quintas de Inovação', 'Bootcamp Tascom Academy', 'Feira do Empreendedor', 'SEBRAE PE',
-  'Missão NEON', 'Hub Canoa Grande', 'FOZ · FPS · IMIP',
+  'Missão NEON', 'Hub Canoa Grande', 'FOZ · FPS · IMIP', 'Rec’n Play', 'Porto Digital',
+  'Sertão Inovador',
 ]
 
 const PAINS = [
@@ -64,14 +65,20 @@ const JOURNEY = [
   { title: 'Feira do Empreendedor', text: 'Participamos da caravana da ETE Jurandir Bezerra Lins para a Feira do Empreendedor, com o suporte do SEBRAE PE. Lá aprendemos como transformar a VIRLA em uma potência tecnológica, além de fazermos várias conexões.', img: img('empreendedor') },
   { title: 'Missão NEON', text: 'Saímos de Igarassu (PE) para Maceió (AL) com inúmeras conexões, parcerias e conhecimentos, um passo mais perto de mudar como as conexões ocorrem no Brasil, com o apoio do SEBRAE PE, da ETE Jurandir Bezerra Lins e do Hub Canoa Grande.', img: img('neon') },
   { title: 'Reunião Semestral do Hub Canoa Grande', text: 'Participamos da reunião de alinhamento semestral do Hub Canoa Grande, o hub de inovação de Igarassu, junto com as startups e gestores da cidade para definir o futuro da inovação local.', img: img('hub') },
-  { title: 'Pré-Incubação na FOZ', text: 'Agora estamos na pré-incubação da FOZ, centro de inovação especializado em saúde e educação criado em 2019 pela Faculdade Pernambucana de Saúde (FPS), com sólida relação de pesquisa com o IMIP. Conseguimos entrar graças a Nayara Melo, do SEBRAE PE, que sempre vem nos ajudando nessa caminhada.', img: img('foz'), alt: 'FOZ, centro de inovação em saúde e educação da FPS e do IMIP', contain: true, current: true },
+  { title: 'Pré-Incubação na FOZ', text: 'Entramos na pré-incubação da FOZ, centro de inovação especializado em saúde e educação criado em 2019 pela Faculdade Pernambucana de Saúde (FPS), com sólida relação de pesquisa com o IMIP. Conseguimos entrar graças a Nayara Melo, do SEBRAE PE, que sempre vem nos ajudando nessa caminhada.', img: img('foz'), alt: 'FOZ, centro de inovação em saúde e educação da FPS e do IMIP', contain: true },
+  { title: 'Rolê Rec’n Play', text: 'Levamos a VIRLA para o Rec’n Play, no Recife, apresentando a plataforma ao vivo para o público do festival e trocando experiências com o ecossistema de inovação.', img: img('role-recnplay'), position: 'center 40%' },
+  { title: 'Rec’n Play Saúde', text: 'Voltamos ao Porto Digital na trilha de saúde do Rec’n Play, aproximando a VIRLA de quem está construindo o futuro do cuidado e da saúde em Pernambuco.', img: img('recnplay-saude'), position: 'center 30%' },
+  { title: 'Semana de Tecnologia', text: 'Apresentamos a oportunidade de mercado da VIRLA na Semana de Tecnologia, com banner próprio e o pitch da solução para estudantes e professores.', img: img('semana-banner') },
+  { title: 'Pré-Incubação Sertão Inovador', text: 'Fomos selecionados para a turma de pré-incubação 2026.2 do Sertão Inovador, programa da Incubadora do Semiárido (ISA) com a Incubadora Sertão Maker.', img: img('sertao-inovador'), alt: 'Sertão Inovador — Turma de Pré-Incubação 2026.2', ratio: '616 / 500', current: true },
+  { title: 'Próximos passos', text: 'Ampliar as validações e conquistar nossos primeiros clientes.', next: true },
 ].map((item, i) => ({ ...item, step: String(i + 1).padStart(2, '0') }))
 
 const PARTNERS = [
   { name: 'Fabio Henrique', role: 'CEO', img: 'time-fabio' },
-  { name: 'Miguel Alves', role: 'COO', img: 'time-miguel' },
-  { name: 'Alissomberg Domingos', role: 'CTO', img: 'time-berg' },
-  { name: 'Cicero José', role: 'Co-CTO', img: 'time-cicero' },
+  { name: 'Alissomberg Domingos', role: 'COO', area: 'Operações', img: 'time-berg' },
+  { name: 'Cicero José', role: 'CTO', area: 'Tecnologia', img: 'time-cicero' },
+  { name: 'Miguel Alves', role: 'CBO', area: 'Negócios e vendas', img: 'time-miguel' },
+  { name: 'Joéverton Paulo', role: 'CFO', area: 'Financeiro', img: 'time-jojo' },
   { name: 'Kauã Soares', role: 'CMO', img: 'time-kaua' },
   { name: 'Vitor Gabriel', role: 'CDO', img: 'time-vitor' },
 ]
@@ -79,7 +86,6 @@ const PARTNERS = [
 const COLLABORATORS = [
   { name: 'Luiz Guilherme', img: 'time-luiz' },
   { name: 'Vinicius Gabriel', img: 'time-vinicius' },
-  { name: 'Joéverton Paulo', img: 'time-jojo' },
 ]
 
 export default function Landing() {
@@ -90,7 +96,7 @@ export default function Landing() {
     <div className="comfort-landing">
       <header className="landing-header">
         <Link to="/" className="landing-brand" aria-label="VIRLA, página inicial">
-          <img className="landing-brand-logo" src="/icon-192.png" alt="" width="34" height="34" /> VIRLA
+          <img className="landing-brand-logo" src="/logo.png" alt="" width="34" height="34" /> VIRLA
         </Link>
         <button
           className="landing-menu-button"
@@ -253,6 +259,7 @@ export default function Landing() {
                   <img src={img(p.img)} alt="" loading="lazy" />
                   <strong>{p.name}</strong>
                   <span>{p.role}</span>
+                  {p.area && <small>{p.area}</small>}
                 </li>
               ))}
             </ul>
@@ -293,7 +300,7 @@ export default function Landing() {
       <footer className="o-footer">
         <div className="o-footer-grid">
           <div className="o-footer-brand">
-            <strong><img className="landing-brand-logo" src="/icon-192.png" alt="" width="34" height="34" /> VIRLA</strong>
+            <strong><img className="landing-brand-logo" src="/logo.png" alt="" width="34" height="34" /> VIRLA</strong>
             <p>Democratizando o acesso a cuidadores confiáveis e garantindo segurança e dignidade às famílias brasileiras.</p>
             <div className="o-social">
               <a href="https://instagram.com/virlaoficial" target="_blank" rel="noreferrer" aria-label="Instagram da VIRLA"><Instagram fontSize="small" /></a>

@@ -37,10 +37,22 @@ describe('Landing', () => {
     renderLanding()
     expect(screen.getAllByRole('heading', { level: 3, name: 'O Nascimento' }).length).toBeGreaterThan(0)
     expect(screen.getAllByRole('heading', { level: 3, name: 'Pré-Incubação na FOZ' }).length).toBeGreaterThan(0)
+    expect(screen.getAllByRole('heading', { level: 3, name: 'Pré-Incubação Sertão Inovador' }).length).toBeGreaterThan(0)
     expect(screen.getByText('Agora')).toBeInTheDocument()
+    expect(screen.getByText('Em breve')).toBeInTheDocument()
     for (const name of ['Fabio Henrique', 'Cicero José', 'Joéverton Paulo']) {
       expect(screen.getByText(name)).toBeInTheDocument()
     }
+  })
+
+  it('mostra os cargos atualizados dos sócios e Joéverton fora dos colaboradores', () => {
+    renderLanding()
+    const role = (name) => screen.getByText(name).closest('li').querySelector('span').textContent
+    expect(role('Joéverton Paulo')).toBe('CFO')
+    expect(role('Alissomberg Domingos')).toBe('COO')
+    expect(role('Cicero José')).toBe('CTO')
+    expect(role('Miguel Alves')).toBe('CBO')
+    expect(screen.getAllByText('Colaborador')).toHaveLength(2)
   })
 
   it('mantém o aviso sobre pagamentos fora da plataforma e os formulários de validação', () => {

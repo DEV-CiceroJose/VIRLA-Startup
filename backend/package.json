@@ -10,6 +10,7 @@
     "dev": "nodemon server.js",
     "emulators:test": "firebase emulators:start --only auth,firestore,database --project virla-startap",
     "seed:test": "node scripts/seed-local-test.js",
+    "deploy:firestore": "firebase deploy --only firestore:rules,firestore:indexes --project default",
     "postinstall": "node scripts/check-deps.js",
     "test": "node --test \"tests/*.test.js\"",
     "test:coverage": "node --test --experimental-test-coverage \"tests/*.test.js\""

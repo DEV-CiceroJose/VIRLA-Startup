@@ -1,0 +1,6 @@
+{
+  "projects": {
+    "default": "virla-app",
+    "test": "virla-startap"
+  }
+}

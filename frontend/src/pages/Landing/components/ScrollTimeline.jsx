@@ -39,7 +39,7 @@ export default function ScrollTimeline({ items }) {
     <ol className="tl" ref={ref}>
       <span className="tl-line" aria-hidden="true"><span className="tl-beam" /></span>
       {items.map((item) => (
-        <li key={item.title} className={`tl-item${item.current ? ' is-current' : ''}`}>
+        <li key={item.title} className={`tl-item${item.current ? ' is-current' : ''}${item.next ? ' is-next' : ''}`}>
           <div className="tl-head">
             <span className="tl-dot" aria-hidden="true"><span /></span>
             <span className="tl-step">{item.step}</span>
@@ -48,6 +48,7 @@ export default function ScrollTimeline({ items }) {
           <div className="tl-content">
             <h3 className="tl-mobile-title">{item.title}</h3>
             {item.current && <span className="tl-now">Agora</span>}
+            {item.next && <span className="tl-now is-next">Em breve</span>}
             <p>{item.text}</p>
             {item.img && (
               <img
@@ -55,7 +56,7 @@ export default function ScrollTimeline({ items }) {
                 alt={item.alt ?? ''}
                 loading="lazy"
                 className={item.contain ? 'is-contain' : undefined}
-                style={item.position ? { objectPosition: item.position } : undefined}
+                style={item.position || item.ratio ? { objectPosition: item.position, aspectRatio: item.ratio } : undefined}
               />
             )}
           </div>

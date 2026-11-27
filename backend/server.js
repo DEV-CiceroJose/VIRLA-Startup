@@ -117,7 +117,9 @@ app.get('/observability/dashboard', dashboard)
 app.use(userRoutes)
 app.use(authRoutes)
 app.use(messageRoutes)
-app.use(PaymentRoutes)
+// Ambiente de migração: nenhuma rota de pagamento ou webhook é publicada.
+// Para produção, revisar e habilitar os pagamentos separadamente.
+// app.use(PaymentRoutes)
 app.use(firebaseRoutes)
 app.use(solicitacaoRoutes)
 
